@@ -1,0 +1,35 @@
+{
+  "name": "callingagent-agency---the-intelligent-ai-call-center",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "start": "node server.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^1.41.0",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@vapi-ai/web": "^2.5.2",
+    "express": "^5.2.1",
+    "lucide-react": "^0.575.0",
+    "motion": "^12.34.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.7.0",
+    "stripe": "^22.0.0",
+    "tsx": "^4.21.0",
+    "twilio": "^5.12.2",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

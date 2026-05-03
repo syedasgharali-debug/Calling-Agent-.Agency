@@ -1,0 +1,7 @@
+{
+  "name": "Calling Agent that works 24/7",
+  "description": "Calling Agent that works 24/7. A high-performance, AI-driven call center platform that automates customer support with human-like intelligence, sentiment analysis, and seamless CRM integrations.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
