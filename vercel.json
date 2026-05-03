@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/(api|streams|frontend-relay)(.*)",
+      "destination": "https://express-production-url-placeholder.com/api$2"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

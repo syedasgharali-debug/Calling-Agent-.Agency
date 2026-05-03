@@ -1,8 +1,19 @@
 
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 
-// Fix: Always use this initialization pattern with process.env.GEMINI_API_KEY directly as per @google/genai guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialization of GoogleGenAI
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is missing. AI features will not work.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+  }
+  return aiInstance;
+}
 
 export interface LiveCallbacks {
   onopen: () => void;
@@ -13,6 +24,7 @@ export interface LiveCallbacks {
 
 export class GeminiService {
   async connectLive(systemInstruction: string, callbacks: LiveCallbacks) {
+    const ai = getAI();
     return ai.live.connect({
       model: "gemini-3.1-flash-live-preview",
       config: {
@@ -28,6 +40,7 @@ export class GeminiService {
 
   async getAgentResponse(message: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = [], systemInstruction?: string) {
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [
@@ -51,6 +64,7 @@ export class GeminiService {
 
   async generateSpeech(text: string, voiceName: string = 'Kore') {
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
@@ -77,6 +91,7 @@ export class GeminiService {
 
   async analyzeSentiment(transcript: string) {
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [{ role: 'user', parts: [{ text: `Analyze the sentiment of this call transcript. Return ONLY one word: Positive, Neutral, or Negative.\n\nTranscript: ${transcript}` }] }],
@@ -89,6 +104,7 @@ export class GeminiService {
 
   async summarizeCall(transcript: string) {
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [{ role: 'user', parts: [{ text: `Summarize this call transcript in 2-3 bullet points.\n\nTranscript: ${transcript}` }] }],
