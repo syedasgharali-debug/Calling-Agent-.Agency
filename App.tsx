@@ -11,6 +11,8 @@ import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import LegalView from './views/LegalView';
 import CareerView from './views/CareerView';
+import { auth, logoutUser, syncUserProfile } from './services/firebaseService';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export type View = 'home' | 'features' | 'pricing' | 'about' | 'docs' | 'login' | 'dashboard' | 'privacy' | 'terms' | 'careers';
 export type UserRole = 'customer' | 'admin' | null;
@@ -54,6 +56,7 @@ interface UserSession {
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
   const [user, setUser] = useState<UserSession | null>(null);
+  const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<UserSession | null>(null);
 
   const [plans, setPlans] = useState<Plan[]>([
@@ -106,6 +109,23 @@ const App: React.FC = () => {
   ]);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const profile = await syncUserProfile(firebaseUser);
+        if (profile) {
+          setUser({
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || '',
+            profilePic: firebaseUser.photoURL || '',
+            role: profile.role as UserRole,
+          });
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
     const handleHash = () => {
       const hash = window.location.hash.replace('#', '') as View;
       const validViews: View[] = ['home', 'features', 'pricing', 'about', 'docs', 'login', 'dashboard', 'privacy', 'terms', 'careers'];
@@ -116,10 +136,10 @@ const App: React.FC = () => {
     window.addEventListener('hashchange', handleHash);
     handleHash();
     
-    const savedUser = localStorage.getItem('callingagent_user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-
-    return () => window.removeEventListener('hashchange', handleHash);
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+      unsubscribe();
+    };
   }, []);
 
   const navigate = (view: View) => {
@@ -136,10 +156,13 @@ const App: React.FC = () => {
     navigate('dashboard');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user) {
+      // Find the actual firebase UID if we had it, but for now we rely on auth state
+      await logoutUser(auth.currentUser?.uid || '');
+    }
     setUser(null);
     setImpersonatedUser(null);
-    localStorage.removeItem('callingagent_user');
     navigate('home');
   };
 
@@ -157,6 +180,8 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>;
+
     switch (currentView) {
       case 'about':
         return <AboutView />;

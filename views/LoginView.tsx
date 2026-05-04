@@ -1,6 +1,9 @@
 
 import React, { useState } from 'react';
 import { UserRole } from '../App';
+import { loginWithGoogle } from '../services/firebaseService';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../services/firebaseService';
 
 interface LoginViewProps {
   onLogin: (email: string, role: UserRole) => void;
@@ -10,16 +13,37 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      // Check for specific admin credentials
-      if (email === 'essadhiif@gmail.com' && password === 'Ilmadhiif1$') {
-        onLogin(email, 'admin');
+    setError('');
+    setLoading(true);
+    try {
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        onLogin(email, 'customer');
+        await signInWithEmailAndPassword(auth, email, password);
       }
+      // App.tsx handles state via onAuthStateChanged
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle();
+      // App.tsx handles state via onAuthStateChanged
+    } catch (err: any) {
+      setError(err.message || 'Google login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,6 +60,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold text-center">{error}</div>}
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
             <input 
@@ -62,9 +87,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <div className="pt-2">
             <button 
               type="submit"
-              className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-sm hover:bg-indigo-500 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
+              disabled={loading}
+              className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-sm hover:bg-indigo-500 transition-all active:scale-95 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isRegistering ? 'Create Account' : 'Login'}
+              {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Login')}
             </button>
           </div>
 
@@ -79,8 +105,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <button 
             type="button"
-            onClick={() => onLogin('google-user@gmail.com', 'customer')}
-            className="w-full py-4 bg-white text-slate-950 rounded-xl font-black text-sm hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center space-x-3"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full py-4 bg-white text-slate-950 rounded-xl font-black text-sm hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path

@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user account information and preferences.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "name": { "type": "string", "description": "User's display name." },
+        "profilePic": { "type": "string", "description": "URL to the user's profile picture." },
+        "role": { "type": "string", "enum": ["customer", "admin"], "description": "Access level of the user." },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
+        "status": { "type": "string", "enum": ["online", "offline"], "description": "Current active status." }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profiles keyed by their Firebase Auth UID."
+    }
+  }
+}
