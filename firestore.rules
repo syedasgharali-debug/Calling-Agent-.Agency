@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Helper functions
     function isSignedIn() {
-      return request.auth != null && request.auth.token.email_verified == true;
+      return request.auth != null;
     }
 
     function isOwner(userId) {
@@ -19,6 +19,7 @@ service cloud.firestore {
       return isSignedIn() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         request.auth.token.email == 'syedasgharkazmii@gmail.com' ||
+        request.auth.token.email == 'syedasghakazmii@gmail.com' ||
         request.auth.token.email == 'essadhiif@gmail.com'
       );
     }

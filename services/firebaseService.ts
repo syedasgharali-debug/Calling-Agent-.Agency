@@ -1,6 +1,14 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  onAuthStateChanged, 
+  User as FirebaseUser,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+} from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -54,7 +62,11 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
     let profileData;
     if (!userDoc.exists()) {
       // First time login
-      const role = (firebaseUser.email === 'syedasgharkazmii@gmail.com' || firebaseUser.email === 'essadhiif@gmail.com') ? 'admin' : 'customer';
+      const role = (
+        firebaseUser.email === 'syedasgharkazmii@gmail.com' || 
+        firebaseUser.email === 'syedasghakazmii@gmail.com' || 
+        firebaseUser.email === 'essadhiif@gmail.com'
+      ) ? 'admin' : 'customer';
       profileData = {
         email: firebaseUser.email || '',
         name: firebaseUser.displayName || '',
@@ -113,6 +125,26 @@ export const loginWithGoogle = async () => {
     return await syncUserProfile(result.user);
   } catch (error) {
     console.error('Google Sign-In Error:', error);
+    throw error;
+  }
+};
+
+export const loginWithEmail = async (email: string, pass: string) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, pass);
+    return await syncUserProfile(result.user);
+  } catch (error) {
+    console.error('Email Sign-In Error:', error);
+    throw error;
+  }
+};
+
+export const registerWithEmail = async (email: string, pass: string) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, pass);
+    return await syncUserProfile(result.user);
+  } catch (error) {
+    console.error('Email Registration Error:', error);
     throw error;
   }
 };

@@ -1,9 +1,7 @@
 
 import React, { useState } from 'react';
 import { UserRole } from '../App';
-import { loginWithGoogle } from '../services/firebaseService';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../services/firebaseService';
+import { loginWithGoogle, loginWithEmail, registerWithEmail } from '../services/firebaseService';
 
 interface LoginViewProps {
   onLogin: (email: string, role: UserRole) => void;
@@ -22,9 +20,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     setLoading(true);
     try {
       if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await registerWithEmail(email, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await loginWithEmail(email, password);
       }
       // App.tsx handles state via onAuthStateChanged
     } catch (err: any) {

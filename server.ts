@@ -214,7 +214,7 @@ async function startServer() {
       
       ws.on("message", (message) => {
         try {
-          const msgStr = message.toString();
+          const msgStr = message.toString().trim();
           if (!msgStr || msgStr === 'undefined') return;
           const data = JSON.parse(msgStr);
           if (data.type === 'AGENT_AUDIO') {
@@ -243,7 +243,7 @@ async function startServer() {
 
     ws.on("message", (message) => {
       try {
-        const msgStr = message.toString();
+        const msgStr = message.toString().trim();
         if (!msgStr || msgStr === 'undefined') return;
         const data = JSON.parse(msgStr);
 

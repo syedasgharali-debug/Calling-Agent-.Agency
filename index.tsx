@@ -9,23 +9,29 @@ import App from './App';
   try {
     const descriptor = Object.getOwnPropertyDescriptor(window, 'fetch');
     
-    // If it's already settable, we are mostly safe, but some libs still fail with "illegal invocation"
-    // if they don't bind properly. 
+    // If we can reconfigure it, let's make it have a setter that just logs/ignores 
+    // to prevent libraries from crashing when they try to proxy/polyfill it.
     if (descriptor && descriptor.configurable) {
-      if (!descriptor.set || !descriptor.get) {
-        const originalFetch = window.fetch;
+      const originalFetch = window.fetch;
+      try {
         Object.defineProperty(window, 'fetch', {
           configurable: true,
           enumerable: true,
           get: () => originalFetch,
           set: (v) => {
-            console.warn('Blocked attempt to overwrite window.fetch with:', v);
-            // We just ignore the set attempt to prevent the "only a getter" TypeError
+            console.warn('Blocked attempt to overwrite window.fetch. Libraries often try this for analytics or proxying.', v);
+            // We ignore to prevent "only a getter" TypeError
           }
         });
+      } catch (innerError) {
+        console.error('Inner fetch patch failed:', innerError);
       }
     } else if (descriptor && !descriptor.configurable) {
-      console.warn('window.fetch is not configurable. Overwrites might still fail.');
+      // If it's already only a getter and non-configurable, we can't do much.
+      // But we can try to at least warn.
+      if (!descriptor.writable && !descriptor.set) {
+        console.warn('window.fetch is read-only and non-configurable. Libraries trying to polyfill it will crash.');
+      }
     }
   } catch (e) {
     console.warn('Failed to patch fetch:', e);

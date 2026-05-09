@@ -461,8 +461,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     ws.onopen = () => console.log("Relay WebSocket connected");
     ws.onmessage = async (event) => {
       try {
-        if (!event.data || event.data === 'undefined') return;
-        const data = JSON.parse(event.data);
+        if (!event.data) return;
+        const msgStr = (event.data as string).toString().trim();
+        if (msgStr === 'undefined' || msgStr === '') return;
+        
+        const data = JSON.parse(msgStr);
         
         if (data.type === 'CALL_STARTED') {
           console.log("Real call started, initializing agent session...");
