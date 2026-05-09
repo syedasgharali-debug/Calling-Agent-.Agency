@@ -8,7 +8,7 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   return (
-    <section className="relative pt-44 pb-32 px-6 overflow-hidden">
+    <section className="relative pt-32 pb-16 px-6 overflow-hidden">
       <div className="max-w-7xl mx-auto text-center relative z-10">
         <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-10 animate-fade-in">
           <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
@@ -24,7 +24,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           Orchestrate <b className="text-slate-100 font-bold">Vapi</b>, <b className="text-slate-100 font-bold">Deepgram</b>, and <b className="text-slate-100 font-bold">Cartesia</b> into a sub-second response engine. Build agents that book meetings, update CRMs, and handle real-time interruptions with zero lag.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-24">
+        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
           <button 
             onClick={() => onNavigate('pricing')}
             className="w-full sm:w-auto px-10 py-5 bg-white text-slate-950 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all transform hover:-translate-y-1 shadow-[0_20px_50px_rgba(255,255,255,0.1)] active:scale-95"

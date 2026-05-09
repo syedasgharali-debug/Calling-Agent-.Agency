@@ -11,9 +11,9 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
   const [isYearly, setIsYearly] = React.useState(false);
 
   return (
-    <section id="pricing" className="py-32 px-6 relative overflow-hidden">
+    <section id="pricing" className="py-16 px-6 relative overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="text-center mb-20">
+        <div className="text-center mb-12">
           <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">Pricing for <span className="text-indigo-500 underline decoration-indigo-500/30">Scale</span></h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-lg mb-12">Transparent infrastructure pricing. No hidden fees. Billed as you grow your voice operation.</p>
           

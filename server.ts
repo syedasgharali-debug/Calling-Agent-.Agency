@@ -144,7 +144,16 @@ async function startServer() {
             },
           }),
         });
-        const data = await response.json();
+
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (e) {
+          console.error("Vapi Response Parse Error:", e);
+          const text = await response.text();
+          console.error("Vapi raw response:", text);
+          return res.status(500).json({ error: "Invalid response from Vapi", details: text });
+        }
         return res.json(data);
       } catch (error) {
         console.error("Vapi Outbound Error:", error);
@@ -204,19 +213,25 @@ async function startServer() {
       console.log("Frontend relay connected");
       
       ws.on("message", (message) => {
-        const data = JSON.parse(message.toString());
-        if (data.type === 'AGENT_AUDIO') {
-          // Send audio back to Twilio
-          const targetStream = streams.get(data.streamSid);
-          if (targetStream && targetStream.readyState === WebSocket.OPEN) {
-            targetStream.send(JSON.stringify({
-              event: 'media',
-              streamSid: data.streamSid,
-              media: {
-                payload: encodeMuLaw(data.payload)
-              }
-            }));
+        try {
+          const msgStr = message.toString();
+          if (!msgStr || msgStr === 'undefined') return;
+          const data = JSON.parse(msgStr);
+          if (data.type === 'AGENT_AUDIO') {
+            // Send audio back to Twilio
+            const targetStream = streams.get(data.streamSid);
+            if (targetStream && targetStream.readyState === WebSocket.OPEN) {
+              targetStream.send(JSON.stringify({
+                event: 'media',
+                streamSid: data.streamSid,
+                media: {
+                  payload: encodeMuLaw(data.payload)
+                }
+              }));
+            }
           }
+        } catch (error) {
+          console.error("Relay message error:", error);
         }
       });
       return;
@@ -227,34 +242,40 @@ async function startServer() {
     let agentId: string;
 
     ws.on("message", (message) => {
-      const data = JSON.parse(message.toString());
+      try {
+        const msgStr = message.toString();
+        if (!msgStr || msgStr === 'undefined') return;
+        const data = JSON.parse(msgStr);
 
-      switch (data.event) {
-        case "start":
-          streamSid = data.start.streamSid;
-          agentId = data.start.customParameters?.agentId;
-          streams.set(streamSid, ws);
-          console.log(`Stream started: ${streamSid} for agent: ${agentId}`);
-          
-          broadcastToFrontend({
-            type: 'CALL_STARTED',
-            streamSid,
-            agentId
-          });
-          break;
-        case "media":
-          broadcastToFrontend({
-            type: 'TWILIO_AUDIO',
-            payload: decodeMuLaw(data.media.payload),
-            streamSid,
-            agentId
-          });
-          break;
-        case "stop":
-          console.log(`Stream stopped: ${streamSid}`);
-          streams.delete(streamSid);
-          broadcastToFrontend({ type: 'CALL_ENDED', streamSid, agentId });
-          break;
+        switch (data.event) {
+          case "start":
+            streamSid = data.start.streamSid;
+            agentId = data.start.customParameters?.agentId;
+            streams.set(streamSid, ws);
+            console.log(`Stream started: ${streamSid} for agent: ${agentId}`);
+            
+            broadcastToFrontend({
+              type: 'CALL_STARTED',
+              streamSid,
+              agentId
+            });
+            break;
+          case "media":
+            broadcastToFrontend({
+              type: 'TWILIO_AUDIO',
+              payload: decodeMuLaw(data.media.payload),
+              streamSid,
+              agentId
+            });
+            break;
+          case "stop":
+            console.log(`Stream stopped: ${streamSid}`);
+            streams.delete(streamSid);
+            broadcastToFrontend({ type: 'CALL_ENDED', streamSid, agentId });
+            break;
+        }
+      } catch (error) {
+        console.error("Twilio stream message error:", error);
       }
     });
 

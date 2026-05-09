@@ -31,6 +31,7 @@ import {
   Edit3,
   Save,
   X,
+  ChevronRight,
   User,
   Camera,
   Lock,
@@ -75,6 +76,9 @@ interface Agent {
   id: string;
   name: string;
   voice: string;
+  gender?: 'Male' | 'Female' | 'Neutral';
+  pitch?: number;
+  speed?: number;
   status: 'Active' | 'Paused';
   calls: number;
   logic: string;
@@ -92,6 +96,7 @@ interface Call {
   sentiment: 'Positive' | 'Neutral' | 'Negative';
   timestamp: string;
   transcript?: string;
+  sentimentAnalysis?: string;
 }
 
 interface Ticket {
@@ -118,6 +123,26 @@ interface EnterpriseRequest {
   adminResponse?: string;
 }
 
+interface Number {
+  id: string;
+  number: string;
+  agentId: string;
+  status: 'Active' | 'Paused' | 'Pending';
+  location: string;
+  type: 'sandbox' | 'real' | 'custom';
+}
+
+const VOICES = [
+  { id: 'Puck', name: 'Puck', gender: 'Male', engine: 'Gemini Native', description: 'Youthful and energetic' },
+  { id: 'Charon', name: 'Charon', gender: 'Male', engine: 'Gemini Native', description: 'Deep and professional' },
+  { id: 'Kore', name: 'Kore', gender: 'Female', engine: 'Gemini Native', description: 'Calm and helpful' },
+  { id: 'Fenrir', name: 'Fenrir', gender: 'Male', engine: 'Gemini Native', description: 'Authoritative and bold' },
+  { id: 'Zephyr', name: 'Zephyr', gender: 'Neutral', engine: 'Gemini Native', description: 'Friendly and modern' },
+  { id: 'Aria', name: 'Aria', gender: 'Female', engine: 'ElevenLabs', description: 'Soft and expressive' },
+  { id: 'Marcus', name: 'Marcus', gender: 'Male', engine: 'ElevenLabs', description: 'Warm and trustworthy' },
+  { id: 'S1', name: 'Sonic-1', gender: 'Male', engine: 'Cartesia', description: 'Ultra-low latency' },
+];
+
 const DashboardView: React.FC<DashboardViewProps> = ({ 
   user, 
   isAdmin, 
@@ -140,6 +165,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [planMinutes, setPlanMinutes] = useState(0);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [showBlogModal, setShowBlogModal] = useState(false);
@@ -196,6 +222,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedEnterpriseRequest, setSelectedEnterpriseRequest] = useState<EnterpriseRequest | null>(null);
   const [enterpriseResponse, setEnterpriseResponse] = useState('');
 
+  useEffect(() => {
+    if (showPlanModal) {
+      setPlanMinutes(editingPlan?.mins || 0);
+    }
+  }, [showPlanModal, editingPlan]);
+
+  const calculatePrice = (mins: number) => (mins * 0.45).toFixed(2);
+  const calculateYearlyPrice = (mins: number) => (mins * 0.45 * 12 * 0.8).toFixed(2); // 20% discount
+
   // Profile State
   const [profileName, setProfileName] = useState(user.name || '');
   const [profilePic, setProfilePic] = useState(user.profilePic || '');
@@ -216,8 +251,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{[key: string]: boolean}>({});
-  const [showConnectNumber, setShowConnectNumber] = useState(false);
+  const [showConnectNumber, setShowConnectNumber] = useState(true);
+  const [showPaymentSelectionModal, setShowPaymentSelectionModal] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<any>(null);
   const [showOutboundModal, setShowOutboundModal] = useState(false);
+  const [showCallDetailsModal, setShowCallDetailsModal] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [outboundNumber, setOutboundNumber] = useState('');
   const [outboundAgentId, setOutboundAgentId] = useState('');
   const [vapiApiKey, setVapiApiKey] = useState(localStorage.getItem('vapi_api_key') || '');
@@ -235,6 +274,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isCallActive, setIsCallActive] = useState(false);
+  const [isCallPaused, setIsCallPaused] = useState(false);
+  const isCallPausedRef = React.useRef(false);
+
+  useEffect(() => {
+    isCallPausedRef.current = isCallPaused;
+  }, [isCallPaused]);
+
   const [liveSession, setLiveSession] = useState<any>(null);
   const liveSessionRef = React.useRef<any>(null);
   const selectedAgentRef = React.useRef<Agent | null>(null);
@@ -256,28 +302,57 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Real State
   const [agents, setAgents] = useState<Agent[]>([
-    { id: '1', name: 'Dr. Smith Scheduler', voice: 'Cartesia S1 (Male)', status: 'Active', calls: 412, logic: 'Make.com Hook', prompt: 'You are a medical scheduler for Dr. Smith. Your goal is to book appointments. Ask for the patient name, preferred date, and time. If they are unsure, suggest next Tuesday at 10 AM. Be polite and professional.', provider: 'CallingAgent' },
-    { id: '2', name: 'Real Estate Lead Gen', voice: 'ElevenLabs (Aria)', status: 'Active', calls: 892, logic: 'FastAPI Agent', prompt: 'You are a real estate assistant. Qualify leads by asking about their budget and timeline. Be persuasive but helpful.', provider: 'CallingAgent' },
-    { id: '3', name: 'After-Hours Support', voice: 'CallingAgent Native', status: 'Paused', calls: 124, logic: 'Static Script', prompt: 'You handle support calls after 6 PM. Take messages if you cannot solve the issue. Always ask for a callback number.', provider: 'CallingAgent' },
+    { id: '1', name: 'Dr. Smith Scheduler', voice: 'Charon', gender: 'Male', pitch: 1.0, speed: 1.0, status: 'Active', calls: 412, logic: 'Make.com Hook', prompt: 'You are a medical scheduler for Dr. Smith. Your goal is to book appointments... Be polite and professional.', provider: 'CallingAgent' },
+    { id: '2', name: 'Real Estate Lead Gen', voice: 'Aria', gender: 'Female', pitch: 1.0, speed: 1.0, status: 'Active', calls: 892, logic: 'FastAPI Agent', prompt: 'You are a real estate assistant. Qualify leads by asking about their budget and timeline. Be persuasive but helpful.', provider: 'CallingAgent' },
+    { id: '3', name: 'After-Hours Support', voice: 'Kore', gender: 'Female', pitch: 1.1, speed: 0.9, status: 'Paused', calls: 124, logic: 'Static Script', prompt: 'You handle support calls after 6 PM. Take messages if you cannot solve the issue. Always ask for a callback number.', provider: 'CallingAgent' },
   ]);
 
-  const [numbers, setNumbers] = useState([
-    { id: '1', number: '+1 (555) 012-3456', agentId: '1', status: 'Active', location: 'New York, US' },
-    { id: '2', number: '+1 (555) 987-6543', agentId: '2', status: 'Active', location: 'London, UK' },
+  const [numbers, setNumbers] = useState<Number[]>([
+    { id: '1', number: '+1 (888) 123-4567', agentId: '1', status: 'Active', location: 'Sandbox (Shared)', type: 'sandbox' },
+    { id: '2', number: '+1 (555) 987-6543', agentId: '2', status: 'Active', location: 'London, UK', type: 'real' },
   ]);
+
+  const [provisionTab, setProvisionTab] = useState<'sandbox' | 'buy' | 'custom'>('sandbox');
+  const [selectedRegion, setSelectedRegion] = useState('US');
+  const [provisioningAgentId, setProvisioningAgentId] = useState('');
 
   const [calls, setCalls] = useState<Call[]>([
-    { id: 'c1', caller: '+1 (555) 012-3456', agent: 'Dr. Smith Scheduler', duration: '4m 12s', outcome: 'Booked', sentiment: 'Positive', timestamp: '2 mins ago' },
+    { 
+      id: 'c1', 
+      caller: '+1 (555) 012-3456', 
+      agent: 'Dr. Smith Scheduler', 
+      duration: '4m 12s', 
+      outcome: 'Booked', 
+      sentiment: 'Positive', 
+      timestamp: '2 mins ago',
+      transcript: "Agent: Hello, this is Dr. Smith's office. How can I help you?\nCaller: Hi, I'd like to book an appointment for next week.\nAgent: Certainly! We have an opening on Tuesday at 10 AM. Does that work for you?\nCaller: Yes, that's perfect. My name is John Doe.\nAgent: Great, John. I've booked you in for Tuesday at 10 AM. We'll see you then.\nCaller: Thank you, goodbye.\nAgent: Goodbye, have a great day!",
+      sentimentAnalysis: "The caller was polite and appreciative. The agent provided efficient service and successfully booked the appointment. Overall sentiment is highly positive with clear resolution."
+    },
     { id: 'c2', caller: '+1 (555) 098-7654', agent: 'After-Hours Support', duration: '1m 22s', outcome: 'Resolved', sentiment: 'Neutral', timestamp: '15 mins ago' },
     { id: 'c3', caller: '+1 (555) 234-5678', agent: 'Real Estate Lead Gen', duration: '8m 45s', outcome: 'Inquiry', sentiment: 'Positive', timestamp: '1 hour ago' },
     { id: 'c4', caller: '+1 (555) 555-0001', agent: 'Dr. Smith Scheduler', duration: '2m 10s', outcome: 'Cancelled', sentiment: 'Negative', timestamp: '3 hours ago' },
   ]);
 
-  const [allUsers, setAllUsers] = useState([
-    { id: 'u1', email: 'customer1@example.com', role: 'customer', status: 'Active', balance: 250.00, usage: 124, joined: '2024-01-15' },
-    { id: 'u2', email: 'customer2@example.com', role: 'customer', status: 'Active', balance: 150.00, usage: 45, joined: '2024-02-10' },
-    { id: 'u3', email: 'admin@callingagent.agency', role: 'admin', status: 'Active', balance: 0, usage: 0, joined: '2023-12-01' },
-  ]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'users' && isAdmin) {
+      const fetchUsers = async () => {
+        setLoadingUsers(true);
+        try {
+          const { getAllUsers } = await import('../services/firebaseService');
+          const users = await getAllUsers();
+          if (users) setAllUsers(users);
+        } catch (error) {
+          console.error("Failed to fetch users:", error);
+        } finally {
+          setLoadingUsers(false);
+        }
+      };
+      fetchUsers();
+    }
+  }, [activeTab, isAdmin]);
 
   const [invoices, setInvoices] = useState([
     { id: 'inv_1', user: 'customer1@example.com', amount: 250.00, status: 'Paid', date: '2024-03-01' },
@@ -314,7 +389,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [newAgent, setNewAgent] = useState({
     name: '',
-    voice: 'CallingAgent Native',
+    voice: 'Puck',
+    gender: 'Male' as 'Male' | 'Female' | 'Neutral',
+    pitch: 1.0,
+    speed: 1.0,
     logic: 'CallingAgent Orchestrator',
     prompt: '',
     provider: 'CallingAgent' as 'CallingAgent' | 'Vapi',
@@ -382,27 +460,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
     ws.onopen = () => console.log("Relay WebSocket connected");
     ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === 'CALL_STARTED') {
-        console.log("Real call started, initializing agent session...");
-        const agent = agents.find(a => a.id === data.agentId) || agents[0];
-        setSelectedAgent(agent);
-        // Wait a bit for state to propagate or use local agent
-        await startLiveCall(data.streamSid, agent);
-      }
-
-      if (data.type === 'TWILIO_AUDIO') {
-        if (liveSessionRef.current) {
-          liveSessionRef.current.sendRealtimeInput({
-            audio: { data: data.payload, mimeType: 'audio/pcm;rate=8000' }
-          });
+      try {
+        if (!event.data || event.data === 'undefined') return;
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'CALL_STARTED') {
+          console.log("Real call started, initializing agent session...");
+          const agent = agents.find(a => a.id === data.agentId) || agents[0];
+          setSelectedAgent(agent);
+          // Wait a bit for state to propagate or use local agent
+          await startLiveCall(data.streamSid, agent);
         }
-      }
 
-      if (data.type === 'CALL_ENDED') {
-        console.log("Real call ended");
-        stopLiveCall();
+        if (data.type === 'TWILIO_AUDIO') {
+          if (liveSessionRef.current) {
+            liveSessionRef.current.sendRealtimeInput({
+              audio: { data: data.payload, mimeType: 'audio/pcm;rate=8000' }
+            });
+          }
+        }
+
+        if (data.type === 'CALL_ENDED') {
+          console.log("Real call ended");
+          stopLiveCall();
+        }
+      } catch (error) {
+        console.error("WebSocket message parsing error:", error);
       }
     };
 
@@ -501,6 +584,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       id: Math.random().toString(36).substr(2, 9),
       name: newAgent.name,
       voice: newAgent.voice,
+      gender: newAgent.gender,
+      pitch: newAgent.pitch,
+      speed: newAgent.speed,
       status: 'Active',
       calls: 0,
       logic: newAgent.logic,
@@ -512,7 +598,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     setShowCreateModal(false);
     setNewAgent({ 
       name: '', 
-      voice: 'CallingAgent Native', 
+      voice: 'Puck', 
+      gender: 'Male',
+      pitch: 1.0,
+      speed: 1.0,
       logic: 'CallingAgent Orchestrator', 
       prompt: '', 
       provider: 'CallingAgent', 
@@ -585,7 +674,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  const handlePlanUpgrade = async (plan: any, method: 'stripe' | 'paypal' = 'stripe') => {
+  const handlePlanUpgrade = async (plan: any) => {
     if (plan.name === currentPlan.name) return;
 
     if (plan.name === 'Enterprise') {
@@ -593,25 +682,44 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       return;
     }
 
-    // Simulate payment flow
-    const confirmMsg = `Are you sure you want to upgrade to the ${plan.name} plan for $${plan.price}/month via ${method === 'stripe' ? 'Stripe' : 'PayPal'}?`;
-    if (!confirm(confirmMsg)) return;
+    setPendingPlan(plan);
+    setShowPaymentSelectionModal(true);
+  };
 
+  const confirmPlanUpgrade = async (method: 'stripe' | 'paypal') => {
+    if (!pendingPlan) return;
+    
     try {
-      // In a real app, we'd call the backend here
+      if (method === 'stripe' && !stripeApiKey) {
+        alert("Please configure Stripe Secret Key in Integrations first.");
+        setActiveTab('integrations');
+        setShowPaymentSelectionModal(false);
+        return;
+      }
+      
+      if (method === 'paypal' && (!paypalClientId || !paypalSecret)) {
+        alert("Please configure PayPal credentials in Integrations first.");
+        setActiveTab('integrations');
+        setShowPaymentSelectionModal(false);
+        return;
+      }
+
+      // In a real app, we'd redirect to Stripe Checkout or PayPal portal here
       // For now, we simulate success
-      setCurrentPlan(plan);
+      setCurrentPlan(pendingPlan);
       
       // Add to invoices
       setInvoices(prev => [{
         id: `inv_${Date.now()}`,
         user: user.email,
-        amount: plan.price,
+        amount: isBillingYearly ? pendingPlan.yearlyPrice : pendingPlan.price,
         status: 'Paid',
         date: new Date().toISOString().split('T')[0]
       }, ...prev]);
 
-      alert(`Successfully upgraded to ${plan.name} plan!`);
+      alert(`Successfully upgraded to ${pendingPlan.name} plan via ${method === 'stripe' ? 'Stripe' : 'PayPal'}!`);
+      setShowPaymentSelectionModal(false);
+      setPendingPlan(null);
     } catch (error) {
       console.error("Upgrade error:", error);
       alert("Failed to process upgrade.");
@@ -668,7 +776,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       setTestChat(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
       
       // Generate and play speech
-      const audio = await geminiService.generateSpeech(response);
+      const audio = await geminiService.generateSpeech(response, selectedAgent.voice);
       if (audio) {
         setAudioUrl(audio);
         const audioObj = new Audio(audio);
@@ -734,7 +842,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       
       setTestChat(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
       
-      const audio = await geminiService.generateSpeech(response);
+      const audio = await geminiService.generateSpeech(response, selectedAgent.voice);
       if (audio) {
         setAudioUrl(audio);
         const audioObj = new Audio(audio);
@@ -779,8 +887,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       audioContextRef.current = null;
     }
     setIsCallActive(false);
+    setIsCallPaused(false);
     setActiveStreamSid(null);
     nextStartTimeRef.current = 0;
+  };
+
+  const togglePauseCall = async () => {
+    if (!isCallActive) return;
+
+    if (isCallPaused) {
+      if (audioContextRef.current?.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      setIsCallPaused(false);
+    } else {
+      if (audioContextRef.current?.state === 'running') {
+        await audioContextRef.current.suspend();
+      }
+      setIsCallPaused(true);
+    }
   };
 
   const startLiveCall = async (streamSid?: string, providedAgent?: Agent) => {
@@ -860,6 +985,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       const enhancedPrompt = `${agent.prompt}\n\nIMPORTANT: When the conversation is finished or the user says goodbye, you MUST say "Goodbye" or "Have a great day" to signal the end of the call.`;
 
       let sessionOpen = false;
+      const voiceName = VOICES.find(v => v.id === agent.voice)?.engine === 'Gemini Native' ? agent.voice : 'Zephyr';
       const session = await geminiService.connectLive(enhancedPrompt, {
         onopen: () => {
           console.log("Live session opened");
@@ -922,7 +1048,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           console.log("Live session closed");
           stopLiveCall();
         }
-      });
+      }, voiceName);
       setLiveSession(session);
 
       // Setup Microphone
@@ -944,7 +1070,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       processorRef.current = processor;
       
       processor.onaudioprocess = (e: any) => {
-        if (!sessionOpen) return;
+        if (!sessionOpen || isCallPausedRef.current) return;
         
         const inputData = e.inputBuffer.getChannelData(0);
         // Convert to 16-bit PCM
@@ -977,7 +1103,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const playAudioChunk = async (base64Data: string) => {
-    if (!audioContextRef.current) return;
+    if (!audioContextRef.current || isCallPausedRef.current) return;
     
     try {
       const binaryString = atob(base64Data);
@@ -1124,7 +1250,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           ].map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
+              onClick={() => {
+                setActiveTab(item.id as any);
+                if (window.innerWidth < 1024) {
+                  setIsSidebarOpen(false);
+                }
+              }}
               className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                 activeTab === item.id 
                   ? isAdmin && !isImpersonating
@@ -1365,7 +1496,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">${u.balance.toFixed(2)}</p>
+                              <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">${(u.balance || 0).toFixed(2)}</p>
                             </div>
                           </div>
                         ))}
@@ -1545,7 +1676,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       </thead>
                       <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
                         {calls.map((call) => (
-                          <tr key={call.id} className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                          <tr 
+                            key={call.id} 
+                            onClick={() => {
+                              setSelectedCall(call);
+                              setShowCallDetailsModal(true);
+                            }}
+                            className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                          >
                             <td className="px-8 py-6">
                               <div className="flex flex-col">
                                 <span className={`font-bold font-mono ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{call.caller}</span>
@@ -1683,6 +1821,69 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   <p className="text-slate-400 text-sm font-medium">To connect your own Twilio numbers, set your webhook URL to: <code className="bg-slate-950 px-2 py-1 rounded text-indigo-400 font-mono">{window.location.origin}/api/voice?agentId=1</code></p>
                 </div>
               </div>
+
+              {/* Sandbox Dialer */}
+              <div className={`p-10 rounded-[3rem] border transition-all ${
+                theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+              }`}>
+                <div className="flex items-center space-x-4 mb-8">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                    <Phone className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className={`text-xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Sandbox Dialer</h4>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Test your numbers via search-to-dial</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-1 space-y-4">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Destination Number</label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={outboundNumber}
+                        onChange={(e) => setOutboundNumber(e.target.value)}
+                        placeholder="+1 555 000 0000"
+                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`} />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex space-x-2">
+                        <button 
+                          onClick={() => setOutboundNumber('+1 (888) AGENT-AI')}
+                          className="px-3 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-lg text-[10px] font-black uppercase hover:bg-indigo-500/20 transition-all"
+                        >
+                          Use Sandbox
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Test with Agent</label>
+                    <select 
+                      value={outboundAgentId}
+                      onChange={(e) => setOutboundAgentId(e.target.value)}
+                      className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
+                      theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}>
+                      <option value="">Select Agent...</option>
+                      {agents.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button 
+                      onClick={handleOutboundCall}
+                      disabled={!outboundNumber || !outboundAgentId}
+                      className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-10 py-4 rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/30 active:scale-95 transition-all flex items-center justify-center space-x-2"
+                    >
+                      <Phone className="w-5 h-5" />
+                      <span>Initiate Test Call</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -1737,12 +1938,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         </button>
                       </div>
                       <h4 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{agent.name}</h4>
-                      <div className="flex items-center space-x-3 mb-8">
-                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center">
-                          <MessageSquare className="w-3 h-3 mr-2" />
-                          {agent.voice}
-                        </p>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${agent.provider === 'Vapi' ? 'bg-white text-black border-white' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
+                      <div className="flex flex-wrap items-center gap-3 mb-8">
+                        <div className="flex items-center space-x-2 bg-slate-800/20 px-3 py-1 rounded-full border border-white/5">
+                          <MessageSquare className="w-3 h-3 text-indigo-400" />
+                          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                            {agent.voice} {agent.gender ? `• ${agent.gender}` : ''}
+                          </p>
+                        </div>
+                        {agent.pitch !== undefined && (
+                          <div className="flex items-center space-x-1 bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded-lg border border-indigo-500/20 text-[9px] font-black uppercase tracking-tighter">
+                            <span>P:{agent.pitch}x S:{agent.speed}x</span>
+                          </div>
+                        )}
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${agent.provider === 'Vapi' ? 'bg-white text-black border-white' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
                           {agent.provider || 'CallingAgent'}
                         </span>
                       </div>
@@ -1762,13 +1970,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       <button 
                         onClick={() => {
                           setSelectedAgent(agent);
-                          setTestChat([]);
-                          setShowTestModal(true);
+                          startLiveCall(undefined, agent);
                         }}
-                        className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-xs font-black text-white transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2"
+                        className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2"
                       >
-                        <Play className="w-3.5 h-3.5" />
-                        <span>Test Agent</span>
+                        <Mic className="w-3.5 h-3.5" />
+                        <span>Direct Call</span>
                       </button>
                       <button 
                         onClick={() => {
@@ -1854,7 +2061,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     </thead>
                     <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
                       {calls.map((call) => (
-                        <tr key={call.id} className={`group transition-colors ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                        <tr 
+                          key={call.id} 
+                          onClick={() => {
+                            setSelectedCall(call);
+                            setShowCallDetailsModal(true);
+                          }}
+                          className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                        >
                           <td className="px-8 py-6">
                             <div className="flex flex-col">
                               <span className={`font-bold font-mono ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{call.caller}</span>
@@ -1872,7 +2086,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                             </span>
                           </td>
                           <td className="px-8 py-6 text-right">
-                            <button className="text-indigo-400 hover:text-indigo-300 font-bold text-xs">View Transcript</button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCall(call);
+                                setShowCallDetailsModal(true);
+                              }}
+                              className="text-indigo-400 hover:text-indigo-300 font-bold text-xs"
+                            >
+                              View Transcript
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -2283,7 +2506,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         <h4 className={`text-2xl font-black mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h4>
                         <div className="flex items-baseline space-x-1">
                           <span className={`text-4xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                            ${isBillingYearly ? Math.floor(discountedPrice / 12) : discountedPrice.toFixed(0)}
+                            ${isBillingYearly ? Math.floor(discountedPrice / 12) : (discountedPrice || 0).toFixed(0)}
                           </span>
                           {appliedCoupon && (
                             <span className="text-slate-500 line-through text-sm ml-2">
@@ -2294,7 +2517,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                         {isBillingYearly && (
                           <div className="text-[10px] font-bold text-indigo-400 mt-2 uppercase tracking-widest">
-                            Billed ${discountedPrice.toFixed(0)} annually
+                            Billed ${(discountedPrice || 0).toFixed(0)} annually
                           </div>
                         )}
                       </div>
@@ -2311,28 +2534,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="space-y-4">
                         <button 
                           onClick={() => handlePlanUpgrade(plan)}
-                          className={`w-full py-4 rounded-2xl font-black text-sm transition-all ${
+                          className={`w-full py-5 rounded-2xl font-black text-sm transition-all ${
                             plan.name === currentPlan.name 
                               ? theme === 'dark' ? 'bg-slate-800 text-slate-400 cursor-default' : 'bg-slate-100 text-slate-400 cursor-default'
                               : `bg-gradient-to-r ${plan.color} text-white hover:opacity-90 shadow-xl shadow-indigo-600/20`
                           }`}
                         >
-                          {plan.name === currentPlan.name ? 'Current Plan' : `Upgrade to ${plan.name}`}
+                          {plan.name === currentPlan.name ? 'Current Plan' : `Purchase ${plan.name} Plan`}
                         </button>
-                        
-                        {plan.name !== currentPlan.name && (
-                          <button 
-                            onClick={() => handlePlanUpgrade(plan, 'paypal')}
-                            className={`w-full py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center space-x-2 border ${
-                              theme === 'dark' 
-                                ? 'bg-slate-950 border-white/10 text-white hover:bg-slate-900' 
-                                : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            <DollarSign className="w-4 h-4" />
-                            <span>Pay with PayPal</span>
-                          </button>
-                        )}
                       </div>
                     </div>
                   );
@@ -2393,7 +2602,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {allUsers.map((u) => (
+                {loadingUsers && (
+                  <div className="flex justify-center p-20">
+                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {!loadingUsers && allUsers.length === 0 && (
+                  <div className={`p-20 text-center border-2 border-dashed rounded-[3rem] ${theme === 'dark' ? 'border-white/5 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
+                    No users found in the system yet.
+                  </div>
+                )}
+                {!loadingUsers && allUsers.map((u) => (
                   <div key={u.id} className={`border rounded-[2.5rem] p-8 flex items-center justify-between group transition-all ${
                     theme === 'dark' ? 'bg-slate-900/40 border-white/5 hover:border-white/10' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'
                   }`}>
@@ -2421,11 +2640,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right mr-6">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Balance</p>
-                        <p className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${u.balance.toFixed(2)}</p>
-                      </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="text-right mr-6">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Balance</p>
+                            <p className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${(u.balance || 0).toFixed(2)}</p>
+                          </div>
                       <button 
                         onClick={() => onImpersonate(u.email)}
                         className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all border ${
@@ -2497,7 +2716,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           isAdmin && !isImpersonating ? 'text-emerald-400' : 'text-indigo-400'
                         }`}>{inv.id}</td>
                         <td className={`px-8 py-6 font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{inv.user}</td>
-                        <td className={`px-8 py-6 font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${inv.amount.toFixed(2)}</td>
+                        <td className={`px-8 py-6 font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${(inv.amount || 0).toFixed(2)}</td>
                         <td className="px-8 py-6">
                           <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
                             inv.status === 'Paid' 
@@ -3655,38 +3874,99 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`relative w-full max-w-lg border rounded-[3rem] p-10 shadow-2xl overflow-hidden transition-all ${
+              className={`relative w-full max-w-xl border rounded-[3rem] p-10 shadow-2xl overflow-hidden transition-all ${
                 theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
               }`}
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
               <h3 className={`text-3xl font-black mb-8 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Provision Number</h3>
+              
+              {/* Tabs */}
+              <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl mb-8">
+                {(['sandbox', 'buy', 'custom'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setProvisionTab(tab)}
+                    className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                      provisionTab === tab 
+                        ? 'bg-white dark:bg-slate-800 text-indigo-500 shadow-sm' 
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
               <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Select Region</label>
-                  <select className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold appearance-none ${
-                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}>
-                    <option>United States (+1)</option>
-                    <option>United Kingdom (+44)</option>
-                    <option>Canada (+1)</option>
-                    <option>Australia (+61)</option>
-                  </select>
-                </div>
+                {provisionTab === 'sandbox' && (
+                  <div className="space-y-6">
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10`}>
+                      Claim a free sandbox extension on our shared number. Perfect for testing and development.
+                    </p>
+                    <div className={`p-6 border rounded-2xl ${theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+                      <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Sandbox Number:</p>
+                      <p className={`text-2xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (888) AGENT-AI</p>
+                      <p className="text-xs text-slate-500 mt-2 font-mono">Ext: {Math.floor(1000 + Math.random() * 9000)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {provisionTab === 'buy' && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Select Region</label>
+                      <select 
+                        value={selectedRegion}
+                        onChange={(e) => setSelectedRegion(e.target.value)}
+                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}>
+                        <option value="US">United States (+1) - $2.00/mo</option>
+                        <option value="UK">United Kingdom (+44) - $4.00/mo</option>
+                        <option value="CA">Canada (+1) - $2.50/mo</option>
+                        <option value="AU">Australia (+61) - $6.00/mo</option>
+                      </select>
+                    </div>
+                    <div className={`p-6 border rounded-2xl ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                      <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Generated Number:</p>
+                      <p className={`text-2xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (555) {Math.floor(Math.random() * 900) + 100}-{Math.floor(Math.random() * 9000) + 1000}</p>
+                    </div>
+                  </div>
+                )}
+
+                {provisionTab === 'custom' && (
+                  <div className="space-y-6">
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Import your existing numbers from Twilio or Vapi.
+                    </p>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="+1 555 000 0000"
+                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`} />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Assign to Agent</label>
-                  <select className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold appearance-none ${
+                  <select 
+                    value={provisioningAgentId}
+                    onChange={(e) => setProvisioningAgentId(e.target.value)}
+                    className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
                     theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}>
+                    <option value="">Select Agent...</option>
                     {agents.map(a => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
                 </div>
-                <div className={`p-6 border rounded-2xl ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
-                  <p className="text-xs font-bold text-emerald-600 mb-2">Available Number:</p>
-                  <p className={`text-2xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (555) {Math.floor(Math.random() * 900) + 100}-{Math.floor(Math.random() * 9000) + 1000}</p>
-                </div>
+
                 <div className="flex space-x-4 pt-4">
                   <button 
                     onClick={() => setShowConnectNumber(false)}
@@ -3698,14 +3978,142 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   </button>
                   <button 
                     onClick={() => {
-                      // Logic to add number
+                      if (!provisioningAgentId) {
+                        alert("Please select an agent first.");
+                        return;
+                      }
+                      const newNum: Number = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        number: provisionTab === 'sandbox' ? '+1 (888) AGENT-AI' : '+1 (555) 321-4321',
+                        agentId: provisioningAgentId,
+                        status: 'Active',
+                        location: provisionTab === 'sandbox' ? 'Sandbox' : (selectedRegion === 'US' ? 'United States' : 'International'),
+                        type: provisionTab === 'buy' ? 'real' : provisionTab
+                      };
+                      setNumbers([...numbers, newNum]);
                       setShowConnectNumber(false);
+                      setProvisioningAgentId('');
                     }}
-                    className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/20 transition-all"
+                    className={`flex-1 px-8 py-4 rounded-2xl font-black text-sm shadow-xl transition-all ${
+                      provisionTab === 'buy' 
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20' 
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
+                    }`}
                   >
-                    Purchase & Connect
+                    {provisionTab === 'buy' ? 'Purchase Number' : 'Connect Number'}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Call Details Modal */}
+      <AnimatePresence>
+        {showCallDetailsModal && selectedCall && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={`absolute inset-0 backdrop-blur-xl ${theme === 'dark' ? 'bg-slate-950/90' : 'bg-slate-900/40'}`} 
+              onClick={() => setShowCallDetailsModal(false)}
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`relative w-full max-w-2xl border rounded-[3rem] p-10 shadow-2xl overflow-hidden transition-all ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-full h-2 ${
+                selectedCall.sentiment === 'Positive' ? 'bg-emerald-500' : 
+                selectedCall.sentiment === 'Negative' ? 'bg-rose-500' : 'bg-indigo-500'
+              }`}></div>
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Call Analysis</h3>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">{selectedCall.agent} • {selectedCall.caller}</p>
+                </div>
+                <button 
+                  onClick={() => setShowCallDetailsModal(false)}
+                  className={`p-2 rounded-full transition-all ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-6 mb-8">
+                <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Duration</p>
+                  <p className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{selectedCall.duration}</p>
+                </div>
+                <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Outcome</p>
+                  <p className="text-xl font-black text-indigo-400">{selectedCall.outcome}</p>
+                </div>
+                <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sentiment</p>
+                  <p className={`text-xl font-black ${
+                    selectedCall.sentiment === 'Positive' ? 'text-emerald-400' : 
+                    selectedCall.sentiment === 'Negative' ? 'text-rose-400' : 'text-indigo-400'
+                  }`}>{selectedCall.sentiment}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Sentiment Analysis Result</label>
+                  <div className={`p-6 rounded-2xl border text-sm font-medium leading-relaxed ${
+                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}>
+                    {selectedCall.sentimentAnalysis || "Sentiment analysis is being processed for this call. Please check back shortly."}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Full Transcript</label>
+                  <div className={`p-6 rounded-2xl border text-sm font-medium leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar ${
+                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                  }`}>
+                    {selectedCall.transcript ? (
+                      <div className="space-y-6">
+                        {selectedCall.transcript.split('\n').map((line, i) => {
+                          const isAgent = line.startsWith('Agent:');
+                          return (
+                            <div key={i} className={`flex flex-col ${isAgent ? 'items-start' : 'items-end'}`}>
+                              <span className={`text-[10px] font-black uppercase mb-1 ${isAgent ? 'text-indigo-400' : 'text-emerald-400'}`}>
+                                {isAgent ? 'Agent' : 'Caller'}
+                              </span>
+                              <div className={`max-w-[85%] px-6 py-3 rounded-[1.5rem] ${
+                                isAgent 
+                                  ? theme === 'dark' ? 'bg-indigo-500/10 text-slate-200 border border-indigo-500/20' : 'bg-indigo-50 text-slate-700 border border-indigo-100'
+                                  : theme === 'dark' ? 'bg-slate-800 text-slate-400 border border-white/5' : 'bg-white text-slate-600 border border-slate-200'
+                              }`}>
+                                {line.replace(/^(Agent|Caller): /, '')}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="italic text-slate-500">Transcript not available for this call.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <button 
+                  onClick={() => setShowCallDetailsModal(false)}
+                  className={`w-full py-5 rounded-2xl text-xs font-black uppercase tracking-[0.3em] transition-all border ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-900 hover:bg-slate-200'
+                  }`}
+                >
+                  Close Analysis
+                </button>
               </div>
             </motion.div>
           </div>
@@ -3789,38 +4197,90 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Voice Engine</label>
-                      <select 
-                        value={newAgent.voice}
-                        onChange={(e) => setNewAgent({...newAgent, voice: e.target.value})}
-                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
-                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                      >
-                        <option>CallingAgent Native</option>
-                        <option>ElevenLabs Flash</option>
-                        <option>Cartesia Sonic</option>
-                        <option>OpenAI Whisper</option>
-                      </select>
+                  <>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Voice Selection</label>
+                        <div className={`border rounded-2xl p-2 max-h-[300px] overflow-y-auto custom-scrollbar ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <div className="grid grid-cols-1 gap-2">
+                            {VOICES.map((v) => (
+                              <button
+                                key={v.id}
+                                onClick={() => setNewAgent({
+                                  ...newAgent, 
+                                  voice: v.id, 
+                                  gender: v.gender as any
+                                })}
+                                className={`flex items-center justify-between p-3 rounded-xl transition-all border ${
+                                  newAgent.voice === v.id
+                                    ? 'bg-indigo-600/10 border-indigo-600 text-indigo-400'
+                                    : theme === 'dark'
+                                      ? 'hover:bg-white/5 border-transparent text-slate-400'
+                                      : 'hover:bg-slate-200/50 border-transparent text-slate-600'
+                                }`}
+                              >
+                                <div className="text-left">
+                                  <div className="text-sm font-black tracking-tight">{v.name}</div>
+                                  <div className="text-[10px] opacity-60 font-bold">{v.engine} • {v.gender}</div>
+                                </div>
+                                {newAgent.voice === v.id && <CheckCircle2 className="w-4 h-4" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Logic Orchestrator</label>
+                        <select 
+                          value={newAgent.logic}
+                          onChange={(e) => setNewAgent({...newAgent, logic: e.target.value})}
+                          className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none mb-6 ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option>CallingAgent Orchestrator</option>
+                          <option>FastAPI Agent</option>
+                          <option>Make.com Hook</option>
+                          <option>Custom Webhook</option>
+                        </select>
+
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pitch</label>
+                              <span className="text-[10px] font-black text-indigo-500">{newAgent.pitch}x</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="0.5" 
+                              max="2.0" 
+                              step="0.1"
+                              value={newAgent.pitch}
+                              onChange={(e) => setNewAgent({...newAgent, pitch: parseFloat(e.target.value)})}
+                              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Speed</label>
+                              <span className="text-[10px] font-black text-indigo-500">{newAgent.speed}x</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="0.5" 
+                              max="2.0" 
+                              step="0.1"
+                              value={newAgent.speed}
+                              onChange={(e) => setNewAgent({...newAgent, speed: parseFloat(e.target.value)})}
+                              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Logic Orchestrator</label>
-                      <select 
-                        value={newAgent.logic}
-                        onChange={(e) => setNewAgent({...newAgent, logic: e.target.value})}
-                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
-                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                      >
-                        <option>CallingAgent Orchestrator</option>
-                        <option>FastAPI Agent</option>
-                        <option>Make.com Hook</option>
-                        <option>Custom Webhook</option>
-                      </select>
-                    </div>
-                  </div>
+                  </>
                 )}
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">System Instruction (Prompt)</label>
@@ -3900,13 +4360,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       <span>Start Voice Call</span>
                     </button>
                   ) : (
-                    <button 
-                      onClick={stopLiveCall}
-                      className="flex items-center space-x-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-rose-600/20 animate-pulse"
-                    >
-                      <PhoneOff className="w-4 h-4" />
-                      <span>End Call</span>
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button 
+                        onClick={togglePauseCall}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg ${
+                          isCallPaused 
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/20' 
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
+                        }`}
+                      >
+                        {isCallPaused ? (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span>Resume</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-4 h-4" />
+                            <span>Pause</span>
+                          </>
+                        )}
+                      </button>
+                      <button 
+                        onClick={stopLiveCall}
+                        className="flex items-center space-x-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-rose-600/20 animate-pulse"
+                      >
+                        <PhoneOff className="w-4 h-4" />
+                        <span>End Call</span>
+                      </button>
+                    </div>
                   )}
                   <button 
                     onClick={() => {
@@ -3931,13 +4413,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         {isConnecting ? (
                           <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                          <Mic className="w-8 h-8 text-white animate-bounce" />
+                          <Mic className={`w-8 h-8 text-white ${isCallPaused ? '' : 'animate-bounce'}`} />
                         )}
                       </div>
                       <div className={`border px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl ${
                         theme === 'dark' ? 'bg-slate-900/90 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                       }`}>
-                        {isConnecting ? 'Establishing Neural Link...' : 'Voice Session Active'}
+                        {isConnecting ? 'Establishing Neural Link...' : isCallPaused ? 'Session Paused' : 'Voice Session Active'}
                       </div>
                     </div>
                   </div>
@@ -4049,6 +4531,104 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         )}
       </AnimatePresence>
+      {/* Payment Selection Modal */}
+      <AnimatePresence>
+        {showPaymentSelectionModal && pendingPlan && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={`absolute inset-0 backdrop-blur-xl ${theme === 'dark' ? 'bg-slate-950/90' : 'bg-slate-900/40'}`} 
+              onClick={() => setShowPaymentSelectionModal(false)}
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`relative w-full max-w-lg border rounded-[3rem] p-10 shadow-2xl overflow-hidden transition-all ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Pay to Continue</h3>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Upgrade to {pendingPlan.name} Plan</p>
+                </div>
+                <button 
+                  onClick={() => setShowPaymentSelectionModal(false)}
+                  className={`p-2 rounded-full transition-all ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className={`p-8 rounded-[2rem] border mb-8 ${theme === 'dark' ? 'bg-slate-950/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Selected Plan</span>
+                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
+                    {isBillingYearly ? 'Yearly' : 'Monthly'}
+                  </span>
+                </div>
+                <div className="flex items-baseline space-x-2">
+                  <span className={`text-4xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    ${isBillingYearly ? pendingPlan.yearlyPrice : pendingPlan.price}
+                  </span>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                    {isBillingYearly ? '/ Year' : '/ Month'}
+                  </span>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-2 text-[8px] font-black uppercase tracking-widest">
+                  {pendingPlan.features.slice(0, 3).map((f: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-slate-500">{f}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <button 
+                  onClick={() => confirmPlanUpgrade('stripe')}
+                  className="w-full group relative flex items-center justify-between p-6 bg-[#635BFF] hover:bg-[#5851E0] rounded-[2rem] text-white transition-all shadow-xl shadow-indigo-600/20"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-black uppercase tracking-widest">Pay with Stripe</p>
+                      <p className="text-[10px] opacity-70">Credit Card, Apple Pay, Google Pay</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button 
+                  onClick={() => confirmPlanUpgrade('paypal')}
+                  className="w-full group relative flex items-center justify-between p-6 bg-[#0070BA] hover:bg-[#005EA6] rounded-[2rem] text-white transition-all shadow-xl shadow-blue-600/20"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                      <DollarSign className="w-6 h-6" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-black uppercase tracking-widest">Pay with PayPal</p>
+                      <p className="text-[10px] opacity-70">PayPal Balance, Direct Bank Transfer</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </button>
+              </div>
+
+              <div className="mt-10 text-center">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                  Secure encrypted checkout via industry standards.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Enterprise Request Modal */}
       <AnimatePresence>
         {showEnterpriseModal && (
@@ -4319,25 +4899,45 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Monthly ($)</label>
-                        <input name="price" type="number" defaultValue={editingPlan?.price} required className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold ${
-                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`} placeholder="99" />
+                        <input 
+                          name="price" 
+                          type="number" 
+                          value={calculatePrice(planMinutes)} 
+                          readOnly
+                          className={`w-full border rounded-2xl px-6 py-4 focus:outline-none transition-all font-bold opacity-70 cursor-not-allowed ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`} 
+                        />
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Yearly ($)</label>
-                        <input name="yearlyPrice" type="number" defaultValue={editingPlan?.yearlyPrice} required className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold ${
-                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`} placeholder="950" />
+                        <input 
+                          name="yearlyPrice" 
+                          type="number" 
+                          value={calculateYearlyPrice(planMinutes)}
+                          readOnly
+                          className={`w-full border rounded-2xl px-6 py-4 focus:outline-none transition-all font-bold opacity-70 cursor-not-allowed ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`} 
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-6">
                     <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Minutes</label>
-                      <input name="mins" type="number" defaultValue={editingPlan?.mins} required className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold ${
-                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`} placeholder="e.g. 1000" />
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Minutes (at $0.45/min)</label>
+                      <input 
+                        name="mins" 
+                        type="number" 
+                        value={planMinutes}
+                        onChange={(e) => setPlanMinutes(Number(e.target.value))}
+                        required 
+                        className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-bold ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                        }`} 
+                        placeholder="e.g. 1000" 
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Agents</label>

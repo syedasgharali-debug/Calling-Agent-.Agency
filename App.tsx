@@ -13,6 +13,7 @@ import LegalView from './views/LegalView';
 import CareerView from './views/CareerView';
 import { auth, logoutUser, syncUserProfile } from './services/firebaseService';
 import { onAuthStateChanged } from 'firebase/auth';
+import { motion, AnimatePresence } from 'motion/react';
 
 export type View = 'home' | 'features' | 'pricing' | 'about' | 'docs' | 'login' | 'dashboard' | 'privacy' | 'terms' | 'careers';
 export type UserRole = 'customer' | 'admin' | null;
@@ -51,6 +52,8 @@ interface UserSession {
   plan?: string;
   name?: string;
   profilePic?: string;
+  balance?: number;
+  credits?: number;
 }
 
 const App: React.FC = () => {
@@ -62,33 +65,33 @@ const App: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([
     { 
       name: 'Starter', 
-      price: 29, 
-      yearlyPrice: 280, 
+      price: 45, 
+      yearlyPrice: 432, 
       mins: 100, 
       agents: 2, 
       numbers: 1,
-      features: ['100 Included Mins', '$0.25/min Overage', '2 AI Agents', '1 Phone Number', 'Standard Support'],
+      features: ['100 Included Mins', '$0.65/min Overage', '2 AI Agents', '1 Phone Number', 'Standard Support'],
       color: 'from-blue-600 to-indigo-600'
     },
     { 
       name: 'Pro', 
-      price: 99, 
-      yearlyPrice: 950, 
+      price: 225, 
+      yearlyPrice: 2160, 
       mins: 500, 
       agents: 10, 
       numbers: 5,
-      features: ['500 Included Mins', '$0.18/min Overage', '10 AI Agents', '5 Phone Numbers', 'Priority Support', 'Advanced Analytics'],
+      features: ['500 Included Mins', '$0.65/min Overage', '10 AI Agents', '5 Phone Numbers', 'Priority Support', 'Advanced Analytics'],
       color: 'from-indigo-600 to-purple-600',
       recommended: true
     },
     { 
       name: 'Enterprise', 
-      price: 399, 
-      yearlyPrice: 3800, 
+      price: 1125, 
+      yearlyPrice: 10800, 
       mins: 2500, 
       agents: 50, 
       numbers: 20,
-      features: ['2,500 Included Mins', 'Bring Your Own Key (BYOK)', 'Dedicated Account Manager', 'Full API Access', 'White-labeling'],
+      features: ['2,500 Included Mins', '$0.65/min Overage', 'Bring Your Own Key (BYOK)', 'Dedicated Account Manager', 'Full API Access', 'White-labeling'],
       color: 'from-purple-600 to-pink-600'
     }
   ]);
@@ -101,10 +104,26 @@ const App: React.FC = () => {
     {
       id: '1',
       title: 'The Future of Agentic Voice AI',
-      content: 'CallingAgent.agency is leading the charge in sub-second voice orchestration. Learn how our new native engine is changing the landscape of customer support.',
+      content: 'CallingAgent.agency is leading the charge in sub-second voice orchestration. Learn how our new native engine is changing the landscape of customer support with unprecedented latency optimizations.',
       author: 'Marcus Chen',
       date: '2026-04-01',
-      image: 'https://picsum.photos/seed/callingagent/800/400'
+      image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800'
+    },
+    {
+      id: '2',
+      title: 'Scaling Voice Operations for Global Teams',
+      content: 'Moving from local testing to global deployment requires more than just a good prompt. Explore the architectural shifts needed to handle 10,000+ concurrent minutes.',
+      author: 'Sarah Jenkins',
+      date: '2026-04-05',
+      image: 'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&q=80&w=800'
+    },
+    {
+      id: '3',
+      title: 'The Secret to Natural Sounding AI',
+      content: 'Latency is only half the battle. Discover how combining RAG with low-level neural synthesis produces speech that is indistinguishable from human conversation.',
+      author: 'David Vales',
+      date: '2026-04-08',
+      image: 'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&q=80&w=800'
     }
   ]);
 
@@ -118,6 +137,8 @@ const App: React.FC = () => {
             name: firebaseUser.displayName || '',
             profilePic: firebaseUser.photoURL || '',
             role: profile.role as UserRole,
+            balance: (profile as any).balance || 0,
+            credits: (profile as any).credits || 0,
           });
         }
       } else {
@@ -143,34 +164,26 @@ const App: React.FC = () => {
   }, []);
 
   const navigate = (view: View) => {
-    setCurrentView(view);
     window.location.hash = view;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const handleLogin = (email: string, role: UserRole) => {
-    const newUser = { email, role };
-    setUser(newUser);
-    setImpersonatedUser(null);
-    localStorage.setItem('callingagent_user', JSON.stringify(newUser));
+    // Firebase handles auth state now, but we keep this for local UI state if needed
+    // though onAuthStateChanged will actually trigger the real update
     navigate('dashboard');
   };
 
   const handleLogout = async () => {
     if (user) {
-      // Find the actual firebase UID if we had it, but for now we rely on auth state
       await logoutUser(auth.currentUser?.uid || '');
     }
-    setUser(null);
-    setImpersonatedUser(null);
     navigate('home');
   };
 
   const handleUpdateUser = (updates: Partial<UserSession>) => {
     if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('callingagent_user', JSON.stringify(updatedUser));
+      setUser({ ...user, ...updates });
     }
   };
 
@@ -237,7 +250,17 @@ const App: React.FC = () => {
       <div className="relative z-10 flex flex-col min-h-screen">
         {currentView !== 'dashboard' && <Navbar currentView={currentView} onNavigate={navigate} user={user} onLogout={handleLogout} />}
         <main className="flex-grow">
-          {renderContent()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
         </main>
         {currentView !== 'dashboard' && <Footer onNavigate={navigate} />}
       </div>

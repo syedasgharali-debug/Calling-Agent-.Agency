@@ -60,6 +60,8 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
         name: firebaseUser.displayName || '',
         profilePic: firebaseUser.photoURL || '',
         role: role,
+        balance: 5.00,
+        credits: 100,
         lastLogin: serverTimestamp(),
         status: 'online' as const
       };
@@ -77,6 +79,19 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
     return profileData as { email: string; role: string; name?: string; profilePic?: string };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
+  }
+};
+
+export const getAllUsers = async () => {
+  try {
+    const { getDocs, collection } = await import('firebase/firestore');
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'users');
   }
 };
 

@@ -23,14 +23,14 @@ export interface LiveCallbacks {
 }
 
 export class GeminiService {
-  async connectLive(systemInstruction: string, callbacks: LiveCallbacks) {
+  async connectLive(systemInstruction: string, callbacks: LiveCallbacks, voiceName: string = 'Zephyr') {
     const ai = getAI();
     return ai.live.connect({
       model: "gemini-3.1-flash-live-preview",
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
+          voiceConfig: { prebuiltVoiceConfig: { voiceName } },
         },
         systemInstruction,
       },

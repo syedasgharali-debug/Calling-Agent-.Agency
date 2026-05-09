@@ -60,9 +60,9 @@ const Features: React.FC = () => {
   ];
 
   return (
-    <section id="features" className="py-24 px-6 bg-slate-900/50">
+    <section id="features" className="py-12 px-6 bg-slate-900/50">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Built for Production Scale</h2>
           <p className="text-slate-400 max-w-2xl mx-auto">Don't settle for high-latency wrappers. Use the stack the pros use to handle millions of minutes.</p>
         </div>

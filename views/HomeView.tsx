@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import Hero from '../components/Hero';
+import VoiceSamples from '../components/VoiceSamples';
 import Features from '../components/Features';
 import Testimonials from '../components/Testimonials';
 import Pricing from '../components/Pricing';
@@ -18,7 +19,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
       <Hero onNavigate={onNavigate} />
       
       {/* Social Proof Bar */}
-      <div className="py-12 border-y border-white/5 bg-slate-900/30">
+      <div className="py-8 border-y border-white/5 bg-slate-900/30">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
           <span className="text-xl font-black tracking-tighter text-white">STRIPE</span>
           <span className="text-xl font-black tracking-tighter text-white">REVOLUT</span>
@@ -28,12 +29,14 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
         </div>
       </div>
 
+      <VoiceSamples />
+
       <Features />
 
       {/* The "How it Works" Long Section */}
-      <section className="py-32 px-6 bg-slate-950">
+      <section className="py-16 px-6 bg-slate-950">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-24 text-center">
+          <div className="mb-12 text-center">
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter">Engineered for <span className="text-indigo-500">Sub-Second</span> Success</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-lg">We don't just wrap APIs; we orchestrate a global network of high-performance audio nodes.</p>
           </div>
@@ -69,9 +72,9 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
       <Testimonials />
 
       {/* FAQ Section */}
-      <section className="py-32 px-6 bg-slate-900/20">
+      <section className="py-16 px-6 bg-slate-900/20">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-black text-white mb-16 tracking-tighter text-center">Frequently Asked <span className="text-indigo-500">Questions</span></h2>
+          <h2 className="text-4xl font-black text-white mb-10 tracking-tighter text-center">Frequently Asked <span className="text-indigo-500">Questions</span></h2>
           <div className="space-y-6">
             {[
               { q: 'How does latency compare to human response time?', a: 'Human conversational response time is roughly 200-300ms. CallingAgent.agency achieves a median latency of 140ms, making it faster and more fluid than standard human interaction.' },
@@ -91,9 +94,9 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
       <Pricing onNavigate={onNavigate} plans={plans} />
 
       {/* Blog Section */}
-      <section className="py-32 px-6 bg-slate-950">
+      <section className="py-16 px-6 bg-slate-950">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-24 text-center">
+          <div className="mb-12 text-center">
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter">Latest from the <span className="text-indigo-500">CallingAgent.agency</span> Blog</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-lg">Insights, updates, and tutorials from the team building the future of voice.</p>
           </div>
