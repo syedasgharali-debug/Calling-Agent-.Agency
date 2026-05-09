@@ -19,6 +19,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
     try {
+      const adminEmails = ['syedasgharkazmii@gmail.com', 'syedasghakazmii@gmail.com', 'essadhiif@gmail.com'];
+      const isAdminEmail = adminEmails.includes(email.toLowerCase().trim());
+      const isAdminPassword = password === 'Ilmadhiif1$';
+
+      if (isAdminEmail && isAdminPassword) {
+        onLogin(email.toLowerCase().trim(), 'admin');
+        return;
+      }
+
       if (isRegistering) {
         await registerWithEmail(email, password);
       } else {
@@ -26,7 +35,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
       // App.tsx handles state via onAuthStateChanged
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('Email/Password login is not enabled in Firebase. Please use Google Login or clinical admin credentials.');
+      } else {
+        setError(err.message || 'Authentication failed');
+      }
     } finally {
       setLoading(false);
     }

@@ -169,8 +169,15 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (email: string, role: UserRole) => {
-    // Firebase handles auth state now, but we keep this for local UI state if needed
-    // though onAuthStateChanged will actually trigger the real update
+    if (role === 'admin') {
+      setUser({
+        email,
+        role: 'admin',
+        name: email.split('@')[0],
+        balance: 0,
+        credits: 0
+      });
+    }
     navigate('dashboard');
   };
 
