@@ -74,6 +74,7 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
         role: role,
         balance: 5.00,
         credits: 100,
+        createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         status: 'online' as const
       };
@@ -109,13 +110,16 @@ export const getAllUsers = async () => {
 
 export const logoutUser = async (userId: string) => {
   try {
-    const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-      status: 'offline'
-    });
+    if (userId) {
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, {
+        status: 'offline'
+      }).catch(err => console.warn("Failed to update status to offline:", err));
+    }
     await auth.signOut();
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    console.error("Logout error in service:", error);
+    await auth.signOut(); // Ensure we still sign out locally
   }
 };
 
@@ -146,5 +150,49 @@ export const registerWithEmail = async (email: string, pass: string) => {
   } catch (error) {
     console.error('Email Registration Error:', error);
     throw error;
+  }
+};
+
+export const manuallyCreateUser = async (email: string, role: 'admin' | 'customer') => {
+  try {
+    // Note: This creates a profile record, but NOT a Firebase Auth user.
+    // The user will need to sign up/login with this email later.
+    const customId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const userDocRef = doc(db, 'users', customId);
+    const profileData = {
+      email: email.toLowerCase().trim(),
+      name: email.split('@')[0],
+      profilePic: '',
+      role: role,
+      balance: 0,
+      credits: 0,
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
+      status: 'offline' as const,
+      isManual: true
+    };
+    await setDoc(userDocRef, profileData);
+    return { id: customId, ...profileData };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'users');
+  }
+};
+
+export const deleteUserDoc = async (userId: string) => {
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'users', userId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+  }
+};
+
+export const updateUserBalance = async (userId: string, newBalance: number) => {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      balance: newBalance
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
   }
 };

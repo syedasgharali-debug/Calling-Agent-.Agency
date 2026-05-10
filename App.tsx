@@ -182,10 +182,21 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (user) {
-      await logoutUser(auth.currentUser?.uid || '');
+    try {
+      if (user && auth.currentUser) {
+        await logoutUser(auth.currentUser.uid);
+      } else {
+        await auth.signOut();
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setUser(null);
+      setImpersonatedUser(null);
+      navigate('home');
+      // Force reload to clear any residual state/loops
+      window.location.reload();
     }
-    navigate('home');
   };
 
   const handleUpdateUser = (updates: Partial<UserSession>) => {

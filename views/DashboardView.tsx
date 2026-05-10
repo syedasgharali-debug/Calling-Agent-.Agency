@@ -251,7 +251,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{[key: string]: boolean}>({});
-  const [showConnectNumber, setShowConnectNumber] = useState(true);
+  const [showConnectNumber, setShowConnectNumber] = useState(false);
   const [showPaymentSelectionModal, setShowPaymentSelectionModal] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<any>(null);
   const [showOutboundModal, setShowOutboundModal] = useState(false);
@@ -498,42 +498,67 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [agents]); // Only depend on agents list
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUserEmail) return;
-    const newUser = {
-      id: `u${allUsers.length + 1}`,
-      email: newUserEmail,
-      role: newUserRole,
-      status: 'Active' as const,
-      balance: 0,
-      usage: 0,
-      joined: new Date().toISOString().split('T')[0]
-    };
-    setAllUsers([...allUsers, newUser]);
-    setShowAddUserModal(false);
-    setNewUserEmail('');
+    try {
+      const { manuallyCreateUser } = await import('../services/firebaseService');
+      const newUser = await manuallyCreateUser(newUserEmail, newUserRole);
+      if (newUser) {
+        setAllUsers([newUser, ...allUsers]);
+      }
+      setShowAddUserModal(false);
+      setNewUserEmail('');
+    } catch (error) {
+      console.error("Manual user creation failed:", error);
+    }
   };
 
-  const handleRemoveUser = (id: string) => {
-    setAllUsers(prev => prev.filter(u => u.id !== id));
-    setShowDeleteModal(false);
-    setUserToDelete(null);
+  const formatDate = (val: any) => {
+    if (!val) return 'Recently';
+    if (val.seconds) {
+      return new Date(val.seconds * 1000).toLocaleDateString();
+    }
+    if (val instanceof Date) {
+      return val.toLocaleDateString();
+    }
+    return val.toString();
   };
 
-  const handleBillUser = () => {
+  const handleRemoveUser = async (id: string) => {
+    try {
+      const { deleteUserDoc } = await import('../services/firebaseService');
+      await deleteUserDoc(id);
+      setAllUsers(prev => prev.filter(u => u.id !== id));
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+    }
+  };
+
+  const handleBillUser = async () => {
     if (!userToBill || !billAmount) return;
     const val = parseFloat(billAmount);
-    setAllUsers(prev => prev.map(u => u.id === userToBill.id ? { ...u, balance: u.balance + val } : u));
-    setInvoices(prev => [{
-      id: `inv_${Date.now()}`,
-      user: userToBill.email,
-      amount: val,
-      status: 'Pending',
-      date: new Date().toISOString().split('T')[0]
-    }, ...prev]);
-    setShowBillModal(false);
-    setUserToBill(null);
-    setBillAmount('10.00');
+    const newBalance = (userToBill.balance || 0) + val;
+    
+    try {
+      const { updateUserBalance } = await import('../services/firebaseService');
+      await updateUserBalance(userToBill.id, newBalance);
+      
+      setAllUsers(prev => prev.map(u => u.id === userToBill.id ? { ...u, balance: newBalance } : u));
+      setInvoices(prev => [{
+        id: `inv_${Date.now()}`,
+        user: userToBill.email,
+        amount: val,
+        status: 'Pending',
+        date: new Date().toISOString().split('T')[0]
+      }, ...prev]);
+      setShowBillModal(false);
+      setUserToBill(null);
+      setBillAmount('10.00');
+    } catch (error) {
+      console.error("Failed to update balance:", error);
+    }
   };
 
   const handleCreateTicket = () => {
@@ -1244,6 +1269,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
+              { id: 'provision', label: 'Provision', icon: Plus },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 'billing', label: 'Billing', icon: CreditCard },
               { id: 'enterprise', label: 'Enterprise Solutions', icon: Building2 },
@@ -2364,6 +2390,140 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </motion.div>
           )}
 
+          {activeTab === 'provision' && !isAdmin && (
+            <motion.div 
+              key="provision"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className={`text-2xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Provision New Number</h3>
+                  <p className={`${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} text-sm`}>Get a dedicated phone number for your AI agents in seconds.</p>
+                </div>
+              </div>
+
+              <div className={`border rounded-[3rem] p-10 transition-all ${
+                theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+              }`}>
+                {/* Tabs */}
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl mb-8 max-w-md">
+                  {(['sandbox', 'buy', 'custom'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setProvisionTab(tab)}
+                      className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        provisionTab === tab 
+                          ? 'bg-white dark:bg-slate-800 text-indigo-500 shadow-sm' 
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="max-w-2xl space-y-8">
+                  {provisionTab === 'sandbox' && (
+                    <div className="space-y-6">
+                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 underline-offset-4`}>
+                        Claim a free sandbox extension on our shared number. Perfect for testing and development.
+                      </p>
+                      <div className={`p-8 border rounded-[2rem] ${theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Sandbox Number:</p>
+                            <p className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (888) AGENT-AI</p>
+                            <p className="text-sm text-slate-500 mt-2 font-mono">Extension: {Math.floor(1000 + Math.random() * 9000)}</p>
+                          </div>
+                          <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 active:scale-95 transition-all">
+                            Claim Extension
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {provisionTab === 'buy' && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Select Region</label>
+                          <select 
+                            value={selectedRegion}
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                            className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}>
+                            <option value="US">United States (+1) - $2.00/mo</option>
+                            <option value="UK">United Kingdom (+44) - $4.00/mo</option>
+                            <option value="CA">Canada (+1) - $2.50/mo</option>
+                            <option value="AU">Australia (+61) - $6.00/mo</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Assign to Agent</label>
+                          <select 
+                            className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}>
+                            {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className={`p-8 border rounded-[2rem] flex justify-between items-center ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                        <div>
+                          <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Available Number:</p>
+                          <p className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (555) {Math.floor(Math.random() * 900) + 100}-{Math.floor(Math.random() * 9000) + 1000}</p>
+                          <p className="text-xs text-slate-500 mt-2">Instant activation. Includes 10 free SMS/mo.</p>
+                        </div>
+                        <button className="bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">
+                          Purchase Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {provisionTab === 'custom' && (
+                    <div className="space-y-6">
+                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} bg-slate-500/5 p-4 rounded-2xl border border-slate-500/10`}>
+                        Import your own carrier numbers directly into the CallingAgent network.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                          <input 
+                            type="text" 
+                            placeholder="+1 555 000 0000"
+                            className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Carrier Provider</label>
+                          <select className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}>
+                            <option>Twilio BYOC</option>
+                            <option>Vapi SIP</option>
+                            <option>Retell AI</option>
+                            <option>SignalWire</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button className="w-full bg-slate-950 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-black text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl">
+                        Verify and Connect Number
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'analytics' && (
             <motion.div 
               key="analytics"
@@ -2637,8 +2797,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></div>
                             {u.status}
                           </span>
-                          <span>Joined {u.joined}</span>
-                          <span>{u.usage} mins used</span>
+                          <span>Joined {formatDate(u.createdAt)}</span>
+                          <span>{u.usage || 0} mins used</span>
                         </div>
                       </div>
                     </div>
@@ -3864,7 +4024,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Connect Number Modal */}
       <AnimatePresence>
-        {showConnectNumber && (
+        {showConnectNumber && !isAdmin && !isImpersonating && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }}
