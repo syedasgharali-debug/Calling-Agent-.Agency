@@ -29,7 +29,7 @@ const LegalView: React.FC<LegalViewProps> = ({ type }) => {
       },
       {
         title: '5. Your Rights (GDPR & CCPA)',
-        text: 'Under various global regulations, you have the right to access, rectify, or erase your personal data. You may also object to processing or request data portability. To exercise these rights, please contact our Data Protection Officer at privacy@callingagent.agency.'
+        text: 'Under various global regulations, you have the right to access, rectify, or erase your personal data. You may also object to processing or request data portability.'
       }
     ]
   } : {
@@ -78,11 +78,7 @@ const LegalView: React.FC<LegalViewProps> = ({ type }) => {
         ))}
       </div>
       
-      <div className="mt-24 p-10 bg-slate-900 rounded-3xl border border-white/5">
-        <h4 className="text-white font-bold mb-4">Questions about our legal terms?</h4>
-        <p className="text-slate-500 text-sm mb-6">Our legal team is available to discuss custom agreements for enterprise clients.</p>
-        <button className="text-indigo-400 font-bold hover:text-white transition-colors">Contact Legal Support →</button>
-      </div>
+      {/* Removing legal team contact section per user request */}
     </div>
   );
 };

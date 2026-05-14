@@ -36,7 +36,6 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li><button onClick={() => onNavigate('home')} className="hover:text-indigo-400 transition-colors">Home</button></li>
               <li><button onClick={() => onNavigate('features')} className="hover:text-indigo-400 transition-colors">Features</button></li>
               <li><button onClick={() => onNavigate('pricing')} className="hover:text-indigo-400 transition-colors">Pricing</button></li>
-              <li><button onClick={() => onNavigate('docs')} className="hover:text-indigo-400 transition-colors">API Reference</button></li>
             </ul>
           </div>
           
@@ -55,7 +54,6 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ul className="space-y-6 text-sm font-bold text-slate-500">
               <li><a href="#" className="hover:text-indigo-400 transition-colors">Twitter / X</a></li>
               <li><a href="#" className="hover:text-indigo-400 transition-colors">LinkedIn</a></li>
-              <li><a href="#" className="hover:text-indigo-400 transition-colors">GitHub</a></li>
               <li><a href="#" className="hover:text-indigo-400 transition-colors">YouTube</a></li>
             </ul>
           </div>
@@ -66,7 +64,6 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div className="flex items-center space-x-10">
             <button onClick={() => onNavigate('terms')} className="hover:text-white transition-colors">Legal</button>
             <button onClick={() => onNavigate('privacy')} className="hover:text-white transition-colors">Cookies</button>
-            <a href="#" className="hover:text-white transition-colors">Status</a>
           </div>
         </div>
       </div>

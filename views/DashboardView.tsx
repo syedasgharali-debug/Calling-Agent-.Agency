@@ -158,7 +158,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   blogs,
   setBlogs
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision'>('overview');
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans.find(p => p.name === user.plan) || plans[0]);
   const [isBillingYearly, setIsBillingYearly] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -190,19 +190,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     return (saved as 'dark' | 'light') || 'dark';
   });
 
+  const dismissWelcome = () => {
+    localStorage.setItem('welcome_dismissed', 'true');
+    setShowWelcomePopup(false);
+  };
+
   useEffect(() => {
-    localStorage.setItem('dashboard-theme', theme);
+    try {
+      localStorage.setItem('dashboard-theme', theme);
+    } catch (e) {}
   }, [theme]);
 
   const handleSaveConfig = (key: string, value: string, secondaryKeys?: {[key: string]: string}) => {
-    localStorage.setItem(key, value);
-    if (secondaryKeys) {
-      Object.entries(secondaryKeys).forEach(([k, v]) => localStorage.setItem(k, v));
+    try {
+      if (value !== undefined) {
+        localStorage.setItem(key, value);
+      }
+      if (secondaryKeys) {
+        Object.entries(secondaryKeys).forEach(([k, v]) => {
+          if (v !== undefined) {
+            localStorage.setItem(k, v);
+          }
+        });
+      }
+      setSaveFeedback(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setSaveFeedback(prev => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch (e) {
+      console.error("Failed to save to storage:", e);
     }
-    setSaveFeedback(prev => ({ ...prev, [key]: true }));
-    setTimeout(() => {
-      setSaveFeedback(prev => ({ ...prev, [key]: false }));
-    }, 2000);
   };
 
   const [enterpriseRequests, setEnterpriseRequests] = useState<EnterpriseRequest[]>([
@@ -255,6 +272,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [showPaymentSelectionModal, setShowPaymentSelectionModal] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<any>(null);
   const [showOutboundModal, setShowOutboundModal] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(() => {
+    // Show only if not previously dismissed
+    return !localStorage.getItem('welcome_dismissed');
+  });
   const [showCallDetailsModal, setShowCallDetailsModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [outboundNumber, setOutboundNumber] = useState('');
@@ -461,11 +482,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     ws.onopen = () => console.log("Relay WebSocket connected");
     ws.onmessage = async (event) => {
       try {
-        if (!event.data) return;
-        const msgStr = (event.data as string).toString().trim();
-        if (msgStr === 'undefined' || msgStr === '') return;
+        const msgStr = event.data?.toString().trim();
+        // Defensive check for "undefined", "null", or empty strings to prevent SyntaxError
+        if (!msgStr || msgStr === 'undefined' || msgStr === 'null') return;
         
-        const data = JSON.parse(msgStr);
+        let data;
+        try {
+          data = JSON.parse(msgStr);
+        } catch (e) {
+          // Not JSON, skip
+          return;
+        }
         
         if (data.type === 'CALL_STARTED') {
           console.log("Real call started, initializing agent session...");
@@ -1210,7 +1237,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-900'
+      theme === 'dark' 
+        ? isAdmin && !isImpersonating ? 'bg-[#05110d] text-slate-200' : 'bg-slate-950 text-slate-200' 
+        : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -1232,10 +1261,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } ${
         theme === 'dark' 
-          ? 'bg-slate-900/95 lg:bg-slate-900/50 border-white/5' 
+          ? isAdmin && !isImpersonating 
+            ? 'bg-[#042013]/95 border-emerald-500/20 shadow-[8px_0_30px_rgba(0,0,0,0.5)]' 
+            : 'bg-slate-900/95 lg:bg-slate-900/50 border-white/5' 
           : 'bg-white/95 lg:bg-white/50 border-slate-200 shadow-xl'
       }`}>
-        <div className="flex items-center space-x-3 mb-10 px-2 group cursor-pointer">
+        <div className="flex items-center space-x-3 mb-10 px-2 group cursor-pointer relative">
+          {isAdmin && !isImpersonating && (
+            <div className="absolute -top-3 -left-2 bg-emerald-500 text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-lg z-50">
+              Root Console
+            </div>
+          )}
           <div className="relative w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/30 transition-all duration-500 overflow-hidden group-hover:scale-110">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)]"></div>
             <svg className="w-7 h-7 text-white relative z-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1289,7 +1325,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 activeTab === item.id 
                   ? isAdmin && !isImpersonating
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                    : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                    : 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                   : theme === 'dark'
                     ? 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -1305,7 +1341,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           ))}
         </nav>
 
-        <div className={`pt-6 border-t ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'}`}>
+          {/* Sidebar Footer */}
+          <div className={`pt-6 border-t ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'} mb-4`}>
+             {!isAdmin && (
+               <button 
+                 onClick={() => setShowWelcomePopup(true)}
+                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group mb-4 ${
+                   theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                 }`}
+               >
+                 <div className="flex items-center space-x-3">
+                   <MessageSquare size={16} />
+                   <span className="text-xs font-bold">Platform Info</span>
+                 </div>
+                 <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                 </div>
+               </button>
+             )}
+          </div>
+
           <div className={`rounded-2xl p-4 mb-6 ${theme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs overflow-hidden">
@@ -1329,11 +1384,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
           <p className={`text-[10px] text-center font-bold uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>v2.4.0 Stable</p>
-        </div>
       </aside>
 
       {/* Main Dashboard Area */}
-      <main className="flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12">
+      <main className={`flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12 ${
+        isAdmin && !isImpersonating ? 'bg-[#05110d] selection:bg-emerald-500/30' : 'bg-slate-950 selection:bg-indigo-500/30'
+      }`}>
+        {isAdmin && !isImpersonating && (
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-50 z-20"></div>
+        )}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-12">
           <div className="flex items-center justify-between w-full lg:w-auto">
             <div>
@@ -4993,6 +5052,98 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     }`}
                   >
                     Close Request
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modals & Popups */}
+      <AnimatePresence>
+        {showWelcomePopup && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={dismissWelcome}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            ></motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className={`relative w-full max-w-2xl border rounded-[2.5rem] shadow-2xl overflow-hidden ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+              
+              <div className="p-10">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-indigo-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-500/20 rotate-3 transition-transform">
+                      <MessageSquare size={32} className="text-white" />
+                    </div>
+                    <div>
+                      <h2 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Welcome to CallingAgent</h2>
+                      <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Your Autonomous Voice Command Center</p>
+                    </div>
+                  </div>
+                  <button onClick={dismissWelcome} className={`p-3 rounded-full transition-all ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className={`p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/5 hover:border-indigo-500/30' : 'bg-slate-50 border-slate-200 hover:border-indigo-500/30'}`}>
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500 mb-4">
+                      <Mic size={20} />
+                    </div>
+                    <h3 className={`font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Voice Synthesis</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed">Experience human-like dialogue with sub-300ms latency. Configure your agent's personality and goals in the Agents panel.</p>
+                  </div>
+                  <div className={`p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/5 hover:border-emerald-500/30' : 'bg-slate-50 border-slate-200 hover:border-emerald-500/30'}`}>
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500 mb-4">
+                      <Phone size={20} />
+                    </div>
+                    <h3 className={`font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Live Orchestration</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed">Deploy real phone numbers or use our sandbox to test integrations. Your agents work 24/7 without intervention.</p>
+                  </div>
+                </div>
+
+                <div className={`rounded-3xl p-6 border mb-10 shadow-inner ${theme === 'dark' ? 'bg-slate-950/60 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Quick Start Roadmap</h4>
+                   <div className="space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">1</div>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Configure your first AI agent in the <span className="text-indigo-400 font-bold underline cursor-pointer" onClick={() => { setActiveTab('agents'); dismissWelcome(); }}>Agents</span> tab.</p>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">2</div>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Set up your <span className="text-emerald-400 font-bold underline cursor-pointer" onClick={() => { setActiveTab('integrations'); dismissWelcome(); }}>API Configuration</span> (Twilio) to enable live features.</p>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">3</div>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Provision a number and start receiving autonomous customer calls.</p>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <button 
+                    onClick={dismissWelcome}
+                    className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                  >
+                    Get Started Now
+                  </button>
+                  <button 
+                    onClick={() => { dismissWelcome(); setActiveTab('support'); }}
+                    className={`px-8 py-5 rounded-2xl font-bold text-sm transition-all ${theme === 'dark' ? 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    View Docs
                   </button>
                 </div>
               </div>

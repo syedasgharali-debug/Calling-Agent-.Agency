@@ -33,6 +33,8 @@ export class GeminiService {
           voiceConfig: { prebuiltVoiceConfig: { voiceName } },
         },
         systemInstruction,
+        outputAudioTranscription: {},
+        inputAudioTranscription: {},
       },
       callbacks,
     });
@@ -66,7 +68,7 @@ export class GeminiService {
     try {
       const ai = getAI();
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-3.1-flash-tts-preview",
         contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],

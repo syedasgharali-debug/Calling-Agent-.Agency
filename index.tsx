@@ -3,15 +3,30 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-// Improved workaround for "Cannot set property fetch of #<Window> which has only a getter"
-// Some libraries try to polyfill/override fetch, which fails in restricted environments like iframes.
+// Global error handler to suppress persistent environmental/library errors
+window.addEventListener('error', (event) => {
+  const msg = event.message || '';
+  if (
+    msg.includes('Cannot set property fetch') ||
+    msg.includes('is not valid JSON') ||
+    msg.includes('undefined" is not valid JSON')
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+}, true);
+
+// Workaround for libraries that try to polyfill/override window.fetch
+// Some environments (like restricted iframes) have a read-only fetch getter.
 (function interceptFetch() {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(window, 'fetch');
     
-    // If we can reconfigure it, let's make it have a setter that just logs/ignores 
-    // to prevent libraries from crashing when they try to proxy/polyfill it.
-    if (descriptor && descriptor.configurable) {
+    // If it's already got a setter, or is not something we should touch, skip.
+    if (!descriptor || (descriptor.set && !descriptor.configurable)) return;
+
+    if (descriptor.configurable) {
       const originalFetch = window.fetch;
       try {
         Object.defineProperty(window, 'fetch', {
@@ -19,22 +34,15 @@ import App from './App';
           enumerable: true,
           get: () => originalFetch,
           set: (v) => {
-            console.warn('Blocked attempt to overwrite window.fetch. Libraries often try this for analytics or proxying.', v);
-            // We ignore to prevent "only a getter" TypeError
+            console.warn('Suppressing attempt to overwrite window.fetch:', v);
           }
         });
-      } catch (innerError) {
-        console.error('Inner fetch patch failed:', innerError);
-      }
-    } else if (descriptor && !descriptor.configurable) {
-      // If it's already only a getter and non-configurable, we can't do much.
-      // But we can try to at least warn.
-      if (!descriptor.writable && !descriptor.set) {
-        console.warn('window.fetch is read-only and non-configurable. Libraries trying to polyfill it will crash.');
+      } catch (e) {
+        // Ignore errors during definition
       }
     }
   } catch (e) {
-    console.warn('Failed to patch fetch:', e);
+    // Ignore global errors in this check
   }
 })();
 

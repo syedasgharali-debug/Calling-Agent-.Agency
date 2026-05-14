@@ -11,6 +11,7 @@ import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import LegalView from './views/LegalView';
 import CareerView from './views/CareerView';
+import ChatWidget from './components/ChatWidget';
 import { auth, logoutUser, syncUserProfile } from './services/firebaseService';
 import { onAuthStateChanged } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
@@ -281,6 +282,7 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
         {currentView !== 'dashboard' && <Footer onNavigate={navigate} />}
+        <ChatWidget />
       </div>
     </div>
   );

@@ -214,9 +214,16 @@ async function startServer() {
       
       ws.on("message", (message) => {
         try {
-          const msgStr = message.toString().trim();
-          if (!msgStr || msgStr === 'undefined') return;
-          const data = JSON.parse(msgStr);
+          const msgStr = message?.toString().trim();
+          if (!msgStr || msgStr === 'undefined' || msgStr === 'null') return;
+          
+          let data;
+          try {
+            data = JSON.parse(msgStr);
+          } catch (e) {
+            return;
+          }
+
           if (data.type === 'AGENT_AUDIO') {
             // Send audio back to Twilio
             const targetStream = streams.get(data.streamSid);
@@ -243,9 +250,15 @@ async function startServer() {
 
     ws.on("message", (message) => {
       try {
-        const msgStr = message.toString().trim();
-        if (!msgStr || msgStr === 'undefined') return;
-        const data = JSON.parse(msgStr);
+        const msgStr = message?.toString().trim();
+        if (!msgStr || msgStr === 'undefined' || msgStr === 'null') return;
+        
+        let data;
+        try {
+          data = JSON.parse(msgStr);
+        } catch (e) {
+          return;
+        }
 
         switch (data.event) {
           case "start":
