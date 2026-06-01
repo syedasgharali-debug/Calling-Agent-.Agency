@@ -42,6 +42,7 @@ export interface Blog {
   id: string;
   title: string;
   content: string;
+  fullContent?: string;
   author: string;
   date: string;
   image: string;
@@ -104,24 +105,69 @@ const App: React.FC = () => {
   const [blogs, setBlogs] = useState<Blog[]>([
     {
       id: '1',
-      title: 'The Future of Agentic Voice AI',
+      title: 'The Future of Agentic Voice AI and Sub-Second Latency',
       content: 'CallingAgent.agency is leading the charge in sub-second voice orchestration. Learn how our new native engine is changing the landscape of customer support with unprecedented latency optimizations.',
+      fullContent: `At CallingAgent.agency, we believe the next frontier of human-computer interaction is voice. Traditional Interactive Voice Response (IVR) systems are clunky, static, and frustrating for users. They rely on rigid button-press menus that offer zero flexibility. On the other hand, traditional LLM-based voice solutions are plagued by high latency, verbal drift, and an inability to handle natural human interruptions.
+
+### The Sub-Second Latency Challenge
+
+For a voice conversation to feel natural, the round-trip latency must be under 300 milliseconds. Most API-driven voice systems require several seconds to convert speech to text, route it to an LLM, wait for a text response, and then synthetically verbalize the output. 
+
+CallingAgent.agency solves this by implementing an ultra-low latency conversational orchestrator. By routing audio directly via secure SIP trunks to our native engine, we run transcription, intelligence, and neural speech synthesis in a continuous parallel pipeline. The moment a user stops speaking, our Voice Activity Detection (VAD) triggers an immediate response from our domain-fine-tuned models, achieving a sub-150ms latency that outperforms standard human-to-human conversational reaction times.
+
+### Elevating the Customer Experience
+
+By utilizing intelligent call routing and deep integration with CRM systems like Salesforce, HubSpot, and custom relational databases, our autonomous voice agents do more than chat—they execute actions. They can check product inventory in real-time, update ticket statuses, process subscription upgrades, and schedule calendar appointments without any human supervision, completely transforming the voice support landscape. Your enterprise can now operate a high-performance, responsive support line that answers every call on the first ring, understands context instantly, and moves customer requests forward flawlessly.`,
       author: 'Marcus Chen',
       date: '2026-04-01',
       image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800'
     },
     {
       id: '2',
-      title: 'Scaling Voice Operations for Global Teams',
+      title: 'Scaling AI Voice Operations for Global Telephony Systems',
       content: 'Moving from local testing to global deployment requires more than just a good prompt. Explore the architectural shifts needed to handle 10,000+ concurrent minutes.',
+      fullContent: `Taking an AI voice agent from a local development environment to a production call center handling thousands of concurrent calls requires robust, enterprise-grade telecommunication architecture.
+
+### The Physics of Real-Time Voice
+
+Unlike web APIs or text chats, real-time voice is highly sensitive to network jitter and packet loss. A simple 50ms delay in network packets can distort a voice streaming over WebRTC or SIP, causing stuttering and breaking conversational continuity. 
+
+CallingAgent.agency operates on a global cluster with point-of-presence (PoP) edge nodes distributed worldwide. We establish direct peer-to-peer SIP connections with major carriers, ensuring that phone traffic is routed over dedicated fiber networks with minimal hop counts.
+
+### Load Balancing and Concurrent Orchestration
+
+When scaling to 10,000+ concurrent call minutes, system utilization spikes. If an LLM response is delayed even slightly, the calling carrier may interpret the silence as a dropped call.
+
+Our orchestration layer uses a highly scalable actor-model framework that dynamically balances calls across regional nodes. If a particular server experiences a load spike, calls are shifted to neighboring edge nodes instantly with no interruption to the ongoing conversation. By decoupling network-level VoIP signaling from LLM execution, we guarantee 99.99% conversation uptime and stellar audio quality even under peak traffic volumes.
+
+### Dynamic Carrier Routing
+
+Our platform dynamically monitors call quality metrics (including packet loss, latency, and MOS scores) in real-time. If a carrier network shows signs of degradation, our automated SIP trunking protocol routes subsequent traffic through alternative global telecom partners instantly, keeping your call center running flawlessly.`,
       author: 'Sarah Jenkins',
       date: '2026-04-05',
       image: 'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&q=80&w=800'
     },
     {
       id: '3',
-      title: 'The Secret to Natural Sounding AI',
-      content: 'Latency is only half the battle. Discover how combining RAG with low-level neural synthesis produces speech that is indistinguishable from human conversation.',
+      title: 'The Secret to Natural Sounding AI: Dynamic Turn-Taking and Neural Synthesis',
+      content: 'Latency is only half the battle. Discover how combining VAD with low-level neural synthesis produces speech that is indistinguishable from human conversation.',
+      fullContent: `Have you ever spoken to a voice assistant and felt an immediate sense of artificiality? This is often referred to as the 'uncanny valley' of voice. It is caused by three key elements: unnatural pauses, monotonous intonation, and an inability to handle conversational interruption.
+
+### Beyond Text-To-Speech
+
+Standard text-to-speech (TTS) engines take static paragraphs and turn them into voice streams. This works fine for reading audiobooks, but fails completely in a fluid voice dialogue where sentences are shaped by context, feedback, and turn-taking.
+
+At CallingAgent.agency, we utilize a streaming neural voice synthesis pipe. Instead of waiting for full sentences to generate, our synthesis engine streams audio fragments word-by-word. This allows our voice agents to hum, pause, and adjust their inflection dynamically based on user reactions.
+
+### Mastering Interruptions with Advanced Voice Activity Detection (VAD)
+
+Humans interrupt each other constantly. In a standard voice bot, if a user speaks while the bot is talking, the bot will speak over them or awkwardly freeze. 
+
+CallingAgent.agency utilizes advanced digital signal processing (DSP) to separate user audio from the bot’s synthetic feedback. When the customer starts talking, our voice synthesis stream is cut off in less than 50 milliseconds, and the user's input is immediately routed back into the reasoning core. This creates a highly responsive, natural, and polite conversational flow where the AI agent is always listening and adaptive.
+
+### Adaptive Intonation and Emotion
+
+Our voice stack models the speaker's emotional state by analyzing voice acoustics, tone, and speech rate. If a caller is frustrated, our agents automatically lower their pitch, speak slower, and use reassuring, compassionate language patterns. If a caller is excited, the agent matches their energy, creating a feedback loop that builds immense trust and brand affinity.`,
       author: 'David Vales',
       date: '2026-04-08',
       image: 'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&q=80&w=800'

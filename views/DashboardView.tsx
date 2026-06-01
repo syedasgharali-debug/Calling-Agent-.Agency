@@ -5798,6 +5798,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     id: editingBlog?.id || Math.random().toString(36).substr(2, 9),
                     title: formData.get('title') as string,
                     content: formData.get('content') as string,
+                    fullContent: formData.get('fullContent') as string,
                     author: 'Admin',
                     date: new Date().toISOString().split('T')[0],
                     image: formData.get('image') as string || 'https://picsum.photos/seed/blog/800/400'
@@ -5825,10 +5826,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Content</label>
-                    <textarea name="content" defaultValue={editingBlog?.content} required className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-medium h-48 resize-none ${
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Short Summary (for card preview)</label>
+                    <textarea name="content" defaultValue={editingBlog?.content} required className={`w-full border rounded-2xl px-6 py-3 focus:outline-none focus:border-emerald-500 transition-all font-medium h-24 resize-none ${
                       theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`} placeholder="Write your post content here..." />
+                    }`} placeholder="Write a short summary of the blog post..." />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Full Article Body</label>
+                    <textarea name="fullContent" defaultValue={editingBlog?.fullContent || editingBlog?.content} className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 transition-all font-medium h-48 resize-none ${
+                      theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`} placeholder="Write your full-length article content. Supports '### ' and '## ' for formatting." />
                   </div>
 
                   <button type="submit" className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-emerald-500 transition-all shadow-xl shadow-emerald-600/20">
