@@ -141,14 +141,14 @@ const DocsView: React.FC = () => {
                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-sm font-black shrink-0 shadow-lg shadow-indigo-600/20">1</div>
                     <div>
                       <h4 className="text-xl font-bold text-white mb-2">Select Your Engine</h4>
-                      <p className="text-slate-400 text-sm leading-relaxed font-medium">Choose between <strong>CallingAgent Native</strong> for ultra-low latency or <strong>Vapi.ai</strong> for advanced enterprise features. CallingAgent Native is optimized for speed, while Vapi offers complex multi-turn logic.</p>
+                      <p className="text-slate-400 text-sm leading-relaxed font-medium">Choose our <strong>Standard Low-Latency Engine</strong> for instant response times or the <strong>Universal Agent Engine</strong> for complex multi-turn logic, custom state machines, and long-term memory.</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-6">
                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-sm font-black shrink-0 shadow-lg shadow-indigo-600/20">2</div>
                     <div>
                       <h4 className="text-xl font-bold text-white mb-2">Voice Personalization</h4>
-                      <p className="text-slate-400 text-sm leading-relaxed font-medium">Pick from our library of state-of-the-art voices. We support <strong>ElevenLabs Flash</strong>, <strong>Cartesia Sonic</strong>, and <strong>OpenAI Whisper</strong> for crystal-clear audio. You can adjust pitch and speed to match your brand's tone.</p>
+                      <p className="text-slate-400 text-sm leading-relaxed font-medium">Select from our library of state-of-the-art neural voices. We support premium high-fidelity voice synthesis and high-accuracy speech recognition pipelines. You can adjust pitch and speed to match your brand's voice.</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-6">

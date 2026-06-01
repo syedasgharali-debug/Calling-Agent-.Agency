@@ -14,7 +14,7 @@ const Features: React.FC = () => {
     },
     {
       title: "Agentic Tool Calling",
-      description: "Connect your agents to Make.com, GoHighLevel, or custom Python endpoints. Agents can check inventory and book Cal.com slots on the fly.",
+      description: "Connect your agents directly to Salesforce, HubSpot, or custom databases. Agents can check inventory, lookup clients, and book scheduling slots on the fly.",
       icon: (
         <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2V4zm-6 8a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zm12 0a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1z" />
@@ -22,8 +22,8 @@ const Features: React.FC = () => {
       )
     },
     {
-      title: "Vapi/Retell Native Sync",
-      description: "Pre-configured orchestration layer ensures you don't have to manage the 'glue' code. We handle the webhooks and SIP trunking for you.",
+      title: "Omni-Channel Voice Gateway",
+      description: "An integrated calling gateway ensures you don't have to manage any 'glue' code. We handle the direct VoIP SIP trunking and dynamic carrier routing.",
       icon: (
         <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -41,7 +41,7 @@ const Features: React.FC = () => {
     },
     {
       title: "Custom Voice Cloning",
-      description: "Clone your best salesperson's voice with ElevenLabs Flash. Maintain brand consistency across millions of concurrent calls.",
+      description: "Clone your best salesperson's or support representative's voice in high-fidelity. Maintain brand consistency across millions of concurrent calls.",
       icon: (
         <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />

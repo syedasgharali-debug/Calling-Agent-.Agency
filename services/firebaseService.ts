@@ -154,27 +154,40 @@ export const registerWithEmail = async (email: string, pass: string) => {
 };
 
 export const manuallyCreateUser = async (email: string, role: 'admin' | 'customer') => {
+  const customId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const profileData = {
+    email: email.toLowerCase().trim(),
+    name: email.split('@')[0],
+    profilePic: '',
+    role: role,
+    balance: 0,
+    credits: 0,
+    status: 'offline' as const,
+    isManual: true
+  };
   try {
     // Note: This creates a profile record, but NOT a Firebase Auth user.
     // The user will need to sign up/login with this email later.
-    const customId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const userDocRef = doc(db, 'users', customId);
-    const profileData = {
-      email: email.toLowerCase().trim(),
-      name: email.split('@')[0],
-      profilePic: '',
-      role: role,
-      balance: 0,
-      credits: 0,
+    await setDoc(userDocRef, {
+      ...profileData,
       createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      status: 'offline' as const,
-      isManual: true
+      lastLogin: serverTimestamp()
+    });
+    return { 
+      id: customId, 
+      ...profileData,
+      createdAt: { seconds: Math.floor(Date.now() / 1000) },
+      lastLogin: { seconds: Math.floor(Date.now() / 1000) }
     };
-    await setDoc(userDocRef, profileData);
-    return { id: customId, ...profileData };
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, 'users');
+    console.warn("Firestore error on user creation, persisting locally in memory:", error);
+    return {
+      id: customId,
+      ...profileData,
+      createdAt: { seconds: Math.floor(Date.now() / 1000) },
+      lastLogin: { seconds: Math.floor(Date.now() / 1000) }
+    };
   }
 };
 

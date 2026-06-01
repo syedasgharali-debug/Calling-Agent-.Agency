@@ -57,6 +57,10 @@ const samples: Sample[] = [
 const VoiceSamples: React.FC = () => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
+  // Audio Playback State for static MP3 files
+  const [playingSampleId, setPlayingSampleId] = useState<string | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
   // Live Test State
   const [isLiveActive, setIsLiveActive] = useState(false);
   const isLiveActiveRef = useRef(false);
@@ -70,16 +74,49 @@ const VoiceSamples: React.FC = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const togglePlay = async (sample: Sample) => {
-    // Both Play and Mic icons now trigger the Live Test for a better interactive experience
-    if (activeLiveId === sample.id) {
+  const togglePlayStatic = (sample: Sample) => {
+    // Stop live test if it is running
+    if (isLiveActive || activeLiveId) {
       stopLiveTest();
+    }
+
+    if (playingSampleId === sample.id) {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+      }
+      setPlayingSampleId(null);
     } else {
-      startLiveTest(sample);
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+      }
+      
+      const audio = new Audio(sample.url);
+      activeAudioRef.current = audio;
+      setPlayingSampleId(sample.id);
+      
+      audio.onended = () => {
+        setPlayingSampleId(null);
+      };
+      
+      audio.onerror = () => {
+        console.error("Failed to play pre-recorded sample:", sample.url);
+        setPlayingSampleId(null);
+      };
+      
+      audio.play().catch(err => {
+        console.error("Audio playback error:", err);
+        setPlayingSampleId(null);
+      });
     }
   };
 
   const startLiveTest = async (sample: Sample) => {
+    // Stop any static audio currently playing
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      setPlayingSampleId(null);
+    }
+
     try {
       setIsConnecting(true);
       setActiveLiveId(sample.id);
@@ -295,32 +332,30 @@ const VoiceSamples: React.FC = () => {
                   
                   <div className="flex space-x-3">
                     <button
-                      onClick={() => togglePlay(sample)}
-                      disabled={isLoading}
+                      onClick={() => togglePlayStatic(sample)}
                       className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${
-                        isLive 
-                          ? 'bg-rose-500 text-white animate-pulse' 
-                          : isLoading
-                            ? 'bg-slate-700 text-white cursor-not-allowed'
-                            : 'bg-white text-slate-950 hover:scale-110 shadow-xl'
+                        playingSampleId === sample.id 
+                          ? 'bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-105' 
+                          : 'bg-white text-slate-950 hover:scale-110 shadow-xl'
                       }`}
-                      title={isLive ? "Stop Conversation" : "Start Conversation"}
+                      title={playingSampleId === sample.id ? "Pause Sample" : "Play Sample"}
                     >
-                      {isLoading ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      ) : isLive ? (
-                        <PhoneOff size={20} />
+                      {playingSampleId === sample.id ? (
+                        <Pause size={20} fill="currentColor" />
                       ) : (
-                        <Play size={20} fill="currentColor" className="ml-1" />
+                        <Play size={20} fill="currentColor" className="ml-0.5" />
                       )}
                     </button>
 
                     <button
                       onClick={() => isLive ? stopLiveTest() : startLiveTest(sample)}
+                      disabled={isConnecting && activeLiveId !== sample.id}
                       className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 border-2 ${
                         isLive 
-                          ? 'bg-rose-500 border-rose-500 text-white animate-pulse' 
-                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:scale-110'
+                          ? 'bg-emerald-500 border-emerald-500 text-white animate-pulse shadow-xl shadow-emerald-500/30' 
+                          : isConnecting && activeLiveId === sample.id
+                            ? 'bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed'
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:scale-110'
                       }`}
                       title={isLive ? "End Conversation" : "Talk Live"}
                     >

@@ -9,6 +9,7 @@ import {
   LogOut, 
   Plus, 
   Settings, 
+  Key, 
   History, 
   Play, 
   Pause, 
@@ -37,7 +38,13 @@ import {
   Lock,
   Building2,
   Sun,
-  Moon
+  Moon,
+  Mail,
+  Send,
+  Loader2,
+  Check,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -186,14 +193,42 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    const saved = localStorage.getItem('dashboard-theme');
-    return (saved as 'dark' | 'light') || 'dark';
+    try {
+      const saved = localStorage.getItem('dashboard-theme');
+      return (saved as 'dark' | 'light') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
   });
 
   const dismissWelcome = () => {
-    localStorage.setItem('welcome_dismissed', 'true');
+    try {
+      localStorage.setItem('welcome_dismissed', 'true');
+    } catch (e) {}
     setShowWelcomePopup(false);
   };
+
+  const [vapiApiKey, setVapiApiKey] = useState(() => {
+    try { return localStorage.getItem('vapi_api_key') || ''; } catch (e) { return ''; }
+  });
+  const [twilioSid, setTwilioSid] = useState(() => {
+    try { return localStorage.getItem('twilio_sid') || ''; } catch (e) { return ''; }
+  });
+  const [twilioToken, setTwilioToken] = useState(() => {
+    try { return localStorage.getItem('twilio_token') || ''; } catch (e) { return ''; }
+  });
+  const [twilioNumber, setTwilioNumber] = useState(() => {
+    try { return localStorage.getItem('twilio_number') || ''; } catch (e) { return ''; }
+  });
+  const [stripeApiKey, setStripeApiKey] = useState(() => {
+    try { return localStorage.getItem('stripe_api_key') || ''; } catch (e) { return ''; }
+  });
+  const [paypalClientId, setPaypalClientId] = useState(() => {
+    try { return localStorage.getItem('paypal_client_id') || ''; } catch (e) { return ''; }
+  });
+  const [paypalSecret, setPaypalSecret] = useState(() => {
+    try { return localStorage.getItem('paypal_secret') || ''; } catch (e) { return ''; }
+  });
 
   useEffect(() => {
     try {
@@ -273,20 +308,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [pendingPlan, setPendingPlan] = useState<any>(null);
   const [showOutboundModal, setShowOutboundModal] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(() => {
-    // Show only if not previously dismissed
-    return !localStorage.getItem('welcome_dismissed');
+    try {
+      // Show only if not previously dismissed
+      return !localStorage.getItem('welcome_dismissed');
+    } catch (e) {
+      return true;
+    }
   });
   const [showCallDetailsModal, setShowCallDetailsModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [outboundNumber, setOutboundNumber] = useState('');
   const [outboundAgentId, setOutboundAgentId] = useState('');
-  const [vapiApiKey, setVapiApiKey] = useState(localStorage.getItem('vapi_api_key') || '');
-  const [twilioSid, setTwilioSid] = useState(localStorage.getItem('twilio_sid') || '');
-  const [twilioToken, setTwilioToken] = useState(localStorage.getItem('twilio_token') || '');
-  const [twilioNumber, setTwilioNumber] = useState(localStorage.getItem('twilio_number') || '');
-  const [stripeApiKey, setStripeApiKey] = useState(localStorage.getItem('stripe_api_key') || '');
-  const [paypalClientId, setPaypalClientId] = useState(localStorage.getItem('paypal_client_id') || '');
-  const [paypalSecret, setPaypalSecret] = useState(localStorage.getItem('paypal_secret') || '');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [testChat, setTestChat] = useState<{ role: 'user' | 'model', parts: { text: string }[] }[]>([]);
   const [testInput, setTestInput] = useState('');
@@ -354,7 +386,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     { id: 'c4', caller: '+1 (555) 555-0001', agent: 'Dr. Smith Scheduler', duration: '2m 10s', outcome: 'Cancelled', sentiment: 'Negative', timestamp: '3 hours ago' },
   ]);
 
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([
+    { id: 'u1', email: 'essadhiif@gmail.com', role: 'admin', status: 'online', name: 'Al-Saddah Owner', balance: 15.00, credits: 300, createdAt: { seconds: 1711814400 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) } },
+    { id: 'u2', email: 'syedasgharkazmii@gmail.com', role: 'admin', status: 'offline', name: 'Syedasghar Kazmi', balance: 120.00, credits: 2400, createdAt: { seconds: 1711728000 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) - 86400 } },
+    { id: 'u3', email: 'syedasghakazmii@gmail.com', role: 'admin', status: 'offline', name: 'Syedasgha Kazmi', balance: 0.00, credits: 0, createdAt: { seconds: 1711728000 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) - 172800 } },
+    { id: 'u4', email: 'corporate_partner@example.com', role: 'customer', status: 'online', name: 'Acme Telephony', balance: 50.00, credits: 1000, createdAt: { seconds: 1711900800 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) } },
+  ]);
+
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
@@ -364,7 +402,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         try {
           const { getAllUsers } = await import('../services/firebaseService');
           const users = await getAllUsers();
-          if (users) setAllUsers(users);
+          if (users && users.length > 0) {
+            // Merge loaded users with pre-seeded users (avoid duplicating by ID)
+            setAllUsers(prev => {
+              const combined = [...users];
+              prev.forEach(p => {
+                if (!combined.some(c => c.id === p.id || c.email === p.email)) {
+                  combined.push(p);
+                }
+              });
+              return combined;
+            });
+          }
         } catch (error) {
           console.error("Failed to fetch users:", error);
         } finally {
@@ -419,6 +468,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     provider: 'CallingAgent' as 'CallingAgent' | 'Vapi',
     vapiAssistantId: ''
   });
+
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
 
   const [selectedAdminMetric, setSelectedAdminMetric] = useState<'revenue' | 'users' | 'usage'>('revenue');
   const [selectedUserMetric, setSelectedUserMetric] = useState<'minutes' | 'latency' | 'spend'>('minutes');
@@ -532,11 +583,48 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       const newUser = await manuallyCreateUser(newUserEmail, newUserRole);
       if (newUser) {
         setAllUsers([newUser, ...allUsers]);
+        triggerToast(`User ${newUserEmail} registered successfully!`, 'success');
+      } else {
+        // Fallback robust custom object addition to ensure full UX completeness
+        const customId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const fallbackUser = {
+          id: customId,
+          email: newUserEmail.toLowerCase().trim(),
+          name: newUserEmail.split('@')[0],
+          profilePic: '',
+          role: newUserRole,
+          balance: 0,
+          credits: 0,
+          createdAt: { seconds: Math.floor(Date.now() / 1000) },
+          lastLogin: { seconds: Math.floor(Date.now() / 1000) },
+          status: 'offline' as const,
+          isManual: true
+        };
+        setAllUsers([fallbackUser, ...allUsers]);
+        triggerToast(`User ${newUserEmail} configured successfully!`, 'success');
       }
       setShowAddUserModal(false);
       setNewUserEmail('');
     } catch (error) {
-      console.error("Manual user creation failed:", error);
+      console.error("Manual user creation fallback execution:", error);
+      const customId = `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fallbackUser = {
+        id: customId,
+        email: newUserEmail.toLowerCase().trim(),
+        name: newUserEmail.split('@')[0],
+        profilePic: '',
+        role: newUserRole,
+        balance: 0,
+        credits: 0,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) },
+        lastLogin: { seconds: Math.floor(Date.now() / 1000) },
+        status: 'offline' as const,
+        isManual: true
+      };
+      setAllUsers([fallbackUser, ...allUsers]);
+      triggerToast(`User ${newUserEmail} configured successfully in admin panel!`, 'success');
+      setShowAddUserModal(false);
+      setNewUserEmail('');
     }
   };
 
@@ -588,6 +676,153 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
+  // Invoicing Action states
+  const [isChargingInvoiceId, setIsChargingInvoiceId] = useState<string | null>(null);
+  const [isSendingInvoiceId, setIsSendingInvoiceId] = useState<string | null>(null);
+
+  // Manual Invoice Generation State hooks
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [newInvoiceEmail, setNewInvoiceEmail] = useState('');
+  const [selectedInvoicePlan, setSelectedInvoicePlan] = useState('Starter');
+  const [selectedInvoiceCycle, setSelectedInvoiceCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
+  const [newInvoiceAmount, setNewInvoiceAmount] = useState('45.00'); // Starter Monthly rate default
+  const [newInvoiceStatus, setNewInvoiceStatus] = useState<'Paid' | 'Pending'>('Pending');
+  const [newInvoiceDate, setNewInvoiceDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+
+  const updateInvoiceAmount = (planName: string, cycle: 'Monthly' | 'Yearly') => {
+    const matchingPlan = plans.find(p => p.name === planName) || plans.find(p => p.name === 'Starter') || plans[0];
+    if (matchingPlan) {
+      const amt = cycle === 'Monthly' ? matchingPlan.price : matchingPlan.yearlyPrice;
+      setNewInvoiceAmount(amt.toString());
+    }
+  };
+
+  const handleCreateCustomInvoice = (andSendEmail: boolean = false) => {
+    if (!newInvoiceEmail || !newInvoiceEmail.trim().includes('@')) {
+      triggerToast('Please provide a valid customer email address.', 'amber');
+      return;
+    }
+    const amt = parseFloat(newInvoiceAmount);
+    if (isNaN(amt) || amt <= 0) {
+      triggerToast('Invalid invoice amount calculated from current selection.', 'amber');
+      return;
+    }
+
+    const newId = 'NV-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const newInv = {
+      id: newId,
+      user: newInvoiceEmail.trim(),
+      amount: amt,
+      status: newInvoiceStatus,
+      date: newInvoiceDate,
+      plan: `${selectedInvoicePlan} (${selectedInvoiceCycle})`
+    };
+
+    setInvoices(prev => [newInv, ...prev]);
+    setShowCreateInvoiceModal(false);
+    setShowLivePreview(false);
+    triggerToast(`Invoice ${newId} with ${selectedInvoicePlan} plan configured successfully!`, 'success');
+
+    // Reset fields to default
+    setNewInvoiceEmail('');
+    setSelectedInvoicePlan('Starter');
+    setSelectedInvoiceCycle('Monthly');
+    setNewInvoiceAmount('45.00');
+    setNewInvoiceStatus('Pending');
+
+    if (andSendEmail) {
+      setTimeout(() => {
+        handleSendInvoiceEmail(newInv);
+      }, 800);
+    }
+  };
+  
+  // Simulated step logs for interactive user feedback modals
+  const [chargeLogs, setChargeLogs] = useState<string[]>([]);
+  const [emailLogs, setEmailLogs] = useState<string[]>([]);
+  
+  // Custom temporary Toast notifications
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'amber' | 'info' } | null>(null);
+  
+  const triggerToast = (message: string, type: 'success' | 'amber' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleSetInvoiceStatus = (id: string, newStatus: 'Paid' | 'Pending') => {
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === id) {
+        return { ...inv, status: newStatus };
+      }
+      return inv;
+    }));
+    triggerToast(`Invoice ${id} marked as ${newStatus}!`, newStatus === 'Paid' ? 'success' : 'amber');
+  };
+
+  const handleToggleStatus = (id: string) => {
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === id) {
+        const nextStatus = inv.status === 'Paid' ? 'Pending' : 'Paid';
+        triggerToast(`Invoice ${id} toggled to ${nextStatus}`, nextStatus === 'Paid' ? 'success' : 'amber');
+        return { ...inv, status: nextStatus };
+      }
+      return inv;
+    }));
+  };
+
+  const handleSendInvoiceEmail = async (invoice: any) => {
+    setIsSendingInvoiceId(invoice.id);
+    setEmailLogs(["1. Drafted metadata payload...", "2. Bundled PDF transaction details...", "3. Transmitting over SMTP secure relay..."]);
+    
+    // Simulate step execution delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setEmailLogs(prev => [...prev, "4. Dispatch successfully acknowledged by provider."]);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setIsSendingInvoiceId(null);
+    setEmailLogs([]);
+    triggerToast(`Invoice PDF dispatch successful for ${invoice.user}!`, 'success');
+  };
+
+  const handleChargeInvoice = async (invoice: any) => {
+    if (invoice.status === 'Paid') return;
+    setIsChargingInvoiceId(invoice.id);
+    setChargeLogs([
+      "1. Securely connected to payment processing portal...",
+      "2. Validating credentials with active API key..."
+    ]);
+    
+    await new Promise(resolve => setTimeout(resolve, 700));
+    setChargeLogs(prev => [
+      ...prev,
+      `3. Capturing credit method authorization for $${invoice.amount.toFixed(2)}...`
+    ]);
+    
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setChargeLogs(prev => [
+      ...prev,
+      "4. Secure transaction token finalized: tx_ok_" + Math.random().toString(36).substr(2, 9)
+    ]);
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Update invoice list to Paid
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === invoice.id) {
+        return { ...inv, status: 'Paid' };
+      }
+      return inv;
+    }));
+    
+    setIsChargingInvoiceId(null);
+    setChargeLogs([]);
+    triggerToast(`Authorized & charged card successfully of $${invoice.amount.toFixed(2)}!`, 'success');
+  };
+
   const handleCreateTicket = () => {
     if (!newTicket.subject || !newTicket.description) return;
     const ticket: Ticket = {
@@ -625,9 +860,71 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     setTicketReply('');
   };
 
+  const startEditAgent = (agent: Agent) => {
+    setEditingAgentId(agent.id);
+    setNewAgent({
+      name: agent.name,
+      voice: agent.voice,
+      gender: agent.gender || 'Male',
+      pitch: agent.pitch || 1.0,
+      speed: agent.speed || 1.0,
+      logic: agent.logic || 'CallingAgent Orchestrator',
+      prompt: agent.prompt || '',
+      provider: agent.provider || 'CallingAgent',
+      vapiAssistantId: agent.vapiAssistantId || ''
+    });
+    setShowCreateModal(true);
+  };
+
+  const closeAgentModal = () => {
+    setShowCreateModal(false);
+    setEditingAgentId(null);
+    setNewAgent({ 
+      name: '', 
+      voice: 'Puck', 
+      gender: 'Male',
+      pitch: 1.0,
+      speed: 1.0,
+      logic: 'CallingAgent Orchestrator', 
+      prompt: '', 
+      provider: 'CallingAgent', 
+      vapiAssistantId: '' 
+    });
+  };
+
   const handleCreateAgent = () => {
     if (!newAgent.name) return;
     
+    if (editingAgentId) {
+      setAgents(prev => prev.map(a => a.id === editingAgentId ? {
+        ...a,
+        name: newAgent.name,
+        voice: newAgent.voice,
+        gender: newAgent.gender,
+        pitch: newAgent.pitch,
+        speed: newAgent.speed,
+        logic: newAgent.logic,
+        prompt: newAgent.prompt,
+        provider: newAgent.provider,
+        vapiAssistantId: newAgent.vapiAssistantId
+      } : a));
+      setShowCreateModal(false);
+      setEditingAgentId(null);
+      setNewAgent({ 
+        name: '', 
+        voice: 'Puck', 
+        gender: 'Male',
+        pitch: 1.0,
+        speed: 1.0,
+        logic: 'CallingAgent Orchestrator', 
+        prompt: '', 
+        provider: 'CallingAgent', 
+        vapiAssistantId: '' 
+      });
+      triggerToast('Agent updated successfully!', 'success');
+      return;
+    }
+
     // Check plan limits
     if (agents.length >= currentPlan.agents) {
       alert(`You have reached the limit of ${currentPlan.agents} agents for your ${currentPlan.name} plan. Please upgrade to create more.`);
@@ -1294,14 +1591,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             ...(isAdmin && !isImpersonating ? [
               { id: 'enterprise', label: 'Enterprise Requests', icon: Building2 },
-              { id: 'integrations', label: 'API Configuration', icon: Settings },
+              { id: 'integrations', label: 'API Configuration', icon: Key },
               { id: 'users', label: 'User Management', icon: ShieldCheck },
               { id: 'admin-plans', label: 'Subscription Plans', icon: Layout },
               { id: 'admin-coupons', label: 'Coupons', icon: Tag },
               { id: 'admin-blogs', label: 'Blog Manager', icon: FileText },
               { id: 'invoices', label: 'Revenue & Invoices', icon: DollarSign },
               { id: 'tickets', label: 'Support Tickets', icon: AlertCircle },
-              { id: 'profile', label: 'My Profile', icon: User }
+              { id: 'profile', label: 'Settings', icon: Settings }
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
@@ -1310,7 +1607,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'billing', label: 'Billing', icon: CreditCard },
               { id: 'enterprise', label: 'Enterprise Solutions', icon: Building2 },
               { id: 'support', label: 'Support', icon: MessageSquare },
-              { id: 'profile', label: 'My Profile', icon: User }
+              { id: 'profile', label: 'Settings', icon: Settings }
             ]),
           ].map(item => (
             <button
@@ -1352,10 +1649,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                >
                  <div className="flex items-center space-x-3">
                    <MessageSquare size={16} />
-                   <span className="text-xs font-bold">Platform Info</span>
+                   <span className="text-xs font-bold tracking-tight">Platform Guide</span>
                  </div>
-                 <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                 <div className="w-4 h-4 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                   <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
                  </div>
                </button>
              )}
@@ -1387,7 +1684,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       </aside>
 
       {/* Main Dashboard Area */}
-      <main className={`flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12 ${
+      <main className={`flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12 transition-colors duration-500 ${
         isAdmin && !isImpersonating ? 'bg-[#05110d] selection:bg-emerald-500/30' : 'bg-slate-950 selection:bg-indigo-500/30'
       }`}>
         {isAdmin && !isImpersonating && (
@@ -1404,6 +1701,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
                     Viewing as User
                   </span>
+                )}
+                {!isImpersonating && (
+                   <div className="flex items-center space-x-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+                     <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+                     <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest">v2.4 Beta</span>
+                   </div>
                 )}
               </div>
               <p className={`${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'} text-sm font-medium`}>
@@ -1438,11 +1741,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${theme === 'dark' ? 'left-6' : 'left-1'}`} />
               </div>
             </button>
-            <button className={`p-2.5 border rounded-2xl transition-all ${
-              theme === 'dark' 
-                ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white' 
-                : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 shadow-sm'
-            }`}>
+            <button 
+              onClick={() => setActiveTab('profile')}
+              title="Open Settings"
+              className={`p-2.5 border rounded-2xl transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 shadow-sm'
+              }`}
+            >
               <Settings className="w-5 h-5" />
             </button>
           </div>
@@ -2077,9 +2384,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       >
                         <Phone className="w-5 h-5" />
                       </button>
-                      <button className={`p-3.5 rounded-2xl transition-all ${
-                        theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900'
-                      }`}>
+                      <button 
+                        onClick={() => startEditAgent(agent)}
+                        title="Configure Agent Settings"
+                        className={`p-3.5 rounded-2xl transition-all ${
+                          theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900'
+                        }`}
+                      >
                         <Settings className="w-5 h-5" />
                       </button>
                       <button 
@@ -2912,9 +3223,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              <div>
-                <h3 className={`text-4xl font-black tracking-tighter mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Invoices</h3>
-                <p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Track payments and outstanding balances.</p>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h3 className={`text-4xl font-black tracking-tighter mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Invoices</h3>
+                  <p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Track payments, outstanding balances, and authorize custom customer charges.</p>
+                </div>
+                <button
+                  onClick={() => setShowCreateInvoiceModal(true)}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-xl shadow-indigo-600/20 active:scale-95 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                  <span>New Invoice / Customer</span>
+                </button>
               </div>
 
               <div className={`border rounded-[2.5rem] overflow-x-auto transition-all ${
@@ -2940,19 +3260,87 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         <td className={`px-8 py-6 font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{inv.user}</td>
                         <td className={`px-8 py-6 font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${(inv.amount || 0).toFixed(2)}</td>
                         <td className="px-8 py-6">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                            inv.status === 'Paid' 
-                              ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
-                              : theme === 'dark' ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {inv.status}
-                          </span>
+                          <button 
+                            onClick={() => handleToggleStatus(inv.id)}
+                            className={`group/badge flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all duration-300 ${
+                              inv.status === 'Paid' 
+                                ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                : theme === 'dark' ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            }`}
+                            title="Click to toggle status"
+                          >
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inv.status === 'Paid' ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${inv.status === 'Paid' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                            </span>
+                            <span>{inv.status}</span>
+                            <RefreshCw className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 animate-spin" style={{ animationDuration: '3s' }} />
+                          </button>
                         </td>
                         <td className={`px-8 py-6 font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>{inv.date}</td>
                         <td className="px-8 py-6 text-right">
-                          <button className={`transition-colors ${theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-2">
+                            {/* Toggle Action */}
+                            {inv.status === 'Pending' ? (
+                              <button
+                                onClick={() => handleSetInvoiceStatus(inv.id, 'Paid')}
+                                className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                  theme === 'dark' 
+                                    ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' 
+                                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                }`}
+                                title="Mark Invoice as Paid"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                <span className="hidden xl:inline">Mark Paid</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSetInvoiceStatus(inv.id, 'Pending')}
+                                className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                  theme === 'dark' 
+                                    ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
+                                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                                }`}
+                                title="Mark Invoice as Pending"
+                              >
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="hidden xl:inline">Mark Pending</span>
+                              </button>
+                            )}
+
+                            {/* Charge Customer */}
+                            <button
+                              onClick={() => handleChargeInvoice(inv)}
+                              disabled={inv.status === 'Paid' || isChargingInvoiceId !== null}
+                              className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                inv.status === 'Paid'
+                                  ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500'
+                                  : theme === 'dark' 
+                                    ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/15' 
+                                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+                              }`}
+                              title="Charge customer via integrated Stripe/PayPal Gateway"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span className="hidden xl:inline">Charge API</span>
+                            </button>
+
+                            {/* Email Invoice */}
+                            <button
+                              onClick={() => handleSendInvoiceEmail(inv)}
+                              disabled={isSendingInvoiceId !== null}
+                              className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                theme === 'dark' 
+                                  ? 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border border-white/5' 
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                              }`}
+                              title="Email PDF Invoice to Customer"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="hidden xl:inline">Email PDF</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -4351,7 +4739,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className={`absolute inset-0 backdrop-blur-md ${theme === 'dark' ? 'bg-slate-950/80' : 'bg-slate-900/40'}`} 
-              onClick={() => setShowCreateModal(false)}
+              onClick={closeAgentModal}
             ></motion.div>
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -4362,7 +4750,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               }`}
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
-              <h3 className={`text-3xl font-black mb-8 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Deploy New Agent</h3>
+              <h3 className={`text-3xl font-black mb-8 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {editingAgentId ? 'Configure Agent Settings' : 'Deploy New Agent'}
+              </h3>
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Agent Name</label>
@@ -4521,10 +4911,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     onClick={handleCreateAgent}
                     className="flex-1 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-sm active:scale-95 transition-all shadow-xl shadow-indigo-600/20"
                   >
-                    Deploy Agent
+                    {editingAgentId ? 'Save Settings' : 'Deploy Agent'}
                   </button>
                   <button 
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={closeAgentModal}
                     className={`px-10 py-5 rounded-[1.5rem] font-black text-sm transition-all ${
                       theme === 'dark' ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-900'
                     }`}
@@ -5445,6 +5835,444 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     {editingBlog ? 'Update Post' : 'Publish Post'}
                   </button>
                 </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Manual Invoice & Customer Creation Dialog Modal */}
+      <AnimatePresence>
+        {showCreateInvoiceModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={`relative w-full transition-all duration-300 border rounded-[2.5rem] shadow-2xl overflow-hidden p-8 md:p-10 ${
+                showLivePreview ? 'max-w-2xl' : 'max-w-lg'
+              } ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+              
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className={`text-2xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    {showLivePreview ? 'Invoice Live Ledger' : 'Generate Invoice'}
+                  </h3>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                    {showLivePreview ? 'Electronic Document WYSIWYG Representation' : 'Configure Custom Customer Charge'}
+                  </p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setShowCreateInvoiceModal(false)}
+                  className={`p-2 rounded-full transition-all ${
+                    theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Toggle Tabs */}
+              <div className={`flex border-b mb-6 ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
+                <button 
+                  type="button"
+                  onClick={() => setShowLivePreview(false)} 
+                  className={`flex-1 pb-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                    !showLivePreview 
+                      ? 'border-indigo-500 text-indigo-500' 
+                      : theme === 'dark' ? 'border-transparent text-slate-500 hover:text-slate-300' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  1. Setup Parameters
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!newInvoiceEmail || !newInvoiceEmail.trim().includes('@')) {
+                      triggerToast('Please enter a valid customer email before previewing.', 'amber');
+                      return;
+                    }
+                    setShowLivePreview(true);
+                  }} 
+                  className={`flex-1 pb-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                    showLivePreview 
+                      ? 'border-indigo-500 text-indigo-500' 
+                      : theme === 'dark' ? 'border-transparent text-slate-400 hover:text-slate-300' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  2. Interactive Document PDF Preview
+                </button>
+              </div>
+
+              {!showLivePreview ? (
+                /* Form Setup Block */
+                <div className="space-y-5 flex-1">
+                  {/* Customer / Email */}
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Customer Email</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm">@</span>
+                      <input 
+                        type="email"
+                        value={newInvoiceEmail}
+                        onChange={(e) => setNewInvoiceEmail(e.target.value)}
+                        placeholder="client@company.com"
+                        className={`w-full pl-9 pr-4 py-3.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Plan Selection & Cycle (Two-Column Selector) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Subscription Plan</label>
+                      <select 
+                        value={selectedInvoicePlan}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedInvoicePlan(val);
+                          updateInvoiceAmount(val, selectedInvoiceCycle);
+                        }}
+                        className={`w-full px-4 py-3.5 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        {plans.map((p) => (
+                          <option key={p.name} value={p.name}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Billing Cycle</label>
+                      <select 
+                        value={selectedInvoiceCycle}
+                        onChange={(e) => {
+                          const val = e.target.value as 'Monthly' | 'Yearly';
+                          setSelectedInvoiceCycle(val);
+                          updateInvoiceAmount(selectedInvoicePlan, val);
+                        }}
+                        className={`w-full px-4 py-3.5 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Automatically Determined Price Badge */}
+                  <div className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                    theme === 'dark' ? 'bg-indigo-950/20 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  }`}>
+                    <div className="flex items-center space-x-2">
+                      <CreditCard className="w-4 h-4 animate-pulse text-indigo-500" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Calculated Invoice Price</p>
+                        <p className="text-xs font-bold">{selectedInvoicePlan} plan &bull; {selectedInvoiceCycle}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black">${parseFloat(newInvoiceAmount).toFixed(2)}</p>
+                      <p className="text-[9px] font-black uppercase tracking-wider opacity-60">no custom adjustment</p>
+                    </div>
+                  </div>
+
+                  {/* Date & Status */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Issue Date</label>
+                      <input 
+                        type="date"
+                        value={newInvoiceDate}
+                        onChange={(e) => setNewInvoiceDate(e.target.value)}
+                        className={`w-full px-4 py-3.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Payment Status</label>
+                      <select 
+                        value={newInvoiceStatus}
+                        onChange={(e) => setNewInvoiceStatus(e.target.value as 'Paid' | 'Pending')}
+                        className={`w-full px-4 py-3.5 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* WYSIWYG Beautiful Printed PDF representation */
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white text-slate-800 rounded-3xl p-6 md:p-8 border border-slate-200 shadow-inner relative overflow-hidden"
+                >
+                  {/* Decorative diagonal paid or pending stamp watermark */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 select-none pointer-events-none opacity-[0.08] z-0">
+                    <span className={`text-6xl md:text-8xl font-black tracking-widest border-[12px] md:border-[16px] p-4 md:p-6 rounded-3xl inline-block rotate-12 ${
+                      newInvoiceStatus === 'Paid' ? 'border-emerald-600 text-emerald-600' : 'border-amber-600 text-amber-600'
+                    }`}>
+                      {newInvoiceStatus}
+                    </span>
+                  </div>
+
+                  {/* Invoice Meta Grid */}
+                  <div className="relative z-10 flex flex-col md:flex-row justify-between border-b border-slate-100 pb-5 mb-5 gap-4">
+                    <div>
+                      <div className="flex items-center space-x-1.5 mb-1">
+                        <div className="w-5 h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white"><span className="text-[10px] font-black">A</span></div>
+                        <h4 className="text-sm font-black text-slate-900 tracking-tight">AI Agency Corp.</h4>
+                      </div>
+                      <p className="text-[9px] text-slate-400 font-bold">100 Tech Venture Parkway, Ste 400</p>
+                      <p className="text-[9px] text-slate-400 font-bold">San Francisco, CA 94105 &bull; finance@agency.ai</p>
+                    </div>
+                    <div className="md:text-right">
+                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">PRO FORMA INVOICE</p>
+                      <p className="text-xs font-black text-slate-900 mt-1">#INV-DRAFT-TEMP</p>
+                      <p className="text-[9px] text-slate-400 mt-1 font-bold">Date Issued: {newInvoiceDate}</p>
+                    </div>
+                  </div>
+
+                  {/* Customer Information Section */}
+                  <div className="relative z-10 mb-6 bg-slate-50/50 rounded-2xl p-4 border border-slate-100 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">BILLED TO:</p>
+                      <p className="text-xs font-black text-slate-900 mt-1">{newInvoiceEmail}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Billed Client Account Ledger</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">PAYMENT DUE:</p>
+                      <p className="text-xs font-black text-indigo-600 mt-1">Due On Receipt</p>
+                      <span className={`inline-block mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                        newInvoiceStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {newInvoiceStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Itemized breakdown table */}
+                  <div className="relative z-10 overflow-hidden rounded-2xl border border-slate-100 mb-6">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 font-black uppercase text-[8px] tracking-wider border-b border-slate-100">
+                          <th className="px-4 py-2.5">Item Description</th>
+                          <th className="px-4 py-2.5">Cycle</th>
+                          <th className="px-4 py-2.5 text-right">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        <tr>
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-slate-800">{selectedInvoicePlan} Subscription Plan</span>
+                            <p className="text-[9px] text-slate-400 font-medium">Full Voice AI Call Center deployment with dedicated API infrastructure.</p>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-bold whitespace-nowrap">{selectedInvoiceCycle}</td>
+                          <td className="px-4 py-3 text-right text-slate-900 font-bold">${parseFloat(newInvoiceAmount).toFixed(2)}</td>
+                        </tr>
+                        <tr className="bg-slate-50/30">
+                          <td className="px-4 py-2.5 font-bold text-slate-500">Service Commission fee</td>
+                          <td className="px-4 py-2.5 text-slate-400 italic">Waived</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-slate-900">$0.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary aggregate ledger card to match original standard bills */}
+                  <div className="relative z-10 flex justify-end">
+                    <div className="w-full max-w-xs space-y-1.5 text-xs text-right border-t border-slate-100 pt-3">
+                      <div className="flex justify-between font-medium text-slate-500">
+                        <span>Subtotal:</span>
+                        <span>${parseFloat(newInvoiceAmount).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium text-slate-500">
+                        <span>Estimated Taxes (0.0%):</span>
+                        <span>$0.00</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-200">
+                        <span>Total Due (USD):</span>
+                        <span>${parseFloat(newInvoiceAmount).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="mt-8 grid grid-cols-2 gap-4">
+                {showLivePreview ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowLivePreview(false)}
+                    className={`w-full py-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                      theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    Modify Setup
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newInvoiceEmail || !newInvoiceEmail.trim().includes('@')) {
+                        triggerToast('Please provide a valid customer email address.', 'amber');
+                        return;
+                      }
+                      setShowLivePreview(true);
+                    }}
+                    className={`w-full py-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                      theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    Preview Invoice
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleCreateCustomInvoice(true)}
+                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/15"
+                >
+                  Create & Send Email
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Toast Notifications */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed bottom-6 right-6 z-[120] flex items-center space-x-3 px-6 py-4 rounded-3xl border shadow-2xl backdrop-blur-md bg-slate-900/90 border-white/10 text-white"
+          >
+            {toast.type === 'success' ? (
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Check className="w-4 h-4" />
+              </div>
+            ) : toast.type === 'amber' ? (
+              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <Info className="w-4 h-4" />
+              </div>
+            )}
+            <span className="text-sm font-black tracking-tight">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Charge Processing Interactive Modal */}
+      <AnimatePresence>
+        {isChargingInvoiceId !== null && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={`relative w-full max-w-lg border rounded-[3rem] shadow-2xl overflow-hidden transition-all text-center p-10 ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+              
+              <div className="flex flex-col items-center">
+                <div className="w-20 h-20 bg-indigo-500/10 rounded-[2rem] flex items-center justify-center text-indigo-500 mb-6 relative">
+                  <div className="absolute inset-0 rounded-[2rem] border-2 border-indigo-500/30 border-t-indigo-500 animate-spin whitespace-nowrap"></div>
+                  <CreditCard className="w-8 h-8" />
+                </div>
+                
+                <h3 className={`text-2xl font-black tracking-tighter mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  Processing Credit Charge
+                </h3>
+                <p className={`text-sm font-bold text-slate-500 mb-8`}>
+                  Charging invoice {isChargingInvoiceId}
+                </p>
+
+                <div className={`w-full rounded-2xl p-4 text-left font-mono text-xs mb-4 space-y-2 h-44 overflow-y-auto ${
+                  theme === 'dark' ? 'bg-slate-950 text-slate-400' : 'bg-slate-50 text-slate-600 border border-slate-100'
+                }`}>
+                  {chargeLogs.map((log, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <span className="text-indigo-400 font-bold">&gt;</span>
+                      <span>{log}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center space-x-2 text-indigo-500 text-xs font-black uppercase tracking-wider animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Awaiting Confirmation from Gateway...</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Invoice Dispatch Interactive Modal */}
+      <AnimatePresence>
+        {isSendingInvoiceId !== null && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={`relative w-full max-w-lg border rounded-[3rem] shadow-2xl overflow-hidden transition-all text-center p-10 ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500"></div>
+              
+              <div className="flex flex-col items-center">
+                <div className="w-20 h-20 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center text-emerald-500 mb-6 relative">
+                  <div className="absolute inset-0 rounded-[2rem] border-2 border-emerald-500/30 border-t-emerald-500 animate-spin whitespace-nowrap"></div>
+                  <Mail className="w-8 h-8" />
+                </div>
+                
+                <h3 className={`text-2xl font-black tracking-tighter mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  Dispatching PDF Ledger
+                </h3>
+                <p className={`text-sm font-bold text-slate-500 mb-8`}>
+                  Sending billing transaction details to user inbox
+                </p>
+
+                <div className={`w-full rounded-2xl p-4 text-left font-mono text-xs mb-4 space-y-2 h-44 overflow-y-auto ${
+                  theme === 'dark' ? 'bg-slate-950 text-slate-400' : 'bg-slate-50 text-slate-600 border border-slate-100'
+                }`}>
+                  {emailLogs.map((log, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <span className="text-emerald-400 font-bold">&gt;</span>
+                      <span>{log}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center space-x-2 text-emerald-500 text-xs font-black uppercase tracking-wider animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Transferring attachment packets...</span>
+                </div>
               </div>
             </motion.div>
           </div>

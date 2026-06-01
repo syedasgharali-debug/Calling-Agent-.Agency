@@ -24,13 +24,13 @@ const FeaturesView: React.FC<FeaturesViewProps> = ({ onNavigate }) => {
         <Features />
 
         <section className="mt-32">
-          <h2 className="text-4xl font-black text-white mb-12 tracking-tight">The "Million Dollar Stack"</h2>
+          <h2 className="text-4xl font-black text-white mb-12 tracking-tight">The CallingAgent AI Telephony Stack</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { title: 'Vapi Orchestration', desc: 'The backbone of our real-time voice intelligence, handling complex multi-turn logic and state management.' },
-              { title: 'Deepgram STT', desc: 'World-class speech-to-text with sub-100ms latency, optimized for telephony and noisy environments.' },
-              { title: 'Cartesia Sonic', desc: 'Ultra-fast, high-fidelity text-to-speech that delivers human-like emotional resonance in real-time.' },
-              { title: 'Custom LLM Core', desc: 'Fine-tuned models specifically for conversational voice, ensuring natural flow and minimal latency.' }
+              { title: 'Autonomous Orchestrator', desc: 'The intellectual core of our real-time voice stack, routing multi-turn logic and managing persistent states instantly.' },
+              { title: 'CallingAgent Speech-to-Text', desc: 'Proprietary speech-to-text with sub-90ms latency, specifically optimized for public telephony and noisy environments.' },
+              { title: 'CallingAgent Voice Synthesis', desc: 'Ultra-fast, high-fidelity neural text-to-speech that speaks with natural breathing rhythms and emotional context.' },
+              { title: 'Domain-Fine-Tuned LLMs', desc: 'Fine-tuned, custom model architectures specializing in real-time dialog flow with zero verbal drift or latency.' }
             ].map((item, i) => (
               <div key={i} className="p-10 bg-slate-900/50 border border-white/5 rounded-[3rem] hover:border-indigo-500/30 transition-all">
                 <h3 className="text-xl font-bold text-white mb-4">{item.title}</h3>

@@ -55,7 +55,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
               },
               { 
                 step: '03', 
-                title: 'Cartesia Voice Synthesis', 
+                title: 'CallingAgent Neural Synthesis', 
                 desc: 'We utilize state-of-the-art neural synthesis to generate speech that includes natural pauses, intonation changes, and emotional nuance, eliminating the uncanny valley.'
               }
             ].map((item, i) => (
@@ -78,7 +78,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs }) => {
           <div className="space-y-6">
             {[
               { q: 'How does latency compare to human response time?', a: 'Human conversational response time is roughly 200-300ms. CallingAgent.agency achieves a median latency of 140ms, making it faster and more fluid than standard human interaction.' },
-              { q: 'Can I use my existing Twilio numbers?', a: 'Yes. CallingAgent.agency is built on open SIP standards. You can point your existing Twilio, Vonage, or Telnyx trunks to our orchestration nodes in seconds.' },
+              { q: 'Can I use my existing phone numbers?', a: 'Yes. CallingAgent.agency is built on open SIP standards. You can point your existing carrier, Twilio, Vonage, or Telnyx trunks to our orchestration nodes in seconds.' },
               { q: 'Is my customer data secure?', a: 'CallingAgent.agency is SOC2 Type II compliant. We offer HIPAA-compliant instances for healthcare providers and private cloud deployments for enterprise clients.' },
               { q: 'Does the AI support non-English languages?', a: 'We currently support 24 languages including Spanish, French, German, Mandarin, and Japanese with native-sounding regional accents.' }
             ].map((item, i) => (
