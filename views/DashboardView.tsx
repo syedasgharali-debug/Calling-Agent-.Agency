@@ -401,7 +401,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         setLoadingUsers(true);
         try {
           const { getAllUsers } = await import('../services/firebaseService');
-          const users = await getAllUsers();
+          const users = await getAllUsers() as any[] | undefined;
           if (users && users.length > 0) {
             // Merge loaded users with pre-seeded users (avoid duplicating by ID)
             setAllUsers(prev => {

@@ -45,13 +45,13 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <div className="relative bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl p-1 md:p-12">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { label: 'TELEPHONY', value: 'Global SIP Trunk', detail: 'Secure Voice Trunks', color: 'indigo' },
-                { label: 'TRANSCRIPTION', value: 'Real-Time STT', detail: 'Sub-90ms Processing', color: 'purple' },
-                { label: 'REASONING', value: 'Agentic Model', detail: 'Context-Aware Flows', color: 'pink' },
-                { label: 'SYNTHESIS', value: 'Neural Voices', detail: 'Human-like TTS Speech', color: 'blue' },
+                { label: 'TELEPHONY', value: 'Global SIP Trunk', detail: 'Secure Voice Trunks', textColor: 'text-indigo-400' },
+                { label: 'TRANSCRIPTION', value: 'Real-Time STT', detail: 'Sub-90ms Processing', textColor: 'text-purple-400' },
+                { label: 'REASONING', value: 'Agentic Model', detail: 'Context-Aware Flows', textColor: 'text-pink-400' },
+                { label: 'SYNTHESIS', value: 'Neural Voices', detail: 'Human-like TTS Speech', textColor: 'text-blue-400' },
               ].map((item, i) => (
                 <div key={i} className="p-8 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-500 text-left group/card">
-                  <div className={`text-[10px] font-black text-${item.color}-400 mb-4 tracking-[0.25em]`}>{item.label}</div>
+                  <div className={`text-[10px] font-black ${item.textColor} mb-4 tracking-[0.25em]`}>{item.label}</div>
                   <div className="text-2xl font-bold text-white mb-1">{item.value}</div>
                   <div className="text-xs text-slate-500 group-hover/card:text-slate-300 transition-colors">{item.detail}</div>
                 </div>

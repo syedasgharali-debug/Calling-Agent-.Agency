@@ -23,6 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, user, onLogout
     { label: 'Home', view: 'home' },
     { label: 'Features', view: 'features' },
     { label: 'Pricing', view: 'pricing' },
+    { label: 'Blog', view: 'blog' as any },
     { label: 'Company', view: 'about' },
     { label: 'Docs', view: 'docs' },
   ];
