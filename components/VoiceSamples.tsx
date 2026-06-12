@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, Mic2, Building2, Stethoscope, Utensils, Truck, Headset, Mic, PhoneOff, AlertCircle, X, Send } from 'lucide-react';
+import { Play, Pause, Volume2, Mic2, Building2, Stethoscope, Utensils, Truck, Headset, Mic, PhoneOff, AlertCircle, X, Send, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { geminiService } from '../services/geminiService';
 
@@ -83,6 +83,20 @@ const samples: Sample[] = [
       "Why did you charge me $49?",
       "I want to cancel my Pro subscription",
       "Can you send me my invoice?"
+    ]
+  },
+  {
+    id: 'finance',
+    industry: 'Financial Services',
+    scenario: 'Flagging fraudulent activity and disputes on a debit card.',
+    greeting: "Thank you for contacting CallingAgent Capital. This is John speaking. I see you flagged an unauthorized $45.00 charge on your account. Let's get this resolved for you right away.",
+    prompt: "You are John, a senior fraud investigator at CallingAgent Capital. A customer is calling to dispute an unrecognized $45.00 online transaction. Be calm, reassuring, highly secure, and professional. Greet with: 'Thank you for contacting CallingAgent Capital. This is John speaking. I see you flagged an unauthorized $45.00 charge on your account. Let's get this resolved for you right away.' Offer to lock the card and generate a new secure virtual card.",
+    icon: CreditCard,
+    voiceName: 'Charon',
+    suggestions: [
+      "Block that unauthorized charge",
+      "Is my savings balance safe?",
+      "Can I get a new virtual card?"
     ]
   }
 ];

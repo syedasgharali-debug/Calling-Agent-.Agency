@@ -87,6 +87,19 @@ function getSimulatedAgentResponse(message: string, systemInstruction: string): 
     return "Great! I've updated your billing service logs. Ticket ID is #9842. Our financial branch will email you the full summary. Is there any other SaaS inquiry I can resolve?";
   }
 
+  if (instruct.includes("john") || instruct.includes("finance") || instruct.includes("banking") || instruct.includes("dispute") || instruct.includes("capital")) {
+    if (msg.includes("block") || msg.includes("unauthorized") || msg.includes("charge") || msg.includes("dispute")) {
+      return "Understood. I have initiated a dispute ticket for the $45.00 transaction and temporarily locked your active debit card. Shall we issue a brand-new secure virtual card to your mobile app right now?";
+    }
+    if (msg.includes("compromised") || msg.includes("hack") || msg.includes("safe")) {
+      return "Rest assured, your core checking and savings remain 100% secure in our bank-grade vault. This was an isolated online card charge. Once we cycle the card token, you will be completely protected. Do you want to do that now?";
+    }
+    if (msg.includes("balance") || msg.includes("money") || msg.includes("available")) {
+      return "Your active checking account holds $4,821.50, and your offline high-yield savings holds $25,000.00. Both are fully secure. Shall I proceed with unlocking the virtual card generator?";
+    }
+    return "Superb, I have logged the dispute and issued a new virtual card with complete zero-liability protection. The new card token is active in your mobile wallet now! Anything else I can assist you with today?";
+  }
+
   return "Hello! I am your CallingAgent intelligent voice assistant. I am listening live with sub-150ms response speed. How can I guide your request today?";
 }
 
