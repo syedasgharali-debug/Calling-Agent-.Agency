@@ -5,9 +5,90 @@ import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from 'stripe';
 import paypal from '@paypal/checkout-server-sdk';
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Lazy initialization of GoogleGenAI
+let aiInstance: GoogleGenAI | null = null;
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    aiInstance = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+  }
+  return aiInstance;
+}
+
+// Simulated responses database for CallingAgent voice scenarios
+function getSimulatedAgentResponse(message: string, systemInstruction: string): string {
+  const msg = (message || "").toLowerCase();
+  const instruct = (systemInstruction || "").toLowerCase();
+
+  if (instruct.includes("sarah") || instruct.includes("real estate") || instruct.includes("loft")) {
+    if (msg.includes("hello") || msg.includes("hi") || msg.includes("assistance")) {
+      return "Hello! This is Sarah from CallingAgent Loft Realty. I see you're interested in booking a viewing for our beautiful downtown loft. How can I assist you today?";
+    }
+    if (msg.includes("saturday") || msg.includes("weekend") || msg.includes("time") || msg.includes("schedule") || msg.includes("book") || msg.includes("viewing")) {
+      return "Excellent! I have an opening this Saturday at 2:00 PM for the loft viewing. Would that block work for you, or do you prefer a weekdays slot?";
+    }
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("million")) {
+      return "The downtown loft is currently listed at $1.2 million. It includes top-tier custom brick finishes, 2 custom bedrooms, and gorgeous terrace skylights. Shall we reserve a tour?";
+    }
+    return "Perfect, I've noted that. I will send a customized calendar invitation to your registered email address shortly. Is there any other detail about the downtown loft I can share?";
+  }
+
+  if (instruct.includes("david") || instruct.includes("health") || instruct.includes("medical") || instruct.includes("specialist")) {
+    if (msg.includes("insurance") || msg.includes("yes") || msg.includes("have")) {
+      return "Wonderful, thank you! I have confirmed your insurance verification is active. Dr. Aris is open next Tuesday at 10:00 AM or Thursday at 2:00 PM. Which premium slot fits your calendar?";
+    }
+    if (msg.includes("tuesday") || msg.includes("thursday") || msg.includes("date") || msg.includes("appointment")) {
+      return "Superb, I've reserved your cardiologist follow-up with Dr. Aris. It's scheduled at our central clinic, Suite 410. Shall I notify you of any pre-appointment requirements?";
+    }
+    if (msg.includes("no") || msg.includes("don't have")) {
+      return "No problem. We can set you up as a self-pay patient, and our office can establish a regular monthly installment plan. Let's find a slot first—would Tuesday at 10:00 AM work?";
+    }
+    return "Great! I have fully logged your follow-up appointment. Be sure to arrive about 10 minutes early with your photo ID. Let me know if any other support is needed!";
+  }
+
+  if (instruct.includes("marco") || instruct.includes("bistro") || instruct.includes("restaurant") || instruct.includes("dinner")) {
+    if (msg.includes("allergy") || msg.includes("gluten") || msg.includes("celiac")) {
+      return "Ah, yes! At CallingAgent Bistro, we take allergies extremely seriously. We offer a dedicated gluten-free preparation workspace, delicious gluten-free pastas, and crust options. You are in safe hands! How many guests will be in your party?";
+    }
+    if (msg.includes("reservation") || msg.includes("guest") || msg.includes("seat") || msg.includes("table") || msg.includes("people") || msg.includes("4")) {
+      return "Bellissimo! A premium table for 4 guests. What time would you prefer this Saturday? We have delightful open tables at 6:30 PM and 8:30 PM.";
+    }
+    if (msg.includes("6") || msg.includes("7") || msg.includes("8") || msg.includes("pm") || msg.includes("time")) {
+      return "Splendid! I have locked in that time frame for you. We will arrange a cozy table and flag your gluten allergies with the kitchen. Under what name should I secure the booking?";
+    }
+    return "Fantastic! Your reservation at CallingAgent Bistro is fully confirmed. We're situated at 15 Osteria Way. We look forward to treating you to an exceptional dining experience!";
+  }
+
+  if (instruct.includes("logistics") || instruct.includes("tracking") || instruct.includes("shipment") || instruct.includes("international")) {
+    if (msg.includes("status") || msg.includes("where") || msg.includes("tracking") || msg.includes("number") || msg.includes("package")) {
+      return "Scanning international registry... Yes! Your shipment SG-NY-39049 left the Singapore hub on June 8th. It has cleared customs in New York and is on route for final mile courier delivery this Friday by 5:00 PM.";
+    }
+    if (msg.includes("delay") || msg.includes("customs") || msg.includes("stuck")) {
+      return "No worries, this is standard clearance flow and no custom flags or holds are raised. The package is fully moving. Shall I activate automated SMS updates for you?";
+    }
+    return "Confirmed! Shipment status SG-NY-39049 has been pinned to high-priority alert. You can check again anytime. Thank you for choosing CallingAgent Logistics!";
+  }
+
+  if (instruct.includes("chloe") || instruct.includes("support") || instruct.includes("billing") || instruct.includes("saas")) {
+    if (msg.includes("billing") || msg.includes("charge") || msg.includes("invoice") || msg.includes("refund")) {
+      return "I can absolutely assist you with your Pro billing. To verify safety logs, could you confirm the corporate email address connected with your active CallingAgent account?";
+    }
+    if (msg.includes("@") || msg.includes("email") || msg.includes(".com")) {
+      return "Got it! I see your invoice of $49 for the Pro subscription plan issued on the first. Would you like me to process a credit refund or assign a new payment method?";
+    }
+    if (msg.includes("cancel") || msg.includes("stop")) {
+      return "I'm sorry to see you go. I can apply an exclusive 50% discount to your account for the next 3 billing cycles if you'd like to continue testing. Shall we apply this now?";
+    }
+    return "Great! I've updated your billing service logs. Ticket ID is #9842. Our financial branch will email you the full summary. Is there any other SaaS inquiry I can resolve?";
+  }
+
+  return "Hello! I am your CallingAgent intelligent voice assistant. I am listening live with sub-150ms response speed. How can I guide your request today?";
+}
 
 // Mu-law decoding and encoding helpers
 function decodeMuLaw(payload: string): string {
@@ -306,6 +387,72 @@ async function startServer() {
       }
     });
   }
+
+  // Interactive Live Demo Chat Proxy
+  app.post("/api/demo/chat", async (req, res) => {
+    const { message, history, systemInstruction } = req.body;
+    try {
+      const ai = getAI();
+
+      if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') {
+        const fallbackResponse = getSimulatedAgentResponse(message, systemInstruction);
+        return res.json({ text: fallbackResponse });
+      }
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          ...(history || []),
+          { role: 'user', parts: [{ text: message }] }
+        ],
+        config: {
+          systemInstruction: systemInstruction || "You are CallingAgent, a professional customer support agent.",
+          temperature: 0.7,
+        }
+      });
+      res.json({ text: response.text || "I'm sorry, I couldn't process that request right now." });
+    } catch (error: any) {
+      console.error("Server /api/demo/chat error:", error);
+      const fallbackResponse = getSimulatedAgentResponse(message, systemInstruction);
+      res.json({ text: fallbackResponse });
+    }
+  });
+
+  // Interactive Live Demo TTS Proxy
+  app.post("/api/demo/tts", async (req, res) => {
+    try {
+      const { text, voiceName } = req.body;
+      if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') {
+        return res.json({ audio: null });
+      }
+
+      const ai = getAI();
+      let selectedVoice = voiceName || 'Aoede';
+      const allowedVoices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'];
+      if (!allowedVoices.includes(selectedVoice)) {
+        selectedVoice = 'Aoede';
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: selectedVoice },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      res.json({ audio: base64Audio || null });
+    } catch (error: any) {
+      console.error("Server /api/demo/tts error:", error);
+      res.json({ audio: null });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

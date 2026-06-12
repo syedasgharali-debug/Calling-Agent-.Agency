@@ -4,56 +4,57 @@ import React from 'react';
 const Features: React.FC = () => {
   const features = [
     {
-      title: "Interruption Handling",
-      description: "Sophisticated endpointing logic allows users to cut off the AI naturally. The agent stops mid-sentence and processes new intent instantly.",
+      title: "Interactive Agent Provisioner",
+      description: "Configure custom AI agents, fine-tune conversational prompts, choose voice models, and assign behavioral profiles directly through your dashboard interface.",
       icon: (
         <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       )
     },
     {
-      title: "Agentic Tool Calling",
-      description: "Connect your agents directly to Salesforce, HubSpot, or custom databases. Agents can check inventory, lookup clients, and book scheduling slots on the fly.",
+      title: "Virtual Line Provisioning",
+      description: "Instantly buy and configure dedicated digital phone numbers from major international carrier pipelines and bind them immediately to your active agents.",
       icon: (
         <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2V4zm-6 8a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zm12 0a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
       )
     },
     {
-      title: "Omni-Channel Voice Gateway",
-      description: "An integrated calling gateway ensures you don't have to manage any 'glue' code. We handle the direct VoIP SIP trunking and dynamic carrier routing.",
+      title: "Multi-Carrier Bridges",
+      description: "Seamless integration with Vapi private lines and Twilio channels. Update Account SIDs, Auth Tokens, and line routes without writing any backend scripts.",
       icon: (
         <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 015.656 0l4 4a4 4 0 11-5.656 5.656l-1.1-1.1" />
         </svg>
       )
     },
     {
-      title: "Emotional Fillers",
-      description: "Natural 'umms', 'ahhs', and 'got it' fillers prevent the Uncanny Valley. Agents sound like helpful colleagues, not robotic scripts.",
+      title: "Live Call Analytics",
+      description: "Monitor continuous operational metrics, average speech latency logs, agent call durations, MTD expenditures, and automated transcript sentiment analyses.",
       icon: (
         <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       )
     },
     {
-      title: "Custom Voice Cloning",
-      description: "Clone your best salesperson's or support representative's voice in high-fidelity. Maintain brand consistency across millions of concurrent calls.",
+      title: "Integrated Stripe Checkout",
+      description: "Self-serve billing portals powered safely by integrated Stripe checkout frameworks, PayPal subscription pools, and valid promotional coupon triggers.",
       icon: (
         <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
         </svg>
       )
     },
     {
-      title: "Speculative Execution",
-      description: "The AI starts speaking reassuring fillers while tools execute in the background, masking API latency and maintaining conversational flow.",
+      title: "Omni-Channel Helpdesk",
+      description: "A fully built-in helpdesk ticket desk where users can file high-priority inquiries, review feedback queues, and sync updates from administration staff.",
       icon: (
         <svg className="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       )
     }
