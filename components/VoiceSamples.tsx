@@ -113,6 +113,8 @@ const VoiceSamples: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState<{ role: 'user' | 'model'; text: string }[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isMicSupported, setIsMicSupported] = useState(true);
+  const [micError, setMicError] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const historyRef = useRef<{ role: 'user' | 'model'; parts: { text: string }[] }[]>([]);
@@ -228,6 +230,7 @@ const VoiceSamples: React.FC = () => {
     setIsConnecting(false);
     setIsListening(false);
     setLiveTranscript([]);
+    setMicError(null);
     historyRef.current = [];
     
     if (activeAudioRef.current) {
@@ -247,9 +250,12 @@ const VoiceSamples: React.FC = () => {
   // Start Speech Recognition loop
   const startSpeechRecognition = (sample: Sample) => {
     if (!activeLiveId) return;
+    setMicError(null);
     
     const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionClass) {
+      setIsMicSupported(false);
+      setMicError("Speech synthesis is active, but microphone recognition is not supported in this browser. Please type or use quick chips below!");
       console.warn("Speech recognition is not supported in this browser.");
       return;
     }
@@ -267,6 +273,7 @@ const VoiceSamples: React.FC = () => {
 
     rec.onstart = () => {
       setIsListening(true);
+      setMicError(null);
     };
 
     rec.onresult = async (e: any) => {
@@ -279,6 +286,14 @@ const VoiceSamples: React.FC = () => {
     rec.onerror = (e: any) => {
       console.warn("Speech recognition error:", e.error);
       setIsListening(false);
+      if (e.error === 'not-allowed') {
+        setMicError("Microphone permission denied. Click the camera/mic camera icon in the address bar to allow browser access.");
+      } else if (e.error === 'no-speech') {
+        // no-speech is common if user was silent. We can just guide them to click speak again.
+        setMicError("No speech detected. click 'TAP TO SPEAK' when you are ready to speak!");
+      } else {
+        setMicError(`Recognition stopped (${e.error}). Feel free to talk again.`);
+      }
     };
 
     rec.onend = () => {
@@ -290,6 +305,7 @@ const VoiceSamples: React.FC = () => {
       rec.start();
     } catch (e) {
       console.error("Failed to start SpeechRecognition:", e);
+      setMicError("Failed to initiate microphone control. Please refresh or use manual chips.");
     }
   };
 
@@ -513,6 +529,13 @@ const VoiceSamples: React.FC = () => {
                           </button>
                         </form>
 
+                        {micError && (
+                          <div className="bg-amber-950/20 text-amber-300 text-[11px] p-2.5 rounded-xl border border-amber-500/20 flex gap-2 items-start leading-snug">
+                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                            <span>{micError}</span>
+                          </div>
+                        )}
+
                         {/* Visualizer Status */}
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                           <div className="flex items-center gap-2">
@@ -521,10 +544,11 @@ const VoiceSamples: React.FC = () => {
                               <span className={`relative inline-flex rounded-full h-2 w-2 ${isListening ? 'bg-emerald-500' : 'bg-indigo-500'}`}></span>
                             </span>
                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                              {isListening ? 'Listening via Microphone...' : 'Agent synthesis active'}
+                              {isListening ? 'Listening...' : 'Muted'}
                             </span>
                           </div>
-                          {isListening && (
+                          
+                          {isListening ? (
                             <div className="flex space-x-0.5 items-end h-3">
                               {[1, 2, 3, 4, 1.5, 2.5, 1.2, 3.5].map((val, i) => (
                                 <div 
@@ -534,6 +558,17 @@ const VoiceSamples: React.FC = () => {
                                 ></div>
                               ))}
                             </div>
+                          ) : (
+                            !isConnecting && (
+                              <button
+                                type="button"
+                                onClick={() => startSpeechRecognition(sample)}
+                                className="text-[10px] font-extrabold text-white bg-emerald-550 bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 rounded-lg shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Mic size={10} />
+                                <span>TAP TO SPEAK</span>
+                              </button>
+                            )
                           )}
                         </div>
                       </div>
