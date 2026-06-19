@@ -17,32 +17,49 @@ window.addEventListener('error', (event) => {
   }
 }, true);
 
-// Workaround for libraries that try to polyfill/override window.fetch
-// Some environments (like restricted iframes) have a read-only fetch getter.
+// Safe JSON.parse override to prevent "undefined" is not valid JSON errors
+(function patchJsonParse() {
+  try {
+    const originalParse = JSON.parse;
+    JSON.parse = function (text: any, reviver?: any) {
+      if (text === undefined || text === null || text === 'undefined' || text === 'null' || text === '') {
+        return null;
+      }
+      try {
+        return originalParse(text, reviver);
+      } catch (e) {
+        if (typeof text === 'string' && (text.trim() === 'undefined' || text.trim() === '')) {
+          return null;
+        }
+        throw e;
+      }
+    };
+  } catch (e) {
+    console.warn('Unable to patch JSON.parse:', e);
+  }
+})();
+
+// Safe window.fetch override to prevent "Cannot set property fetch" errors
+// We define a writable, configurable fetch property directly on the window object
+// that delegates reads to the original fetch but safely absorbs or allows updates.
 (function interceptFetch() {
   try {
-    const descriptor = Object.getOwnPropertyDescriptor(window, 'fetch');
-    
-    // If it's already got a setter, or is not something we should touch, skip.
-    if (!descriptor || (descriptor.set && !descriptor.configurable)) return;
-
-    if (descriptor.configurable) {
-      const originalFetch = window.fetch;
-      try {
-        Object.defineProperty(window, 'fetch', {
-          configurable: true,
-          enumerable: true,
-          get: () => originalFetch,
-          set: (v) => {
-            console.warn('Suppressing attempt to overwrite window.fetch:', v);
-          }
-        });
-      } catch (e) {
-        // Ignore errors during definition
+    const originalFetch = window.fetch;
+    let activeFetch = originalFetch;
+    Object.defineProperty(window, 'fetch', {
+      configurable: true,
+      enumerable: true,
+      get: () => activeFetch,
+      set: (v) => {
+        if (typeof v === 'function') {
+          activeFetch = v;
+        } else {
+          console.warn('Suppressing attempt to overwrite window.fetch with non-function:', v);
+        }
       }
-    }
+    });
   } catch (e) {
-    // Ignore global errors in this check
+    console.warn('Unable to define fetch decorator on window:', e);
   }
 })();
 

@@ -44,7 +44,11 @@ import {
   Loader2,
   Check,
   RefreshCw,
-  Info
+  Info,
+  Volume2,
+  Clock,
+  Laptop,
+  Tv
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -168,7 +172,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   blogs,
   setBlogs
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials'>('overview');
   const [currentPlan, setCurrentPlan] = useState<Plan>(plans.find(p => p.name === user.plan) || plans[0]);
   const [isBillingYearly, setIsBillingYearly] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -276,6 +280,235 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [newEnterpriseRequest, setNewEnterpriseRequest] = useState({ companyName: '', monthlyVolume: '50,000 - 250,000', needs: '', requestedMinutes: 50000 });
   const [selectedEnterpriseRequest, setSelectedEnterpriseRequest] = useState<EnterpriseRequest | null>(null);
   const [enterpriseResponse, setEnterpriseResponse] = useState('');
+
+  // Video Tutorial Player States
+  const [activeVideoId, setActiveVideoId] = useState<number>(1);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [playbackVolume, setPlaybackVolume] = useState<number>(0.8);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState<boolean>(true);
+  const lastSpokenRef = useRef<string>('');
+
+  const tutorialVideos = [
+    {
+      id: 1,
+      title: "1. Overview & Workspace Tour",
+      description: "Learn how to navigate your live statistics, active inbound gateway statuses, and monitor outbound execution indicators from the centralized dashboard.",
+      duration: 35, // Premium fast-paced walkthrough (35 seconds)
+      targetTab: "overview",
+      thumbnail: "bg-gradient-to-r from-blue-600/30 via-slate-900 to-indigo-950",
+      iconName: "BarChart3",
+      learningPoints: [
+        "Read real-time metrics (Total minutes, Completion rate, MTD Spend)",
+        "Understand the outbound concurrent line telemetry dial",
+        "Configure custom webhook logs & navigate structural tables"
+      ],
+      subtitles: [
+        { time: 0, text: "Welcome to CallingAgent! In this video, we will explore your primary statistics dashboard." },
+        { time: 6, text: "Your main console displays real-time data, including active voice minutes, completion rate, and global spend." },
+        { time: 14, text: "On the left side, the quick-navigation rail lets you access agent creation tools and numbers gateways." },
+        { time: 22, text: "The Outbound Concurrency Dial shows active SIP telephone channels occupied by calling agents." },
+        { time: 28, text: "Scroll down to see the live activity log stream displaying standard telephony success signals." }
+      ]
+    },
+    {
+      id: 2,
+      title: "2. Designing Conversational Flow",
+      description: "Configure natural-dialog prompts, goals, fallback instructions, and pair your agent with premium synthetic voices in the Agent Studio.",
+      duration: 38, // Beautiful, fast masterclass step
+      targetTab: "agents",
+      thumbnail: "bg-gradient-to-r from-indigo-600/30 via-slate-900 to-violet-950",
+      iconName: "Users",
+      learningPoints: [
+        "Formulate system prompts to constraint Gemini models behavior",
+        "Define target data to extract (Email, payment schedules, routing goals)",
+        "Review voice templates & customize latency thresholds"
+      ],
+      subtitles: [
+        { time: 0, text: "Now we step into the Agent Designer Studio to deploy our first conversational bot." },
+        { time: 6, text: "Click 'Create Agent' to initialize a new module. Each bot can be customized server-side." },
+        { time: 13, text: "Edit the Agent System Instructions. This defines constraints, character parameters, and guidelines." },
+        { time: 21, text: "Select a custom realistic voice template. You can preview vocal tones styled like Emma or Charlotte." },
+        { time: 29, text: "Adjust response latency bounds and vocal interruption gaps to achieve continuous speech rhythms." }
+      ]
+    },
+    {
+      id: 3,
+      title: "3. Inbound & Outbound Telephony",
+      description: "Claim Twilio numbers, wire webhooks, set up inbound routing rules, and point callers directly to individual agents.",
+      duration: 35, // Snappy 35 seconds
+      targetTab: "numbers",
+      thumbnail: "bg-gradient-to-r from-emerald-600/30 via-slate-900 to-teal-950",
+      iconName: "Phone",
+      learningPoints: [
+        "Setup your Twilio SID and Token secure storage credentials",
+        "Search and lease localized telephone numbers",
+        "Map numbers to target agents instantly from raw dropdown menus"
+      ],
+      subtitles: [
+        { time: 0, text: "Let's connect active high-density outbound telephone lines to the live global grid." },
+        { time: 6, text: "Open the Phone Numbers dashboard. Here, you'll see your current claimed numbers inventory." },
+        { time: 13, text: "Click Provision Number to search, reserve, and secure localized regional lines instantly." },
+        { time: 20, text: "Configure your Twilio keys and assign a specific agent to handle any incoming callers." },
+        { time: 27, text: "The platform deploys SIP trunk records live, guaranteeing instant bridge times." }
+      ]
+    },
+    {
+      id: 4,
+      title: "4. Analytics & Performance Audits",
+      description: "Monitor customer retention, completion status codes, calculate total expenditure, and research latency metrics.",
+      duration: 38, // Concise 38 seconds
+      targetTab: "analytics",
+      thumbnail: "bg-gradient-to-r from-rose-600/30 via-slate-900 to-pink-950",
+      iconName: "TrendingUp",
+      learningPoints: [
+        "Load 30-day interactive call volume and sentiment distribution graphs",
+        "Identify and analyze average network latency and response time limits",
+        "Review detailed call recordings and system-generated structural transcripts"
+      ],
+      subtitles: [
+        { time: 0, text: "Let's review calling logs, performance charts, and customer sentiment analytics." },
+        { time: 6, text: "The Live Analytics tracker shows completion rates and average response latencies." },
+        { time: 13, text: "Click on any finished call row to load the exact conversation transcript with live sentiment scores." },
+        { time: 21, text: "See how the AI model responses stay optimized under three hundred and eighty milliseconds." },
+        { time: 28, text: "Download fully detailed report spreadsheets to synchronize with external business intelligence dashboards." }
+      ]
+    },
+    {
+      id: 5,
+      title: "5. Billing & Capacity Control",
+      description: "How to add gateway account balance, handle automated plan renewals, apply coupons, and upgrade sandbox quotas.",
+      duration: 35, // Fast-paced billing guide
+      targetTab: "billing",
+      thumbnail: "bg-gradient-to-r from-amber-600/30 via-slate-900 to-orange-950",
+      iconName: "CreditCard",
+      learningPoints: [
+        "Compare basic, scale, and custom tier quotas",
+        "Add billing credits securely with integrated gateways (Stripe/PayPal)",
+        "Claim referral coupons and configure localized accounts"
+      ],
+      subtitles: [
+        { time: 0, text: "In this phase, we analyze credit balances, payment modes, and capacity tiers." },
+        { time: 6, text: "Inbound and outbound minutes draw tiny fractions from your secure dollar balance ledger." },
+        { time: 13, text: "Access the Ledger section to instantly add calling credits via card or PayPal gateways." },
+        { time: 20, text: "Apply promotional coupon codes to benefit from seasonal discount adjustments." },
+        { time: 27, text: "Top up your gateway balance to ensure active lines never encounter network interruption." }
+      ]
+    },
+    {
+      id: 6,
+      title: "6. Custom Enterprise Pipestack",
+      description: "Configuring customized high-density outbound rates, arranging core bridging meetings, and scaling up concurrent line capacities.",
+      duration: 40, // 40 seconds enterprise grand finale
+      targetTab: "enterprise",
+      thumbnail: "bg-gradient-to-r from-emerald-600/30 via-slate-900 to-cyan-950",
+      iconName: "Building2",
+      learningPoints: [
+        "Drag interactive sliders to design target minutes based on operations scale",
+        "Evaluate Bronze, Gold, and Infinite Platinum volume tier quotas",
+        "Acquire sub-five-cents rate structures under major scale plans"
+      ],
+      subtitles: [
+        { time: 0, text: "Finally, let's configure dedicated Enterprise Channels to run major outbound centers." },
+        { time: 6, text: "If your operations scale beyond ten thousand calling minutes per month, standard tiers don't fit." },
+        { time: 14, text: "Select your custom target minutes on our wholesale volume range slider to lower rates." },
+        { time: 22, text: "Outbound call costs scale downward all the way to a highly premium five-cents-per-minute rate." },
+        { time: 30, text: "Click request to reserve a private hardware SIP trunk and set up an engineering alignment." }
+      ]
+    }
+  ];
+
+  // Auto Reset timeline on active tutorial select
+  useEffect(() => {
+    setCurrentTime(0);
+    lastSpokenRef.current = '';
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [activeVideoId]);
+
+  // Masterclass Timer with Automated Video Progression Flow
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setCurrentTime((prev) => {
+          const activeVideo = tutorialVideos.find(v => v.id === activeVideoId);
+          const duration = activeVideo ? activeVideo.duration : 35;
+          if (prev >= duration) {
+            // Auto advance flow!
+            if (activeVideoId < 6) {
+              setActiveVideoId((curr) => curr + 1);
+              return 0;
+            } else {
+              setIsPlaying(false);
+              return 0;
+            }
+          }
+          return prev + 1 * playbackSpeed;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, activeVideoId, playbackSpeed]);
+
+  // Automated voice synthesis speaker with clean callbacks
+  useEffect(() => {
+    if (!isPlaying) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      return;
+    }
+
+    const activeVideo = tutorialVideos.find(v => v.id === activeVideoId);
+    if (!activeVideo) return;
+
+    let matchingSubtitle = "";
+    for (const s of activeVideo.subtitles) {
+      if (currentTime >= s.time) {
+        matchingSubtitle = s.text;
+      }
+    }
+
+    if (matchingSubtitle && isVoiceEnabled && matchingSubtitle !== lastSpokenRef.current) {
+      lastSpokenRef.current = matchingSubtitle;
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(matchingSubtitle);
+          utterance.volume = playbackVolume;
+          utterance.rate = playbackSpeed;
+          
+          // Select professional natural supportive voice (supports Google, Zira, Charlotte, Microsoft)
+          const voices = window.speechSynthesis.getVoices();
+          const customVoice = voices.find(v => v.lang.includes('en') && (
+            v.name.includes('Natural') || 
+            v.name.includes('Google') || 
+            v.name.includes('Female') || 
+            v.name.includes('Zira') ||
+            v.name.includes('Charlotte')
+          ));
+          if (customVoice) {
+            utterance.voice = customVoice;
+          }
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn("Speech synthesis error ignored: ", e);
+        }
+      }
+    }
+  }, [currentTime, activeVideoId, isPlaying, isVoiceEnabled, playbackVolume, playbackSpeed]);
+
+  // Cancel speech on unmount
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (showPlanModal) {
@@ -1541,6 +1774,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 'billing', label: 'Billing', icon: CreditCard },
               { id: 'enterprise', label: 'Enterprise Solutions', icon: Building2 },
+              { id: 'tutorials', label: 'Video Tutorials', icon: Play },
               { id: 'support', label: 'Support', icon: MessageSquare },
               { id: 'profile', label: 'Settings', icon: Settings }
             ]),
@@ -1615,7 +1849,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <span>Sign Out</span>
             </button>
           </div>
-          <p className={`text-[10px] text-center font-bold uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>v2.4.0 Stable</p>
+          <p className={`text-[10px] text-center font-bold uppercase tracking-[0.2em] ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>Console Production</p>
       </aside>
 
       {/* Main Dashboard Area */}
@@ -1633,14 +1867,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                 </h2>
                 {isImpersonating && (
-                  <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
-                    Viewing as User
-                  </span>
+                   <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                     Viewing as User
+                   </span>
                 )}
                 {!isImpersonating && (
-                   <div className="flex items-center space-x-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-                     <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                     <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest">v2.4 Beta</span>
+                   <div className="flex items-center space-x-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                     <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Console Live</span>
                    </div>
                 )}
               </div>
@@ -3931,6 +4165,821 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </motion.div>
           )}
+
+          {activeTab === 'tutorials' && (() => {
+            const formatTime = (secs: number) => {
+              const m = Math.floor(secs / 60);
+              const s = Math.floor(secs % 60);
+              return `${m}:${s < 10 ? '0' : ''}${s}`;
+            };
+            const activeVideo = tutorialVideos.find(v => v.id === activeVideoId) || tutorialVideos[0];
+            const activeSubtitle = (() => {
+              if (!isPlaying && currentTime === 0) {
+                return "Press the play button to begin this tutorial (length: " + formatTime(activeVideo.duration) + ")";
+              }
+              let text = "";
+              for (const s of activeVideo.subtitles) {
+                if (currentTime >= s.time) {
+                  text = s.text;
+                }
+              }
+              return text || "Deploying automated SIP voice pipelines...";
+            })();
+
+            // Helper to get matching icon for tutorial target
+            const getTabIcon = (target: string) => {
+              switch (target) {
+                case 'overview': return BarChart3;
+                case 'agents': return Users;
+                case 'numbers': return Phone;
+                case 'analytics': return TrendingUp;
+                case 'billing': return CreditCard;
+                case 'enterprise': return Building2;
+                default: return Info;
+              }
+            };
+
+            const TargetIcon = getTabIcon(activeVideo.targetTab);
+
+            return (
+              <motion.div 
+                key="tutorials"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="max-w-6xl space-y-10"
+              >
+                {/* Modernized Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                  <div>
+                    <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
+                      Dashboard Academy
+                    </span>
+                    <h3 className={`text-4xl font-black tracking-tighter mt-3 mb-1.5 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Video Tutorials & Walkthroughs
+                    </h3>
+                    <p className={`text-sm font-bold max-w-2xl ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Master the CallingAgent voice infrastructure with our 6-part video masterclass. Each guide takes 2 to 3 minutes to completely operationalize your team.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Main Video Arena: Interactive Simulator & Companion Info */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  
+                  {/* Left Column: Custom Interactive HTML5 Video Player Simulator */}
+                  <div className="lg:col-span-7 space-y-4">
+                    <div className={`relative aspect-video rounded-[2.5rem] border overflow-hidden group shadow-2xl flex flex-col justify-between ${
+                      theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-900 border-slate-200'
+                    }`}>
+                      {/* Watermark / Status Header */}
+                      <div className="p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
+                          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                            CallingAgent Player Sim.v1
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                          {activeVideo.title.toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Video Player Display Canvas with Live Animations */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 overflow-hidden">
+                        {/* Selected Tutorial Backdrop Style */}
+                        <div className={`absolute inset-0 opacity-[0.08] transition-all duration-700 ${activeVideo.thumbnail}`} />
+                        
+                        {/* macOS style interactive high-fidelity browser frame simulation */}
+                        <div className="absolute inset-0 w-full h-full flex flex-col text-left pointer-events-none select-none">
+                          
+                          {/* macOS Top Address Bar Header */}
+                          <div className="h-9 border-b border-white/5 bg-slate-950/95 flex items-center px-4 justify-between shrink-0 z-10">
+                            <div className="flex items-center space-x-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] opacity-80" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] opacity-80" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F] opacity-80" />
+                            </div>
+                            <div className="bg-slate-900 border border-white/5 px-6 py-0.5 text-[8px] text-slate-400 font-mono w-48 md:w-60 text-center rounded-lg truncate shadow-inner">
+                              https://callingagent.ai/console/{activeVideo.targetTab}
+                            </div>
+                            <div className="flex items-center space-x-1 opacity-40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            </div>
+                          </div>
+
+                          {/* Interactive Internal browser Workspace */}
+                          <div className="flex flex-1 min-h-0 relative z-10">
+                            
+                            {/* Left Console Navigation rail */}
+                            <div className="w-24 md:w-28 border-r border-white/5 bg-slate-950/80 p-2 flex flex-col justify-between shrink-0">
+                              <div className="space-y-1">
+                                <span className="text-[5px] md:text-[6px] font-black uppercase text-slate-600 tracking-wider px-1 block mb-2">TELEPHONY RUN</span>
+                                {[
+                                  { tab: 'overview', label: 'Overview', icon: BarChart3 },
+                                  { tab: 'agents', label: 'Agent Studio', icon: Users },
+                                  { tab: 'numbers', label: 'Phone Gateway', icon: Phone },
+                                  { tab: 'analytics', label: 'Analytics', icon: TrendingUp },
+                                  { tab: 'billing', label: 'Ledger & Bills', icon: CreditCard },
+                                  { tab: 'enterprise', label: 'Enterprise', icon: Building2 },
+                                ].map((item) => {
+                                  const ItemIcon = item.icon;
+                                  const isActive = activeVideo.targetTab === item.tab;
+                                  return (
+                                    <div 
+                                      key={item.tab}
+                                      className={`flex items-center space-x-1 px-1.5 py-1 rounded transition-all duration-300 ${
+                                        isActive 
+                                          ? 'bg-indigo-600/15 border border-indigo-500/15 text-indigo-300' 
+                                          : 'text-slate-500 opacity-60'
+                                      }`}
+                                    >
+                                      <ItemIcon className="w-2 h-2 shrink-0 text-indigo-400" />
+                                      <span className="text-[6px] md:text-[7px] font-bold tracking-tight truncate">{item.label}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="border-t border-white/5 pt-1.5 text-center">
+                                <span className="text-[5px] text-slate-600 font-mono font-bold tracking-tight uppercase">Platform.v1</span>
+                              </div>
+                            </div>
+
+                            {/* Center Main dynamic workspace matching the selected walkthrough segment */}
+                            <div className="flex-1 p-3 md:p-4 flex flex-col justify-between bg-slate-900/60 overflow-hidden relative">
+                              {activeVideoId === 1 && (
+                                <div className="w-full h-full flex flex-col justify-between space-y-3">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="p-2 bg-slate-900/90 border border-white/5 rounded-xl">
+                                      <p className="text-[6px] text-slate-500 font-black uppercase tracking-widest leading-none">Total Minutes</p>
+                                      <p className="text-xs font-mono font-black text-indigo-400 mt-1">32,481 m</p>
+                                    </div>
+                                    <div className="p-2 bg-slate-900/90 border border-white/5 rounded-xl">
+                                      <p className="text-[6px] text-slate-500 font-black uppercase tracking-widest leading-none">Global Spend</p>
+                                      <p className="text-xs font-mono font-black text-emerald-400 mt-1">$3,248.10</p>
+                                    </div>
+                                    <div className="p-2 bg-slate-900/90 border border-white/5 rounded-xl">
+                                      <p className="text-[6px] text-slate-500 font-black uppercase tracking-widest leading-none">Concurrency Dial</p>
+                                      <p className="text-xs font-mono font-black text-white mt-1">32 Active</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
+                                    <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-1 shrink-0">
+                                      <span className="text-[8px] font-black uppercase text-slate-400">Live Active Sip Trunks</span>
+                                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                                    </div>
+                                    <div className="space-y-1.5 text-[8px] font-mono text-slate-300 overflow-hidden">
+                                      <p className={`p-1 rounded transition-all duration-300 ${currentTime >= 28 ? 'bg-indigo-500/20 border border-indigo-500/30 text-white' : 'bg-white/5'}`}>
+                                        <span className="text-indigo-400">SIP/200 OK</span> - Call bridged with Emma Bot on +1 (555) 0122
+                                      </p>
+                                      <p className="p-1 rounded bg-white/5 opacity-60">
+                                        <span className="text-emerald-400">SIP/180 RING</span> - Outbound callback triggered by webhook API
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Animated Concurrency Radar Dial */}
+                                    <div className="flex justify-center items-center py-2 relative shrink-0">
+                                      <div className="w-12 h-12 rounded-full border border-dashed border-indigo-500/30 animate-spin flex items-center justify-center">
+                                        <div className="w-6 h-6 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                                          <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 2 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Agent Designer Studio</span>
+                                      <span className="px-1.5 py-0.5 bg-indigo-600 rounded text-[6px] text-white font-extrabold uppercase">Emma Selected</span>
+                                    </div>
+                                    
+                                    <div className="space-y-1.5">
+                                      <div>
+                                        <label className="text-[6px] uppercase font-black tracking-widest text-slate-500 block">Agent System Instructions</label>
+                                        <div className="p-1.5 bg-slate-950 rounded-lg text-[7px] font-mono text-indigo-200 border border-indigo-500/10 line-clamp-2">
+                                          {currentTime >= 13 
+                                            ? "You are Emma, a virtual assistant. Welcome the caller, verify their account ID, and record their feedback."
+                                            : "Formulating instructions prompt..."}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                                        <div className="p-1.5 bg-slate-950 rounded-lg border border-white/5 flex items-center justify-between">
+                                          <span className="text-[7px] text-slate-400 font-bold">Interruption Gap</span>
+                                          <span className="text-[7px] font-mono font-black text-indigo-400">{currentTime >= 29 ? '350ms' : '450ms'}</span>
+                                        </div>
+                                        <div className="p-1.5 bg-slate-950 rounded-lg border border-indigo-500/30 flex items-center justify-between">
+                                          <span className="text-[7px] text-indigo-400 font-bold">Voice Model</span>
+                                          <span className="text-[7px] font-mono font-black text-indigo-400">Emma (Natural)</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex items-center justify-center space-x-2">
+                                    <span className="text-[8px] font-black uppercase text-indigo-300">Synthesis Engine Output:</span>
+                                    <div className="flex items-end space-x-1 h-5">
+                                      {[2, 4, 1, 5, 2, 3, 2, 5, 1, 4, 2, 3, 1].map((h, idx) => (
+                                        <span 
+                                          key={idx}
+                                          className="w-1 bg-indigo-400 rounded-full animate-bounce" 
+                                          style={{ 
+                                            height: isPlaying ? `${h * 3.2}px` : '4px',
+                                            animationDelay: `${idx * 0.08}s` 
+                                          }}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 3 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">SIP Router Gateway</span>
+                                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[6px] font-extrabold uppercase">Active Trunk</span>
+                                    </div>
+                                    
+                                    <div className="space-y-1.5">
+                                      <div className="p-1.5 bg-slate-950 rounded-lg border border-white/5 flex items-center justify-between">
+                                        <div>
+                                          <p className="text-[6px] text-slate-500 uppercase font-black tracking-wider">Assigned Line</p>
+                                          <p className="text-[10px] font-mono font-black text-white">+1 (888) 420-9991</p>
+                                        </div>
+                                        <div className="bg-indigo-600 text-white rounded px-2 py-0.5 text-[7px] font-black uppercase">Emma Assigned</div>
+                                      </div>
+
+                                      <div className="p-1.5 bg-slate-950 rounded-lg border border-white/5 flex items-center justify-between">
+                                        <div>
+                                          <p className="text-[6px] text-slate-500 uppercase font-black tracking-wider">Twilio Integration Status</p>
+                                          <p className="text-[10px] font-mono font-black text-slate-400">Linked / Active</p>
+                                        </div>
+                                        <div className="bg-emerald-500/10 text-emerald-400 rounded px-2 py-0.5 text-[7px] font-black uppercase">ONLINE</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex flex-col justify-center">
+                                    <p className="text-[7px] font-black uppercase text-slate-500 tracking-widest text-center mb-1">Bridge Synchronization State</p>
+                                    <p className="text-[9px] font-black text-emerald-400 text-center animate-pulse">
+                                      {currentTime >= 20 ? "⚡ Live Handshake registered successfully with routing gateway" : "⌛ Awaiting dynamic Twilio bridge signal registration..."}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 4 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="p-2.5 bg-slate-900/95 border border-white/5 rounded-xl text-center">
+                                      <p className="text-[6px] text-slate-500 font-black uppercase tracking-wider mb-0.5">Response Latency</p>
+                                      <p className="text-xs font-mono font-black text-indigo-400">385ms</p>
+                                    </div>
+                                    <div className="p-2.5 bg-slate-900/95 border border-white/5 rounded-xl text-center">
+                                      <p className="text-[6px] text-slate-500 font-black uppercase tracking-wider mb-0.5">Sentiment Rating</p>
+                                      <p className="text-xs font-mono font-black text-emerald-400">94 / 100</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
+                                    <p className="text-[7px] font-black uppercase text-slate-400 border-b border-white/5 pb-1 mb-1 shrink-0">Live Transcript Stream</p>
+                                    <div className="text-[8px] space-y-1 bg-slate-950 p-2 rounded-xl border border-white/5 overflow-hidden leading-relaxed max-h-16">
+                                      <p className="text-slate-400 font-medium">
+                                        <span className="text-indigo-400 font-black uppercase text-[6px] tracking-wider">Customer:</span> "Yes, configure a custom calling pipeline please."
+                                      </p>
+                                      <p className="text-slate-200 font-medium">
+                                        <span className="text-emerald-400 font-black uppercase text-[6px] tracking-wider">Emma:</span> "Of course! Let's schedule that deployment instantly."
+                                      </p>
+                                    </div>
+
+                                    {/* Miniature Analytics Trend Chart */}
+                                    <div className="flex items-end justify-between space-x-1 h-5 mt-1 px-4 shrink-0">
+                                      {[20, 60, 40, 80, 50, 90, 70, 100, 85, 95].map((val, i) => (
+                                        <div key={i} className="flex-1 bg-indigo-500/20 rounded-t-sm transition-all duration-700" style={{ height: isPlaying ? `${val}%` : '20%' }}>
+                                          <div className="w-full bg-indigo-500 rounded-t-sm" style={{ height: isPlaying ? '100%' : '20%' }}></div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 5 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Financial Credit Ledger</span>
+                                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[6px] font-extrabold uppercase">Linked</span>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-white/5">
+                                      <div>
+                                        <p className="text-[6px] text-slate-500 uppercase font-black leading-none">Active Credit Balance</p>
+                                        <p className="text-sm font-mono font-black text-white mt-1">$492.50 USD</p>
+                                      </div>
+                                      <span className="text-[7px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">Stripe Active</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-white/5">
+                                        <p className="text-[6px] text-slate-500 uppercase font-black">Contract Tier</p>
+                                        <p className="text-[9px] font-black text-white">Scale Plan</p>
+                                      </div>
+                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-indigo-500/20">
+                                        <p className="text-[6px] text-indigo-400 uppercase font-black">Active Promo Coupon</p>
+                                        <p className="text-[9px] font-black text-indigo-400">{currentTime >= 20 ? 'PROMO20 (20%)' : 'None applied'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-1.5 flex items-center justify-center">
+                                    <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest text-center leading-none">Auto-Renewal: Every 30 Days</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 6 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Enterprise Gateway Provisioning</span>
+                                      <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[6px] font-extrabold uppercase">Tuned Rate</span>
+                                    </div>
+                                    
+                                    <div className="p-2 bg-slate-950 rounded-xl border border-white/5 space-y-1.5">
+                                      <div className="flex justify-between text-[6px] font-mono text-slate-500 font-black uppercase leading-none">
+                                        <span>Scale Target</span>
+                                        <span>Rate Per Minute</span>
+                                      </div>
+                                      {/* Simulated slider progress based on elapsed play seconds */}
+                                      <div className="flex justify-between items-center bg-white/5 p-1.5 rounded-lg">
+                                        <span className="text-[10px] font-mono font-black text-white">
+                                          {(currentTime < 15 ? 50000 : Math.min(1000000, 50000 + (currentTime - 14) * 85000)).toLocaleString(undefined, { maximumFractionDigits: 0 })} mins
+                                        </span>
+                                        <span className="text-[10px] font-mono font-black text-indigo-400">
+                                          $0.05 / min
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-1 min-h-0 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center text-center">
+                                    <p className="text-[7px] font-black uppercase text-emerald-400 tracking-widest leading-none">Calculated Operations Savings</p>
+                                    <p className="text-sm font-mono font-black text-emerald-300 mt-1">
+                                      +${(currentTime < 15 ? 12000 : 12000 + (currentTime - 14) * 19500).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    </p>
+                                    <span className="text-[5px] text-slate-500 mt-0.5 uppercase font-semibold">Allocated Dedicated SIP channels</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive floating cursor vector that glides across the dashboard frame */}
+                        {(() => {
+                          const getCursorCoords = (videoId: number, time: number) => {
+                            if (videoId === 1) { // Overview
+                              if (time < 12) return { x: '35%', top: '30%', text: 'Auditing high-level metrics' };
+                              if (time < 22) return { x: '8%', top: '28%', text: 'Browsing Console tab rail' };
+                              if (time < 28) return { x: '72%', top: '68%', text: 'Inspecting Outbound telemetry dials' };
+                              return { x: '45%', top: '82%', text: 'Monitoring standard active SIP logs' };
+                            }
+                            if (videoId === 2) { // Agents
+                              if (time < 10) return { x: '82%', top: '16%', action: 'click', text: 'Initializing Agent Studio' };
+                              if (time < 20) return { x: '45%', top: '35%', action: 'type', text: 'Updating core System Instructions template' };
+                              if (time < 30) return { x: '68%', top: '62%', action: 'click', text: 'Selecting Emma vocal synthesized voice' };
+                              return { x: '35%', top: '78%', action: 'drag', text: 'Fine-tuning latency & interruption bounds' };
+                            }
+                            if (videoId === 3) { // Numbers
+                              if (time < 10) return { x: '8%', top: '48%', text: 'Accessing VoIP Phone gateway' };
+                              if (time < 20) return { x: '78%', top: '22%', action: 'click', text: 'Reserving/provisioning dynamic toll-free line' };
+                              if (time < 28) return { x: '52%', top: '48%', action: 'click', text: 'Associating line target agent' };
+                              return { x: '50%', top: '72%', text: 'Resolving gateway API handshake' };
+                            }
+                            if (videoId === 4) { // Analytics
+                              if (time < 10) return { x: '25%', top: '26%', text: 'Auditing system response lag limits' };
+                              if (time < 24) return { x: '48%', top: '58%', action: 'click', text: 'Opening live text-transcript audit log' };
+                              return { x: '72%', top: '80%', text: 'Generating 30-day sentiment trend charts' };
+                            }
+                            if (videoId === 5) { // Billing
+                              if (time < 10) return { x: '35%', top: '32%', text: 'Inspecting USD ledger cash balance' };
+                              if (time < 20) return { x: '68%', top: '60%', action: 'click', text: 'Evaluating scale service plans upgrades' };
+                              if (time < 28) return { x: '70%', top: '74%', action: 'type', text: 'Evaluating coupon codes' };
+                              return { x: '50%', top: '86%', text: 'Confirming secure Stripe auto-topup' };
+                            }
+                            // Video 6: Enterprise
+                            if (time < 18) return { x: '55%', top: '66%', action: 'drag', text: 'Scaling wholesale calling commitments' };
+                            return { x: '65%', top: '82%', action: 'click', text: 'Registering private SIP hardware pipelines' };
+                          };
+
+                          const cursor = getCursorCoords(activeVideoId, currentTime);
+                          if (!isPlaying) return null;
+
+                          return (
+                            <motion.div 
+                              className="absolute z-20 pointer-events-none flex flex-col items-start transition-all duration-700 ease-out"
+                              style={{ left: cursor.x, top: cursor.top }}
+                            >
+                              <div className="relative">
+                                {/* Simulated pointer arrow */}
+                                <svg 
+                                  className="w-5 h-5 text-indigo-400 drop-shadow-md select-none transform -rotate-12" 
+                                  viewBox="0 0 24 24" 
+                                  fill="currentColor"
+                                >
+                                  <path d="M4.5 3v15.25l3.75-3.5 2.5 5.5s.4.8 1.15.5c.75-.3 1.15-1 .75-1.75l-2.4-5.25h5.5L4.5 3z" stroke="white" strokeWidth="1.5" />
+                                </svg>
+                                
+                                {/* Dynamic Click Pulse indicator */}
+                                {cursor.action === 'click' && (
+                                  <span className="absolute -left-1 -top-1 w-7 h-7 rounded-full border border-indigo-500 bg-indigo-500/30 animate-ping" />
+                                )}
+
+                                {/* Floating cursor action label */}
+                                <div className="absolute left-6 top-1 bg-indigo-600/90 backdrop-blur border border-indigo-400/20 text-white text-[8px] font-black rounded px-2 py-0.5 shadow-md whitespace-nowrap">
+                                  {cursor.text}
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })()}
+
+                        {/* Beautiful semi-transparent glass backdrop overlay with play button if not playing */}
+                        {!isPlaying && (
+                          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] flex items-center justify-center z-20">
+                            <button 
+                              onClick={() => setIsPlaying(true)}
+                              className="w-20 h-20 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center transition-all shadow-2xl relative hover:scale-105 active:scale-95"
+                            >
+                              <Play className="w-8 h-8 ml-1 text-white animate-pulse" />
+                              <span className="absolute -inset-2.5 rounded-full border border-indigo-500/25 animate-ping"></span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Synchronous Captions Subtitle Box */}
+                        <div className="absolute bottom-16 left-4 right-4 text-center z-10 pointer-events-none">
+                          <span className="inline-block bg-slate-950/90 backdrop-blur-md text-white text-[11px] md:text-xs font-semibold rounded-xl px-5 py-2.5 max-w-xl shadow-lg border border-white/5 transition-all duration-300">
+                            {activeSubtitle}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Video Control Bar */}
+                      <div className="p-6 bg-gradient-to-t from-black/90 to-transparent z-10 w-full space-y-4">
+                        {/* Scrubber timeline bar */}
+                        <div className="flex items-center space-x-3">
+                          <span className="text-[10px] font-mono text-slate-400 font-extrabold">{formatTime(currentTime)}</span>
+                          <div className="flex-1 relative group py-1.5">
+                            <input 
+                              type="range"
+                              min="0"
+                              max={activeVideo.duration}
+                              value={currentTime}
+                              onChange={(e) => setCurrentTime(Number(e.target.value))}
+                              className="w-full accent-indigo-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                            />
+                            {/* Visual Progress Track */}
+                            <div 
+                              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-indigo-500 rounded-lg pointer-events-none"
+                              style={{ width: `${(currentTime / activeVideo.duration) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 font-extrabold">{formatTime(activeVideo.duration)}</span>
+                        </div>
+
+                        {/* Player Control Actions Row */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-4">
+                            <button 
+                              onClick={() => setIsPlaying(!isPlaying)}
+                              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
+                            >
+                              {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white" />}
+                            </button>
+
+                            <button 
+                              onClick={() => setCurrentTime(0)}
+                              className="text-[10px] font-black uppercase text-slate-400 hover:text-white tracking-widest bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5 transition-colors"
+                            >
+                              Reset
+                            </button>
+                          </div>
+
+                          {/* Captions Icon Indicator */}
+                          <div className="flex items-center space-x-4">
+                            
+                            {/* Voice Guidance Toggle */}
+                            <button 
+                              onClick={() => {
+                                setIsVoiceEnabled(!isVoiceEnabled);
+                                if (isVoiceEnabled && 'speechSynthesis' in window) {
+                                  window.speechSynthesis.cancel();
+                                }
+                              }}
+                              className={`p-2 rounded-lg border transition-all flex items-center space-x-1.5 ${
+                                isVoiceEnabled 
+                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                  : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200'
+                              }`}
+                              title={isVoiceEnabled ? "Mute interactive AI Voice Coach" : "Unmute interactive AI Voice Coach"}
+                            >
+                              <Mic className={`w-3.5 h-3.5 ${isVoiceEnabled ? 'animate-pulse text-emerald-400' : 'text-slate-400'}`} />
+                              <span className="text-[10px] font-bold tracking-tight">Voice Assist {isVoiceEnabled ? 'ON' : 'OFF'}</span>
+                            </button>
+
+                            {/* Speed Adjuster */}
+                            <div className="flex items-center space-x-1.5 bg-white/5 border border-white/5 p-1 rounded-lg">
+                              {[1, 1.5, 2].map((speed) => (
+                                <button 
+                                  key={speed}
+                                  onClick={() => setPlaybackSpeed(speed)}
+                                  className={`text-[9px] font-black tracking-widest px-2 py-1 rounded transition-all ${
+                                    playbackSpeed === speed 
+                                      ? 'bg-indigo-600 text-white' 
+                                      : 'text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  {speed}x
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Vol simulated panel */}
+                            <div className="flex items-center space-x-1.5">
+                              <Volume2 className="w-4 h-4 text-slate-400" />
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.1" 
+                                value={playbackVolume} 
+                                onChange={(e) => setPlaybackVolume(Number(e.target.value))}
+                                className="w-12 accent-indigo-500 h-1 bg-slate-800 rounded-lg"
+                              />
+                            </div>
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Information, Key Learning Points & Quick Action tab redirection */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <div className={`p-8 rounded-[2.5rem] border ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+                    }`}>
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-500">
+                          <TargetIcon className="w-5 h-5 text-indigo-500" />
+                        </div>
+                        <h4 className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          Companion Resources
+                        </h4>
+                      </div>
+
+                      <p className={`text-sm leading-relaxed mb-6 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {activeVideo.description}
+                      </p>
+
+                      <div className={`p-5 rounded-2xl border mb-6 ${
+                        theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-slate-50 border-slate-100'
+                      }`}>
+                        <h5 className="text-[10px] uppercase font-black tracking-wider text-slate-500 mb-3">
+                          What you will learn:
+                        </h5>
+                        <ul className="space-y-3">
+                          {activeVideo.learningPoints.map((pt, i) => (
+                            <li key={i} className="flex items-start text-xs font-semibold text-slate-400">
+                              <Check className="w-3.5 h-3.5 mr-2 text-indigo-500 shrink-0 mt-0.5" />
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Intelligent context direct jumper redirect */}
+                      <button 
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setActiveTab(activeVideo.targetTab as any);
+                        }}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all flex items-center justify-center space-x-2"
+                      >
+                        <span>Jump Directly to {activeVideo.targetTab.toUpperCase()}</span>
+                        <ChevronRight className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+
+                    <div className={`p-6 rounded-[2rem] border ${
+                      theme === 'dark' ? 'bg-slate-900/10 border-white/5' : 'bg-slate-100 border-slate-200'
+                    }`}>
+                      <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-1">
+                        Deployment Ready
+                      </p>
+                      <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                        Need continuous live assistance or physical system deployments? Claim dedicated regional SIP numbers directly in the platform to route outbound agents in less than 5 minutes.
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 6 Grid items section layout */}
+                <div>
+                  <h4 className={`text-lg font-black tracking-tight mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    Choose Masterclass Lesson:
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {tutorialVideos.map((video) => {
+                      const isSelected = video.id === activeVideoId;
+                      const VideoIcon = getTabIcon(video.targetTab);
+                      
+                      return (
+                        <div 
+                          key={video.id}
+                          onClick={() => {
+                            setActiveVideoId(video.id);
+                            setCurrentTime(0);
+                            setIsPlaying(true);
+                          }}
+                          className={`p-6 rounded-[2rem] border cursor-pointer transition-all duration-300 relative group flex flex-col justify-between ${
+                            isSelected 
+                              ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02] shadow-xl' 
+                              : theme === 'dark' ? 'border-white/5 bg-slate-900/30 hover:border-white/10 hover:bg-slate-900/50' : 'border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md'
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-4 right-4 px-2 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-widest animate-pulse">
+                              Active Playing
+                            </span>
+                          )}
+
+                          <div className="space-y-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                              isSelected ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              <VideoIcon className="w-5 h-5" />
+                            </div>
+
+                            <div>
+                              <h5 className={`font-black text-sm mb-1.5 tracking-tight ${
+                                isSelected ? 'text-indigo-400' : theme === 'dark' ? 'text-white' : 'text-slate-900'
+                              }`}>
+                                {video.title}
+                              </h5>
+                              <p className="text-slate-500 text-xs font-semibold leading-relaxed line-clamp-2">
+                                {video.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-6 mt-4 border-t border-slate-500/10">
+                            <span className="text-[10px] font-black tracking-widest uppercase text-slate-400 flex items-center">
+                              <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                              Length: {formatTime(video.duration)}
+                            </span>
+                            <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest group-hover:translate-x-1 transition-all">
+                              Launch sim &rarr;
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Polish Dashboard Written Step Onboarding Guide */}
+                <div className={`p-8 md:p-12 rounded-[2.5rem] border mt-12 transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/20 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+                }`}>
+                  <div className="max-w-3xl space-y-4 mb-10">
+                    <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
+                      Step-by-Step Practical Blueprint
+                    </span>
+                    <h4 className={`text-2xl md:text-3xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Operationalizing Your Call Center In 6 Core Phases
+                    </h4>
+                    <p className={`text-sm font-semibold leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Follow this tactical roadmap to completely wire, test, launch, and monitor your conversational AI workflows. Use the active voice coach controls above to hear the spoken guide for any specific topic.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {[
+                      {
+                        num: "01",
+                        title: "Credential Setup",
+                        icon: Key,
+                        tab: "integrations",
+                        desc: "Input your Twilio Account SID and Auth Token inside the Integrations portal. This creates a secure, encrypted link allowing CallingAgent to communicate directly with global cellular grids.",
+                        tip: "Locate these in your primary Twilio console dashboard under API credentials."
+                      },
+                      {
+                        num: "02",
+                        title: "Agent Conception",
+                        icon: Users,
+                        tab: "agents",
+                        desc: "Navigate to Agent Studio and click 'Create Agent'. Write system goals constraint profiles, select prime voice modules (e.g. Emma, Oliver), and formulate interruption tolerances.",
+                        tip: "Use strict constraints like 'Do not discuss competitor pricing' to protect compliance."
+                      },
+                      {
+                        num: "03",
+                        title: "Number Allocation",
+                        icon: Phone,
+                        tab: "numbers",
+                        desc: "Acquire localized landline or toll-free calling routes directly. Click 'Provision Number', choose your desired state/region prefix, and link the incoming lines to your created agents.",
+                        tip: "Make sure you have active Twilio gateway balance before leasing numbers."
+                      },
+                      {
+                        num: "04",
+                        title: "Live Operations",
+                        icon: BarChart3,
+                        tab: "overview",
+                        desc: "Monitor your ongoing incoming or outgoing voice channels on the main Overview Board. Check outbound telecommunication lines, active SIP trunk queues, and completion ratios.",
+                        tip: "The real-time log stream shows signal statuses and duration timers live."
+                      },
+                      {
+                        num: "05",
+                        title: "Transcript Analysis",
+                        icon: TrendingUp,
+                        tab: "analytics",
+                        desc: "Inspect customer transcriptions, audio streams, and sentiment audits immediately post-call. The System automatically grades user emotion from negative to highly cooperative.",
+                        tip: "Use CSV exports to feed performance metrics into external BI pipelines."
+                      },
+                      {
+                        num: "06",
+                        title: "Scale & Capacity",
+                        icon: Building2,
+                        tab: "enterprise",
+                        desc: "When routing more than 10,000 minutes monthly, trigger our automated wholesale pricing sliders. Set custom capacity targets to dynamically provision dedicated line hardware buffers.",
+                        tip: "Wholesale plans drop the outbound minutes pricing rate by up to 60%."
+                      }
+                    ].map((step, idx) => {
+                      const StepIcon = step.icon;
+                      return (
+                        <div 
+                          key={idx}
+                          className={`p-6 rounded-[2rem] border transition-all duration-300 relative flex flex-col justify-between ${
+                            theme === 'dark' ? 'bg-slate-950/40 border-white/5 hover:border-indigo-500/30' : 'bg-slate-50 border-slate-150 hover:border-slate-300'
+                          }`}
+                        >
+                          <div>
+                            <div className="absolute top-6 right-6 text-2xl font-black opacity-10 font-mono tracking-tight text-indigo-500 select-none">
+                              {step.num}
+                            </div>
+                            
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-5">
+                              <StepIcon className="w-5 h-5 text-indigo-400" />
+                            </div>
+
+                            <h5 className={`font-black text-base mb-2 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                              {step.title}
+                            </h5>
+
+                            <p className={`text-xs leading-relaxed mb-4 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {step.desc}
+                            </p>
+                          </div>
+
+                          <div className="space-y-4 mt-4">
+                            <div className={`p-3 rounded-xl text-[10px] font-semibold flex items-start ${
+                              theme === 'dark' ? 'bg-slate-900/60 text-slate-400' : 'bg-white text-slate-500 border border-slate-200'
+                            }`}>
+                              <span className="text-amber-500 font-extrabold mr-1.5 shrink-0">PRO TIP:</span>
+                              <span>{step.tip}</span>
+                            </div>
+
+                            <button 
+                              onClick={() => {
+                                setIsPlaying(false);
+                                setActiveTab(step.tab as any);
+                              }}
+                              className="w-full py-2.5 bg-indigo-600/10 hover:bg-indigo-600 hover:text-white rounded-xl text-[10px] font-bold text-indigo-400 tracking-wider uppercase transition-colors"
+                            >
+                              Go To {step.title} Tab
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </motion.div>
+            );
+          })()}
 
           {activeTab === 'profile' && (
             <motion.div 
