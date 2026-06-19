@@ -128,6 +128,9 @@ interface EnterpriseRequest {
   status: 'Pending' | 'Reviewing' | 'Responded' | 'Closed';
   createdAt: string;
   adminResponse?: string;
+  requestedMinutes?: number;
+  calculatedRate?: number;
+  estimatedMonthlyCost?: number;
 }
 
 interface Number {
@@ -270,7 +273,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     }
   ]);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
-  const [newEnterpriseRequest, setNewEnterpriseRequest] = useState({ companyName: '', monthlyVolume: '', needs: '' });
+  const [newEnterpriseRequest, setNewEnterpriseRequest] = useState({ companyName: '', monthlyVolume: '50,000 - 250,000', needs: '', requestedMinutes: 50000 });
   const [selectedEnterpriseRequest, setSelectedEnterpriseRequest] = useState<EnterpriseRequest | null>(null);
   const [enterpriseResponse, setEnterpriseResponse] = useState('');
 
@@ -282,6 +285,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const calculatePrice = (mins: number) => (mins * 0.45).toFixed(2);
   const calculateYearlyPrice = (mins: number) => (mins * 0.45 * 12 * 0.8).toFixed(2); // 20% discount
+
+  // Enterprise rates based on requested minutes
+  const getEnterpriseRate = (mins: number) => {
+    if (mins < 10000) return 0.12;
+    if (mins < 50000) return 0.10;
+    if (mins < 100000) return 0.08;
+    if (mins < 250000) return 0.06;
+    return 0.05;
+  };
+
+  const calculateEnterpriseCost = (mins: number) => {
+    const rate = getEnterpriseRate(mins);
+    return mins * rate;
+  };
 
   // Profile State
   const [profileName, setProfileName] = useState(user.name || '');
@@ -354,44 +371,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const relayWsRef = React.useRef<WebSocket | null>(null);
 
   // Real State
-  const [agents, setAgents] = useState<Agent[]>([
-    { id: '1', name: 'Dr. Smith Scheduler', voice: 'Charon', gender: 'Male', pitch: 1.0, speed: 1.0, status: 'Active', calls: 412, logic: 'Make.com Hook', prompt: 'You are a medical scheduler for Dr. Smith. Your goal is to book appointments... Be polite and professional.', provider: 'CallingAgent' },
-    { id: '2', name: 'Real Estate Lead Gen', voice: 'Aria', gender: 'Female', pitch: 1.0, speed: 1.0, status: 'Active', calls: 892, logic: 'FastAPI Agent', prompt: 'You are a real estate assistant. Qualify leads by asking about their budget and timeline. Be persuasive but helpful.', provider: 'CallingAgent' },
-    { id: '3', name: 'After-Hours Support', voice: 'Kore', gender: 'Female', pitch: 1.1, speed: 0.9, status: 'Paused', calls: 124, logic: 'Static Script', prompt: 'You handle support calls after 6 PM. Take messages if you cannot solve the issue. Always ask for a callback number.', provider: 'CallingAgent' },
-  ]);
+  const [agents, setAgents] = useState<Agent[]>([]);
 
-  const [numbers, setNumbers] = useState<Number[]>([
-    { id: '1', number: '+1 (888) 123-4567', agentId: '1', status: 'Active', location: 'Sandbox (Shared)', type: 'sandbox' },
-    { id: '2', number: '+1 (555) 987-6543', agentId: '2', status: 'Active', location: 'London, UK', type: 'real' },
-  ]);
+  const [numbers, setNumbers] = useState<Number[]>([]);
 
   const [provisionTab, setProvisionTab] = useState<'sandbox' | 'buy' | 'custom'>('sandbox');
   const [selectedRegion, setSelectedRegion] = useState('US');
   const [provisioningAgentId, setProvisioningAgentId] = useState('');
 
-  const [calls, setCalls] = useState<Call[]>([
-    { 
-      id: 'c1', 
-      caller: '+1 (555) 012-3456', 
-      agent: 'Dr. Smith Scheduler', 
-      duration: '4m 12s', 
-      outcome: 'Booked', 
-      sentiment: 'Positive', 
-      timestamp: '2 mins ago',
-      transcript: "Agent: Hello, this is Dr. Smith's office. How can I help you?\nCaller: Hi, I'd like to book an appointment for next week.\nAgent: Certainly! We have an opening on Tuesday at 10 AM. Does that work for you?\nCaller: Yes, that's perfect. My name is John Doe.\nAgent: Great, John. I've booked you in for Tuesday at 10 AM. We'll see you then.\nCaller: Thank you, goodbye.\nAgent: Goodbye, have a great day!",
-      sentimentAnalysis: "The caller was polite and appreciative. The agent provided efficient service and successfully booked the appointment. Overall sentiment is highly positive with clear resolution."
-    },
-    { id: 'c2', caller: '+1 (555) 098-7654', agent: 'After-Hours Support', duration: '1m 22s', outcome: 'Resolved', sentiment: 'Neutral', timestamp: '15 mins ago' },
-    { id: 'c3', caller: '+1 (555) 234-5678', agent: 'Real Estate Lead Gen', duration: '8m 45s', outcome: 'Inquiry', sentiment: 'Positive', timestamp: '1 hour ago' },
-    { id: 'c4', caller: '+1 (555) 555-0001', agent: 'Dr. Smith Scheduler', duration: '2m 10s', outcome: 'Cancelled', sentiment: 'Negative', timestamp: '3 hours ago' },
-  ]);
+  const [calls, setCalls] = useState<Call[]>([]);
 
-  const [allUsers, setAllUsers] = useState<any[]>([
-    { id: 'u1', email: 'essadhiif@gmail.com', role: 'admin', status: 'online', name: 'Al-Saddah Owner', balance: 15.00, credits: 300, createdAt: { seconds: 1711814400 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) } },
-    { id: 'u2', email: 'syedasgharkazmii@gmail.com', role: 'admin', status: 'offline', name: 'Syedasghar Kazmi', balance: 120.00, credits: 2400, createdAt: { seconds: 1711728000 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) - 86400 } },
-    { id: 'u3', email: 'syedasghakazmii@gmail.com', role: 'admin', status: 'offline', name: 'Syedasgha Kazmi', balance: 0.00, credits: 0, createdAt: { seconds: 1711728000 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) - 172800 } },
-    { id: 'u4', email: 'corporate_partner@example.com', role: 'customer', status: 'online', name: 'Acme Telephony', balance: 50.00, credits: 1000, createdAt: { seconds: 1711900800 }, lastLogin: { seconds: Math.floor(Date.now() / 1000) } },
-  ]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -424,38 +414,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     }
   }, [activeTab, isAdmin]);
 
-  const [invoices, setInvoices] = useState([
-    { id: 'inv_1', user: 'customer1@example.com', amount: 250.00, status: 'Paid', date: '2024-03-01' },
-    { id: 'inv_2', user: 'customer2@example.com', amount: 100.00, status: 'Pending', date: '2024-03-15' },
-    { id: 'inv_3', user: 'customer2@example.com', amount: 50.00, status: 'Paid', date: '2024-02-01' },
-  ]);
+  const [invoices, setInvoices] = useState([]);
 
-  const [tickets, setTickets] = useState<Ticket[]>([
-    { 
-      id: 't1', 
-      userId: 'u1', 
-      userEmail: 'customer1@example.com', 
-      subject: 'Call quality issue', 
-      description: 'I am hearing a lot of static during calls.', 
-      status: 'Open', 
-      priority: 'High', 
-      createdAt: '2024-03-20 10:00',
-      replies: []
-    },
-    { 
-      id: 't2', 
-      userId: 'u2', 
-      userEmail: 'customer2@example.com', 
-      subject: 'Billing question', 
-      description: 'Why was I charged twice this month?', 
-      status: 'Resolved', 
-      priority: 'Medium', 
-      createdAt: '2024-03-18 14:30',
-      replies: [
-        { role: 'admin', message: 'We have refunded the duplicate charge.', timestamp: '2024-03-19 09:00' }
-      ]
-    }
-  ]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
 
   const [newAgent, setNewAgent] = useState({
     name: '',
@@ -477,51 +438,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   // Realistic Chart Data Generation
   const chartData = useMemo(() => {
     const data = [];
-    let baseRevenue = 450;
-    let baseCalls = 15;
-    let baseUsers = 1200;
-    let baseUsage = 120000;
-    let baseSpend = 5;
-    
     for (let i = 0; i < 24; i++) {
-      // Simulate daily cycle (peak hours 9 AM - 6 PM)
-      const hour = i;
-      const isPeak = hour >= 9 && hour <= 18;
-      const peakMultiplier = isPeak ? 1.5 + Math.random() * 0.5 : 0.7 + Math.random() * 0.3;
-      
-      // Add a slight upward trend over the 24h period for "growth" feel
-      const trendFactor = 1 + (i * 0.01); 
-      
-      const calls = Math.floor(baseCalls * peakMultiplier * trendFactor);
-      const revenue = Math.floor(baseRevenue * peakMultiplier * trendFactor);
-      const users = Math.floor(baseUsers + (i * 3) + Math.random() * 5);
-      const usage = Math.floor(baseUsage / 24 * peakMultiplier * trendFactor);
-      const latency = Math.floor(140 + Math.random() * 20 - (isPeak ? 10 : 0)); 
-      const spend = Math.floor(baseSpend * peakMultiplier * trendFactor);
-      
       data.push({
         time: `${i}:00`,
-        calls,
-        latency,
-        revenue,
-        users,
-        usage,
-        minutes: calls * 3, // Simulate minutes
-        spend,
+        calls: 0,
+        latency: 0,
+        revenue: 0,
+        users: 0,
+        usage: 0,
+        minutes: 0,
+        spend: 0,
       });
-      
-      // Gradually increase base for next hour to simulate growth
-      baseRevenue += Math.random() * 5;
-      baseCalls += Math.random() * 0.2;
-      baseSpend += Math.random() * 0.1;
     }
     return data;
   }, []);
 
   const sentimentData = [
-    { name: 'Positive', value: 65, color: '#10b981' },
-    { name: 'Neutral', value: 25, color: '#6366f1' },
-    { name: 'Negative', value: 10, color: '#f43f5e' },
+    { name: 'Positive', value: 0, color: '#10b981' },
+    { name: 'Neutral', value: 0, color: '#6366f1' },
+    { name: 'Negative', value: 0, color: '#f43f5e' },
   ];
 
   useEffect(() => {
@@ -1526,10 +1461,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const stats = [
-    { id: 'minutes', label: 'Total Minutes', value: '1,284', change: '+12.5%', icon: Phone, color: 'text-indigo-400' },
-    { id: 'completion', label: 'Completion Rate', value: '99.4%', change: '+0.2%', icon: CheckCircle2, color: 'text-emerald-400' },
-    { id: 'latency', label: 'Avg Latency', value: '142ms', change: '-8ms', icon: TrendingUp, color: 'text-purple-400' },
-    { id: 'spend', label: 'Spend (MTD)', value: '$192.40', change: '+$12.10', icon: CreditCard, color: 'text-blue-400' },
+    { id: 'minutes', label: 'Total Minutes', value: '0', change: '0%', icon: Phone, color: 'text-indigo-400' },
+    { id: 'completion', label: 'Completion Rate', value: '0.0%', change: '0%', icon: CheckCircle2, color: 'text-emerald-400' },
+    { id: 'latency', label: 'Avg Latency', value: '0ms', change: '0%', icon: TrendingUp, color: 'text-purple-400' },
+    { id: 'spend', label: 'Spend (MTD)', value: '$0.00', change: '0%', icon: CreditCard, color: 'text-blue-400' },
   ];
 
   return (
@@ -1769,10 +1704,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                      { id: 'revenue', label: 'Total Revenue', value: '$18,450.00', change: '+12.5%', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                      { id: 'users', label: 'Active Users', value: '1,284', change: '+142', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                      { id: 'usage', label: 'Platform Usage', value: '124,500 mins', change: '+12.4k', icon: Mic, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                      { id: 'tickets', label: 'Open Tickets', value: tickets.filter(t => t.status === 'Open').length.toString(), change: '-2', icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                      { id: 'revenue', label: 'Total Revenue', value: '$0.00', change: '0%', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                      { id: 'users', label: 'Active Users', value: '0', change: '0%', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                      { id: 'usage', label: 'Platform Usage', value: '0 mins', change: '0%', icon: Mic, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      { id: 'tickets', label: 'Open Tickets', value: tickets.filter(t => t.status === 'Open').length.toString(), change: '0%', icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     ].map((stat, i) => (
                       <button 
                         key={i} 
@@ -3066,14 +3001,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
                       <div className="space-y-4">
                         <button 
-                          onClick={() => handlePlanUpgrade(plan)}
+                          onClick={() => {
+                            if (plan.name === 'Enterprise') {
+                              setShowEnterpriseModal(true);
+                            } else {
+                              handlePlanUpgrade(plan);
+                            }
+                          }}
                           className={`w-full py-5 rounded-2xl font-black text-sm transition-all ${
                             plan.name === currentPlan.name 
                               ? theme === 'dark' ? 'bg-slate-800 text-slate-400 cursor-default' : 'bg-slate-100 text-slate-400 cursor-default'
                               : `bg-gradient-to-r ${plan.color} text-white hover:opacity-90 shadow-xl shadow-indigo-600/20`
                           }`}
                         >
-                          {plan.name === currentPlan.name ? 'Current Plan' : `Purchase ${plan.name} Plan`}
+                          {plan.name === currentPlan.name 
+                            ? 'Current Plan' 
+                            : plan.name === 'Enterprise' 
+                              ? 'Configure Custom Plan' 
+                              : `Purchase ${plan.name} Plan`}
                         </button>
                       </div>
                     </div>
@@ -3836,11 +3781,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 {req.status}
                               </span>
                             </div>
-                            <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-500">
-                              <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1.5" /> {req.userEmail}</span>
-                              <span className="flex items-center"><TrendingUp className="w-3.5 h-3.5 mr-1.5" /> {req.monthlyVolume} mins/mo</span>
-                              <span className="flex items-center"><History className="w-3.5 h-3.5 mr-1.5" /> {req.createdAt}</span>
-                            </div>
+                             <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-500">
+                               <span className="flex items-center"><User className="w-3.5 h-3.5 mr-1.5" /> {req.userEmail}</span>
+                               <span className="flex items-center"><TrendingUp className="w-3.5 h-3.5 mr-1.5 text-indigo-400" /> {req.requestedMinutes ? `${req.requestedMinutes.toLocaleString()} mins` : req.monthlyVolume}</span>
+                               {req.calculatedRate && (
+                                 <span className="flex items-center text-indigo-400 font-extrabold">Proposed: ${req.calculatedRate.toFixed(2)}/min</span>
+                               )}
+                               {req.estimatedMonthlyCost && (
+                                 <span className="flex items-center text-emerald-500 font-extrabold">Est: ${req.estimatedMonthlyCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                               )}
+                               <span className="flex items-center"><History className="w-3.5 h-3.5 mr-1.5" /> {req.createdAt}</span>
+                             </div>
+                             {req.needs && (
+                               <div className={`mt-3 p-3 rounded-lg text-xs leading-relaxed max-w-xl ${theme === 'dark' ? 'bg-slate-950/45 text-slate-400' : 'bg-slate-100/60 text-slate-600'}`}>
+                                 <strong className="text-slate-500 uppercase tracking-widest text-[9px] block mb-1">Requested Specifics:</strong>
+                                 {req.needs}
+                               </div>
+                             )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -3911,6 +3868,27 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 {req.status}
                               </span>
                             </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                              <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-slate-950/40' : 'bg-slate-50'}`}>
+                                <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider mb-0.5">Monthly Volume</p>
+                                <p className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                  {req.requestedMinutes ? `${req.requestedMinutes.toLocaleString()} mins` : req.monthlyVolume}
+                                </p>
+                              </div>
+                              <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-slate-950/40' : 'bg-slate-50'}`}>
+                                <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider mb-0.5">Calculated Rate</p>
+                                <p className={`text-sm font-bold text-indigo-400`}>
+                                  {req.calculatedRate ? `$${req.calculatedRate.toFixed(2)}/min` : 'Custom Quote'}
+                                </p>
+                              </div>
+                              <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-slate-950/40' : 'bg-slate-50'} col-span-2 sm:col-span-1`}>
+                                <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider mb-0.5">Est. Monthly Cost</p>
+                                <p className={`text-sm font-black text-emerald-500`}>
+                                  {req.estimatedMonthlyCost ? `$${req.estimatedMonthlyCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'Under Review'}
+                                </p>
+                              </div>
+                            </div>
+                            
                             <div className={`p-4 rounded-xl mb-4 ${theme === 'dark' ? 'bg-slate-950/50' : 'bg-slate-100/50'}`}>
                               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Your Needs</p>
                               <p className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{req.needs}</p>
@@ -5272,23 +5250,30 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <form onSubmit={(e) => {
                   e.preventDefault();
+                  const mins = newEnterpriseRequest.requestedMinutes || 50000;
+                  const rate = getEnterpriseRate(mins);
+                  const cost = calculateEnterpriseCost(mins);
+                  
                   const request: EnterpriseRequest = {
                     id: `er_${Date.now()}`,
                     userId: user.email,
                     userEmail: user.email,
                     companyName: newEnterpriseRequest.companyName,
-                    monthlyVolume: newEnterpriseRequest.monthlyVolume,
+                    monthlyVolume: `${mins.toLocaleString()} mins`,
                     needs: newEnterpriseRequest.needs,
                     status: 'Pending',
-                    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+                    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                    requestedMinutes: mins,
+                    calculatedRate: rate,
+                    estimatedMonthlyCost: cost,
                   };
                   setEnterpriseRequests([request, ...enterpriseRequests]);
                   setShowEnterpriseModal(false);
-                  setNewEnterpriseRequest({ companyName: '', monthlyVolume: '', needs: '' });
-                  alert("Your request has been submitted! Our team will review it and get back to you shortly.");
+                  setNewEnterpriseRequest({ companyName: '', monthlyVolume: '50,000 - 250,000', needs: '', requestedMinutes: 50000 });
+                  alert("Your custom enterprise request has been successfully created! Outbound capacity pipelines have been calculated. Let's arrange a dedicated bridge meeting.");
                 }} className="space-y-6">
                   <div>
-                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ml-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Company Name</label>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ml-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Company Name</label>
                     <input 
                       required 
                       value={newEnterpriseRequest.companyName}
@@ -5301,25 +5286,91 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   <div>
-                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ml-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Estimated Monthly Volume</label>
-                    <select 
-                      required 
-                      value={newEnterpriseRequest.monthlyVolume}
-                      onChange={(e) => setNewEnterpriseRequest({...newEnterpriseRequest, monthlyVolume: e.target.value})}
-                      className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
-                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      <option value="">Select volume...</option>
-                      <option value="10,000 - 50,000">10,000 - 50,000 mins</option>
-                      <option value="50,000 - 250,000">50,000 - 250,000 mins</option>
-                      <option value="250,000 - 1,000,000">250,000 - 1,000,000 mins</option>
-                      <option value="1,000,000+">1,000,000+ mins</option>
-                    </select>
+                    <div className="flex justify-between items-center mb-1 ml-1">
+                      <label className={`block text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Requested Monthly Minutes</label>
+                      <span className="text-xs font-mono text-indigo-400 font-extrabold">Step: 5,000 mins</span>
+                    </div>
+                    <div className="flex gap-4 items-center">
+                      <input 
+                        type="range"
+                        min="5000"
+                        max="50000"
+                        step="5000"
+                        value={newEnterpriseRequest.requestedMinutes > 50000 ? 50000 : newEnterpriseRequest.requestedMinutes}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setNewEnterpriseRequest({
+                            ...newEnterpriseRequest, 
+                            requestedMinutes: val,
+                            monthlyVolume: `${val.toLocaleString()} mins`
+                          });
+                        }}
+                        className="flex-1 accent-indigo-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <input 
+                        type="number"
+                        min="1000"
+                        max="10000000"
+                        step="1000"
+                        value={newEnterpriseRequest.requestedMinutes}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setNewEnterpriseRequest({
+                            ...newEnterpriseRequest, 
+                            requestedMinutes: val,
+                            monthlyVolume: `${val.toLocaleString()} mins`
+                          });
+                        }}
+                        className={`w-28 text-center border rounded-xl py-2 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    
+                    {/* Live estimator cards */}
+                    <div className={`mt-4 p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-950/60 border-white/5' : 'bg-slate-50 border-slate-200'} space-y-3`}>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-extrabold uppercase tracking-wider">Volume Tier:</span>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                          newEnterpriseRequest.requestedMinutes < 10000 ? 'bg-orange-500/10 text-orange-400' :
+                          newEnterpriseRequest.requestedMinutes < 50000 ? 'bg-slate-500/10 text-slate-300' :
+                          newEnterpriseRequest.requestedMinutes < 100000 ? 'bg-amber-500/10 text-amber-400' :
+                          newEnterpriseRequest.requestedMinutes < 250000 ? 'bg-indigo-500/10 text-indigo-400' :
+                          'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                          {newEnterpriseRequest.requestedMinutes < 10000 ? 'Bronze Pipeline' :
+                           newEnterpriseRequest.requestedMinutes < 50000 ? 'Silver Pipeline' :
+                           newEnterpriseRequest.requestedMinutes < 100000 ? 'Gold Pipeline' :
+                           newEnterpriseRequest.requestedMinutes < 250000 ? 'Platinum Pipeline' :
+                           'Diamond Infinite Tier'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-extrabold uppercase tracking-wider">Custom Telephony Rate:</span>
+                        <span className="font-mono font-extrabold text-white text-indigo-400">
+                          ${getEnterpriseRate(newEnterpriseRequest.requestedMinutes).toFixed(2)}/min
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs border-t border-dashed border-white/5 pt-2">
+                        <span className="text-slate-500 font-extrabold uppercase tracking-wider">Estimated Monthly Cost:</span>
+                        <span className="font-mono font-black text-lg text-emerald-400">
+                          ${calculateEnterpriseCost(newEnterpriseRequest.requestedMinutes).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] text-slate-500">
+                        <span>Concurrent Active Lines Included:</span>
+                        <span className="font-mono font-black">
+                          {Math.max(2, Math.ceil(newEnterpriseRequest.requestedMinutes / 3500))} Lines
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
-                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ml-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Specific Needs & Requirements</label>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ml-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Specific Needs & Requirements</label>
                     <textarea 
                       required 
                       value={newEnterpriseRequest.needs}
