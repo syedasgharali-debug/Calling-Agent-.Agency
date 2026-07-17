@@ -50,6 +50,7 @@ export interface Blog {
 }
 
 interface UserSession {
+  uid?: string;
   email: string;
   role: UserRole;
   plan?: string;
@@ -57,6 +58,7 @@ interface UserSession {
   profilePic?: string;
   balance?: number;
   credits?: number;
+  agents?: any[];
 }
 
 const App: React.FC = () => {
@@ -199,6 +201,36 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
       try {
         const parsed = JSON.parse(savedSession);
         setUser(parsed);
+
+        // Fetch latest details from Firestore to keep dashboard synchronized
+        if (parsed.uid) {
+          const fetchLatest = async () => {
+            try {
+              const { doc, getDoc } = await import('firebase/firestore');
+              const { db } = await import('./services/firebaseService');
+              const snapshot = await getDoc(doc(db, 'users', parsed.uid));
+              if (snapshot.exists()) {
+                const data = snapshot.data();
+                const freshUser = {
+                  ...parsed,
+                  name: data.name || parsed.name,
+                  profilePic: data.profilePic || parsed.profilePic,
+                  role: data.role || parsed.role,
+                  balance: data.balance !== undefined ? data.balance : parsed.balance,
+                  credits: data.credits !== undefined ? data.credits : parsed.credits,
+                  plan: data.plan !== undefined ? data.plan : parsed.plan || 'Free',
+                  agents: data.agents || parsed.agents,
+                };
+                setUser(freshUser);
+                localStorage.setItem('fallback_user_session', JSON.stringify(freshUser));
+                console.log("Successfully loaded fresh user session from database.");
+              }
+            } catch (err) {
+              console.warn("Could not refresh user session from Firestore on mount:", err);
+            }
+          };
+          fetchLatest();
+        }
       } catch (e) {
         console.error("Failed to parse fallback session:", e);
       }
@@ -209,12 +241,15 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
         const profile = await syncUserProfile(firebaseUser);
         if (profile) {
           const u = {
+            uid: firebaseUser.uid,
             email: firebaseUser.email || '',
-            name: firebaseUser.displayName || '',
-            profilePic: firebaseUser.photoURL || '',
+            name: (profile as any).name || firebaseUser.displayName || '',
+            profilePic: (profile as any).profilePic || firebaseUser.photoURL || '',
             role: profile.role as UserRole,
-            balance: (profile as any).balance || 0,
-            credits: (profile as any).credits || 0,
+            balance: (profile as any).balance !== undefined ? (profile as any).balance : 5.00,
+            credits: (profile as any).credits !== undefined ? (profile as any).credits : 100,
+            plan: (profile as any).plan || 'Free',
+            agents: (profile as any).agents || null,
           };
           setUser(u);
           localStorage.setItem('fallback_user_session', JSON.stringify(u));
@@ -267,16 +302,77 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const handleLogin = (email: string, role: UserRole, fallbackUser?: any) => {
-    const sessionUser = fallbackUser || {
-      email,
-      role: role,
-      name: email.split('@')[0],
-      balance: role === 'admin' ? 0 : 5.00,
-      credits: role === 'admin' ? 0 : 100
-    };
+  const handleLogin = async (email: string, role: UserRole, fallbackUser?: any) => {
+    let sessionUser: UserSession;
+    if (fallbackUser) {
+      sessionUser = {
+        uid: fallbackUser.uid,
+        email: fallbackUser.email,
+        role: fallbackUser.role,
+        name: fallbackUser.name || email.split('@')[0],
+        balance: fallbackUser.balance !== undefined ? fallbackUser.balance : (role === 'admin' ? 0 : 5.00),
+        credits: fallbackUser.credits !== undefined ? fallbackUser.credits : (role === 'admin' ? 0 : 100),
+        plan: fallbackUser.plan || 'Free',
+        agents: fallbackUser.agents || null,
+        profilePic: fallbackUser.profilePic || ''
+      };
+    } else {
+      const docId = `fallback_${role}_${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
+      sessionUser = {
+        uid: docId,
+        email: email.toLowerCase().trim(),
+        role: role,
+        name: email.split('@')[0],
+        balance: role === 'admin' ? 0 : 5.00,
+        credits: role === 'admin' ? 0 : 100,
+        plan: 'Free',
+        agents: null,
+        profilePic: ''
+      };
+    }
     setUser(sessionUser);
     localStorage.setItem('fallback_user_session', JSON.stringify(sessionUser));
+    
+    // Sync to Firestore to ensure their account details are persistent in the database
+    if (sessionUser.uid) {
+      try {
+        const { doc, setDoc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('./services/firebaseService');
+        const userDocRef = doc(db, 'users', sessionUser.uid);
+        const existingSnap = await getDoc(userDocRef);
+        if (!existingSnap.exists()) {
+          await setDoc(userDocRef, {
+            email: sessionUser.email,
+            role: sessionUser.role,
+            name: sessionUser.name,
+            balance: sessionUser.balance,
+            credits: sessionUser.credits,
+            plan: sessionUser.plan || 'Free',
+            agents: sessionUser.agents,
+            profilePic: sessionUser.profilePic,
+            createdAt: new Date().toISOString()
+          });
+          console.log("Created database record for fallback/admin user:", sessionUser.uid);
+        } else {
+          // Merge existing Firestore database values to state to avoid resetting anything to zero
+          const data = existingSnap.data();
+          const mergedUser = {
+            ...sessionUser,
+            name: data.name || sessionUser.name,
+            profilePic: data.profilePic || sessionUser.profilePic,
+            balance: data.balance !== undefined ? data.balance : sessionUser.balance,
+            credits: data.credits !== undefined ? data.credits : sessionUser.credits,
+            plan: data.plan !== undefined ? data.plan : sessionUser.plan,
+            agents: data.agents || sessionUser.agents
+          };
+          setUser(mergedUser);
+          localStorage.setItem('fallback_user_session', JSON.stringify(mergedUser));
+        }
+      } catch (err) {
+        console.warn("Could not synchronize fallback session user in Firestore:", err);
+      }
+    }
+    
     navigate('dashboard');
   };
 
@@ -299,9 +395,23 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
     }
   };
 
-  const handleUpdateUser = (updates: Partial<UserSession>) => {
+  const handleUpdateUser = async (updates: Partial<UserSession>) => {
     if (user) {
-      setUser({ ...user, ...updates });
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('fallback_user_session', JSON.stringify(updatedUser));
+      
+      const userId = user.uid || (auth.currentUser ? auth.currentUser.uid : null);
+      if (userId) {
+        try {
+          const { doc, setDoc } = await import('firebase/firestore');
+          const { db } = await import('./services/firebaseService');
+          await setDoc(doc(db, 'users', userId), updates, { merge: true });
+          console.log("Successfully saved updates to user profile inside Firestore:", userId);
+        } catch (e) {
+          console.warn("Failed to persist user updates in Firestore:", e);
+        }
+      }
     }
   };
 

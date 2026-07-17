@@ -629,9 +629,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Real State
   const [agents, setAgents] = useState<Agent[]>(() => {
+    if (user && (user as any).agents && Array.isArray((user as any).agents) && (user as any).agents.length > 0) {
+      return (user as any).agents;
+    }
     try {
-      const saved = localStorage.getItem('dashboard-agents');
-      if (saved) return JSON.parse(saved);
+      const userKey = user && (user as any).uid ? `dashboard-agents-${(user as any).uid}` : 'dashboard-agents';
+      const saved = localStorage.getItem(userKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -693,9 +702,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [agentLoads, setAgentLoads] = useState<Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }>>({});
 
+  // Keep agents in sync with user state
   useEffect(() => {
+    if (user && (user as any).agents && Array.isArray((user as any).agents)) {
+      const serializedUserAgents = JSON.stringify((user as any).agents);
+      const serializedCurrentAgents = JSON.stringify(agents);
+      if (serializedUserAgents !== serializedCurrentAgents) {
+        setAgents((user as any).agents);
+      }
+    }
+  }, [user]);
+
+  // Persist agents to local storage and Firestore when they change
+  useEffect(() => {
+    const userKey = user && (user as any).uid ? `dashboard-agents-${(user as any).uid}` : 'dashboard-agents';
+    localStorage.setItem(userKey, JSON.stringify(agents));
     localStorage.setItem('dashboard-agents', JSON.stringify(agents));
-  }, [agents]);
+    
+    // Update parent user state if they don't match
+    if (user) {
+      const serializedUserAgents = JSON.stringify((user as any).agents || []);
+      const serializedCurrentAgents = JSON.stringify(agents);
+      if (serializedUserAgents !== serializedCurrentAgents) {
+        onUpdateUser({ agents });
+      }
+    }
+  }, [agents, user, onUpdateUser]);
 
   useEffect(() => {
     const initLoads: Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }> = {};
@@ -1391,6 +1423,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       // In a real app, we'd redirect to Stripe Checkout or PayPal portal here
       // For now, we simulate success
       setCurrentPlan(pendingPlan);
+      onUpdateUser({ plan: pendingPlan.name });
       
       // Add to invoices
       setInvoices(prev => [{

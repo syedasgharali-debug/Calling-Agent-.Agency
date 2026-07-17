@@ -74,8 +74,9 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
         role: role,
         balance: 5.00,
         credits: 100,
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
+        plan: 'Free',
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
         status: 'online' as const
       };
       await setDoc(userDocRef, profileData);
@@ -83,13 +84,13 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
       // Update existing user
       const existingData = userDoc.data();
       const updates = {
-        lastLogin: serverTimestamp(),
+        lastLogin: new Date().toISOString(),
         status: 'online' as const
       };
       await updateDoc(userDocRef, updates);
       profileData = { ...existingData, ...updates };
     }
-    return profileData as { email: string; role: string; name?: string; profilePic?: string };
+    return profileData as { email: string; role: string; name?: string; profilePic?: string; plan?: string };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
   }
@@ -148,7 +149,7 @@ export const loginWithEmailFallback = async (email: string, pass: string) => {
     }
     
     const updates = {
-      lastLogin: serverTimestamp(),
+      lastLogin: new Date().toISOString(),
       status: 'online' as const
     };
     await updateDoc(userDocRef, updates);
@@ -159,6 +160,7 @@ export const loginWithEmailFallback = async (email: string, pass: string) => {
       role: data.role || 'customer',
       balance: data.balance ?? 5.00,
       credits: data.credits ?? 100,
+      plan: data.plan || 'Free',
       ...data,
       ...updates
     };
@@ -187,8 +189,9 @@ export const registerWithEmailFallback = async (email: string, pass: string) => 
       role: role,
       balance: 5.00,
       credits: 100,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
+      plan: 'Free',
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
       status: 'online' as const,
       password: pass,
       isFallbackAuth: true
@@ -242,6 +245,7 @@ export const manuallyCreateUser = async (email: string, role: 'admin' | 'custome
     role: role,
     balance: 0,
     credits: 0,
+    plan: 'Free',
     status: 'offline' as const,
     isManual: true
   };
@@ -251,22 +255,22 @@ export const manuallyCreateUser = async (email: string, role: 'admin' | 'custome
     const userDocRef = doc(db, 'users', customId);
     await setDoc(userDocRef, {
       ...profileData,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp()
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
     });
     return { 
       id: customId, 
       ...profileData,
-      createdAt: { seconds: Math.floor(Date.now() / 1000) },
-      lastLogin: { seconds: Math.floor(Date.now() / 1000) }
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
     };
   } catch (error) {
     console.warn("Firestore error on user creation, persisting locally in memory:", error);
     return {
       id: customId,
       ...profileData,
-      createdAt: { seconds: Math.floor(Date.now() / 1000) },
-      lastLogin: { seconds: Math.floor(Date.now() / 1000) }
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
     };
   }
 };
