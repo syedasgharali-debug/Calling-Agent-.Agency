@@ -48,7 +48,8 @@ import {
   Volume2,
   Clock,
   Laptop,
-  Tv
+  Tv,
+  Activity
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -66,6 +67,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { geminiService } from '../services/geminiService';
 import Markdown from 'react-markdown';
 import Vapi from '@vapi-ai/web';
+import { auth } from '../services/firebaseService';
+import { CallLogsView } from './CallLogsView';
 
 interface DashboardViewProps {
   user: { email: string; role: UserRole; plan?: string; name?: string; profilePic?: string };
@@ -293,7 +296,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const tutorialVideos = [
     {
       id: 1,
-      title: "1. Overview & Workspace Tour",
+      title: "1. Account Onboarding & Secure Portal Auth",
+      description: "Explore how incoming invitees can trigger quick signups, configure passwords, and complete dual session logins to access the calling command deck.",
+      duration: 35,
+      targetTab: "auth",
+      thumbnail: "bg-gradient-to-r from-violet-600/30 via-slate-900 to-fuchsia-950",
+      iconName: "Lock",
+      learningPoints: [
+        "Toggle secure credentials screens (Sign In and Sign Up views)",
+        "Configure strong passwords and register administrative keys",
+        "Load workspace tokens to enter high-density call control centers"
+      ],
+      subtitles: [
+        { time: 0, text: "Welcome to CallingAgent! Let's explore how new users register and sign in to access the control panel." },
+        { time: 7, text: "Newly invited users can select the registration form tab to input their email and select strong passphrases." },
+        { time: 15, text: "Already have credentials? Enter your team login keys and toggle secure session token persistence." },
+        { time: 23, text: "Click Authorize Session to run automated validation and load your private communications dashboard." },
+        { time: 29, text: "After validation, the workspace session activates, granting you absolute portal-wide privileges!" }
+      ]
+    },
+    {
+      id: 2,
+      title: "2. Central Workspace & Statistics Tour",
       description: "Learn how to navigate your live statistics, active inbound gateway statuses, and monitor outbound execution indicators from the centralized dashboard.",
       duration: 35, // Premium fast-paced walkthrough (35 seconds)
       targetTab: "overview",
@@ -305,7 +329,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         "Configure custom webhook logs & navigate structural tables"
       ],
       subtitles: [
-        { time: 0, text: "Welcome to CallingAgent! In this video, we will explore your primary statistics dashboard." },
+        { time: 0, text: "Welcome to calling console! In this video, we will explore your primary statistics dashboard." },
         { time: 6, text: "Your main console displays real-time data, including active voice minutes, completion rate, and global spend." },
         { time: 14, text: "On the left side, the quick-navigation rail lets you access agent creation tools and numbers gateways." },
         { time: 22, text: "The Outbound Concurrency Dial shows active SIP telephone channels occupied by calling agents." },
@@ -313,8 +337,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     },
     {
-      id: 2,
-      title: "2. Designing Conversational Flow",
+      id: 3,
+      title: "3. Flow Studio & Conversation Designing",
       description: "Configure natural-dialog prompts, goals, fallback instructions, and pair your agent with premium synthetic voices in the Agent Studio.",
       duration: 38, // Beautiful, fast masterclass step
       targetTab: "agents",
@@ -334,8 +358,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     },
     {
-      id: 3,
-      title: "3. Inbound & Outbound Telephony",
+      id: 4,
+      title: "4. Claim IP Numbers & Telephony Bridges",
       description: "Claim Twilio numbers, wire webhooks, set up inbound routing rules, and point callers directly to individual agents.",
       duration: 35, // Snappy 35 seconds
       targetTab: "numbers",
@@ -355,8 +379,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     },
     {
-      id: 4,
-      title: "4. Analytics & Performance Audits",
+      id: 5,
+      title: "5. Metric Audits & Sentiment Analysis",
       description: "Monitor customer retention, completion status codes, calculate total expenditure, and research latency metrics.",
       duration: 38, // Concise 38 seconds
       targetTab: "analytics",
@@ -376,8 +400,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     },
     {
-      id: 5,
-      title: "5. Billing & Capacity Control",
+      id: 6,
+      title: "6. Billing Control & Ledger Management",
       description: "How to add gateway account balance, handle automated plan renewals, apply coupons, and upgrade sandbox quotas.",
       duration: 35, // Fast-paced billing guide
       targetTab: "billing",
@@ -397,8 +421,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     },
     {
-      id: 6,
-      title: "6. Custom Enterprise Pipestack",
+      id: 7,
+      title: "7. High-Volume Private Enterprise Trunks",
       description: "Configuring customized high-density outbound rates, arranging core bridging meetings, and scaling up concurrent line capacities.",
       duration: 40, // 40 seconds enterprise grand finale
       targetTab: "enterprise",
@@ -438,7 +462,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           const duration = activeVideo ? activeVideo.duration : 35;
           if (prev >= duration) {
             // Auto advance flow!
-            if (activeVideoId < 6) {
+            if (activeVideoId < 7) {
               setActiveVideoId((curr) => curr + 1);
               return 0;
             } else {
@@ -604,7 +628,125 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const relayWsRef = React.useRef<WebSocket | null>(null);
 
   // Real State
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<Agent[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-agents');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return [
+      {
+        id: 'agent_sarah',
+        name: 'Sarah (Real Estate)',
+        voice: 'Emma',
+        gender: 'Female',
+        pitch: 1.05,
+        speed: 0.95,
+        status: 'Active',
+        calls: 142,
+        logic: 'Real Estate Orchestrator',
+        prompt: 'Assists with real estate viewings, prices, and booking Saturday slot tours.',
+        provider: 'CallingAgent'
+      },
+      {
+        id: 'agent_chloe',
+        name: 'Chloe (SaaS Billing)',
+        voice: 'Kore',
+        gender: 'Female',
+        pitch: 1.0,
+        speed: 1.05,
+        status: 'Active',
+        calls: 89,
+        logic: 'SaaS Billing & Support',
+        prompt: 'Handles account queries, applies 50% retention discounts, and updates payment methods.',
+        provider: 'CallingAgent'
+      },
+      {
+        id: 'agent_david',
+        name: 'David (Medical Clinic)',
+        voice: 'Puck',
+        gender: 'Male',
+        pitch: 0.95,
+        speed: 1.0,
+        status: 'Active',
+        calls: 64,
+        logic: 'Clinic Booking & Triage',
+        prompt: 'Schedules medical appointments, verifies Blue Cross insurance, and sends pre-visit lists.',
+        provider: 'CallingAgent'
+      },
+      {
+        id: 'agent_john',
+        name: 'John (Capital dispute)',
+        voice: 'Fenrir',
+        gender: 'Male',
+        pitch: 0.9,
+        speed: 1.02,
+        status: 'Paused',
+        calls: 110,
+        logic: 'Fraud & Dispute Desk',
+        prompt: 'Locks compromised debit cards, initiates dispute tickets, and issues virtual cards.',
+        provider: 'CallingAgent'
+      }
+    ];
+  });
+
+  const [agentLoads, setAgentLoads] = useState<Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }>>({});
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-agents', JSON.stringify(agents));
+  }, [agents]);
+
+  useEffect(() => {
+    const initLoads: Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }> = {};
+    agents.forEach(a => {
+      if (a.status === 'Active') {
+        initLoads[a.id] = {
+          activeCalls: Math.floor(Math.random() * 3),
+          maxCalls: 5,
+          cpuUsage: Math.floor(Math.random() * 30) + 20
+        };
+      } else {
+        initLoads[a.id] = {
+          activeCalls: 0,
+          maxCalls: 5,
+          cpuUsage: 0
+        };
+      }
+    });
+    setAgentLoads(initLoads);
+  }, [agents.length]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAgentLoads(prev => {
+        const updated = { ...prev };
+        agents.forEach(a => {
+          if (a.status === 'Active') {
+            const current = prev[a.id] || { activeCalls: 0, maxCalls: 5, cpuUsage: 10 };
+            let newCalls = current.activeCalls;
+            if (Math.random() > 0.7) {
+              newCalls = Math.max(0, Math.min(current.maxCalls, current.activeCalls + (Math.random() > 0.5 ? 1 : -1)));
+            }
+            const newCpu = Math.max(10, Math.min(95, current.cpuUsage + Math.floor((Math.random() - 0.5) * 15)));
+            updated[a.id] = {
+              ...current,
+              activeCalls: newCalls,
+              cpuUsage: newCpu
+            };
+          } else {
+            updated[a.id] = {
+              activeCalls: 0,
+              maxCalls: 5,
+              cpuUsage: 0
+            };
+          }
+        });
+        return updated;
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [agents]);
 
   const [numbers, setNumbers] = useState<Number[]>([]);
 
@@ -1134,7 +1276,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const toggleAgentStatus = (id: string) => {
-    setAgents(agents.map(a => a.id === id ? { ...a, status: a.status === 'Active' ? 'Paused' : 'Active' } : a));
+    setAgents(prev => {
+      const updated = prev.map(a => {
+        if (a.id === id) {
+          const nextStatus: 'Active' | 'Paused' = a.status === 'Active' ? 'Paused' : 'Active';
+          // Update loads instantly
+          setAgentLoads(loads => ({
+            ...loads,
+            [id]: nextStatus === 'Active' ? {
+              activeCalls: Math.floor(Math.random() * 2) + 1,
+              maxCalls: 5,
+              cpuUsage: Math.floor(Math.random() * 20) + 30
+            } : {
+              activeCalls: 0,
+              maxCalls: 5,
+              cpuUsage: 0
+            }
+          }));
+          return { ...a, status: nextStatus };
+        }
+        return a;
+      });
+      return updated;
+    });
   };
 
   const handleOutboundCall = async () => {
@@ -1693,6 +1857,155 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     setTimeout(() => setProfileSuccess(false), 3000);
   };
 
+  const renderLiveAgentsPanel = () => {
+    return (
+      <div className={`border rounded-[2.5rem] p-8 transition-all ${
+        theme === 'dark' ? 'bg-slate-900/30 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+      }`}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Live Agent Status</h3>
+            </div>
+            <p className={`text-xs font-medium mt-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+              Real-time concurrency, live resource consumption, and quick-toggle availability.
+            </p>
+          </div>
+          <div className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider ${
+            theme === 'dark' ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {agents.filter(a => a.status === 'Active').length} / {agents.length} Online
+          </div>
+        </div>
+
+        {agents.length === 0 ? (
+          <div className="text-center py-12 space-y-3">
+            <div className="p-4 bg-slate-500/10 w-fit rounded-full mx-auto text-slate-500">
+              <Activity className="w-8 h-8 animate-pulse" />
+            </div>
+            <h4 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>No Agents Deployed</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Please deploy an AI agent in the Agent Studio to initiate live telemetry monitoring.
+            </p>
+            <button
+              onClick={() => setActiveTab('agents')}
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wide transition-all shadow-md active:scale-95"
+            >
+              Go to Agent Studio
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {agents.map((agent) => {
+              const load = agentLoads[agent.id] || { activeCalls: 0, maxCalls: 5, cpuUsage: 0 };
+              const isActive = agent.status === 'Active';
+              
+              return (
+                <div 
+                  key={agent.id}
+                  className={`p-6 rounded-[2rem] border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+                    isActive
+                      ? theme === 'dark'
+                        ? 'bg-slate-900/50 border-emerald-500/20 shadow-emerald-950/10 shadow-lg'
+                        : 'bg-white border-slate-100 shadow-lg hover:shadow-xl'
+                      : theme === 'dark'
+                        ? 'bg-slate-950/40 border-white/5 opacity-60'
+                        : 'bg-slate-50/50 border-slate-200/60 opacity-60'
+                  }`}
+                >
+                  {/* Top Row: Name and Toggle */}
+                  <div className="flex justify-between items-start gap-3 mb-6">
+                    <div className="min-w-0">
+                      <h4 className={`text-sm font-black truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                        {agent.name}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                        {agent.logic || 'General Agent'}
+                      </p>
+                    </div>
+                    
+                    {/* Quick Toggle Switch */}
+                    <button
+                      onClick={() => toggleAgentStatus(agent.id)}
+                      title={isActive ? "Pause Agent" : "Activate Agent"}
+                      className="flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                      style={{
+                        backgroundColor: isActive ? '#10b981' : theme === 'dark' ? '#1e293b' : '#cbd5e1'
+                      }}
+                    >
+                      <span
+                        className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-sm"
+                        style={{
+                          transform: isActive ? 'translateX(24px)' : 'translateX(4px)'
+                        }}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Middle Row: Metrics & Load Indicators */}
+                  <div className="space-y-4 mb-6">
+                    {/* Load Bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        <span>Current Load</span>
+                        <span className={isActive ? 'text-emerald-500' : ''}>
+                          {isActive ? `${load.activeCalls} / ${load.maxCalls} Active` : 'Inactive'}
+                        </span>
+                      </div>
+                      <div className={`h-1.5 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            load.activeCalls >= 4 ? 'bg-rose-500' : load.activeCalls >= 3 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: isActive ? `${(load.activeCalls / load.maxCalls) * 100}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* CPU load usage */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        <span>Synthesizer CPU</span>
+                        <span className={isActive ? 'text-indigo-400 font-mono' : ''}>
+                          {isActive ? `${load.cpuUsage}%` : '0%'}
+                        </span>
+                      </div>
+                      <div className={`h-1.5 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                        <div 
+                          className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: isActive ? `${load.cpuUsage}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Status Badge */}
+                  <div className="flex items-center justify-between pt-4 border-t border-dashed border-slate-500/20">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center space-x-1 ${
+                      isActive 
+                        ? 'bg-emerald-500/10 text-emerald-400' 
+                        : theme === 'dark' ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+                      <span>{isActive ? 'Routing Live' : 'Standby'}</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono font-bold">
+                      Voice: {agent.voice || 'Default'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const stats = [
     { id: 'minutes', label: 'Total Minutes', value: '0', change: '0%', icon: Phone, color: 'text-indigo-400' },
     { id: 'completion', label: 'Completion Rate', value: '0.0%', change: '0%', icon: CheckCircle2, color: 'text-emerald-400' },
@@ -1766,12 +2079,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'admin-blogs', label: 'Blog Manager', icon: FileText },
               { id: 'invoices', label: 'Revenue & Invoices', icon: DollarSign },
               { id: 'tickets', label: 'Support Tickets', icon: AlertCircle },
+              { id: 'logs', label: 'Call Logs', icon: History },
               { id: 'profile', label: 'Settings', icon: Settings }
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
               { id: 'provision', label: 'Provision', icon: Plus },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+              { id: 'logs', label: 'Call Logs', icon: History },
               { id: 'billing', label: 'Billing', icon: CreditCard },
               { id: 'enterprise', label: 'Enterprise Solutions', icon: Building2 },
               { id: 'tutorials', label: 'Video Tutorials', icon: Play },
@@ -2067,6 +2382,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   </div>
+                  {renderLiveAgentsPanel()}
                 </>
               ) : (
                 // User Overview
@@ -2211,6 +2527,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {renderLiveAgentsPanel()}
 
                 {/* Recent Activity Table */}
                 <div className={`border rounded-[2.5rem] overflow-hidden transition-all ${
@@ -2596,81 +2914,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className={`text-2xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Call History</h3>
-                  <p className="text-slate-500 text-sm">Review transcripts and recordings of past interactions.</p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Search by ID or Agent..." 
-                    className={`rounded-xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-all font-bold border ${
-                      theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className={`border rounded-[2.5rem] overflow-hidden transition-all ${
-                theme === 'dark' ? 'bg-slate-900/30 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
-              }`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className={`text-[10px] font-black uppercase tracking-widest text-slate-500 ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
-                      <tr>
-                        <th className="px-8 py-5">Call ID</th>
-                        <th className="px-8 py-5">Agent</th>
-                        <th className="px-8 py-5">Duration</th>
-                        <th className="px-8 py-5">Sentiment</th>
-                        <th className="px-8 py-5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
-                      {calls.map((call) => (
-                        <tr 
-                          key={call.id} 
-                          onClick={() => {
-                            setSelectedCall(call);
-                            setShowCallDetailsModal(true);
-                          }}
-                          className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
-                        >
-                          <td className="px-8 py-6">
-                            <div className="flex flex-col">
-                              <span className={`font-bold font-mono ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{call.caller}</span>
-                              <span className="text-[10px] text-slate-500 font-bold uppercase">{call.timestamp}</span>
-                            </div>
-                          </td>
-                          <td className={`px-8 py-6 font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{call.agent}</td>
-                          <td className={`px-8 py-6 font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{call.duration}</td>
-                          <td className="px-8 py-6">
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                              call.sentiment === 'Positive' ? 'bg-emerald-500/10 text-emerald-400' : 
-                              call.sentiment === 'Negative' ? 'bg-rose-500/10 text-rose-400' : 'bg-indigo-500/10 text-indigo-400'
-                            }`}>
-                              {call.sentiment}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCall(call);
-                                setShowCallDetailsModal(true);
-                              }}
-                              className="text-indigo-400 hover:text-indigo-300 font-bold text-xs"
-                            >
-                              View Transcript
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <CallLogsView 
+                userId={auth.currentUser?.uid || 'user_test'} 
+                isAdmin={isAdmin} 
+                theme={theme} 
+              />
             </motion.div>
           )}
 
@@ -4189,6 +4437,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             // Helper to get matching icon for tutorial target
             const getTabIcon = (target: string) => {
               switch (target) {
+                case 'auth': return Lock;
                 case 'overview': return BarChart3;
                 case 'agents': return Users;
                 case 'numbers': return Phone;
@@ -4309,7 +4558,75 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                             {/* Center Main dynamic workspace matching the selected walkthrough segment */}
                             <div className="flex-1 p-3 md:p-4 flex flex-col justify-between bg-slate-900/60 overflow-hidden relative">
                               {activeVideoId === 1 && (
-                                <div className="w-full h-full flex flex-col justify-between space-y-3">
+                                <div className="w-full h-full flex flex-col items-center justify-center p-2 font-sans relative">
+                                  {/* High-fidelity replica of our real LoginView */}
+                                  <div className="w-full max-w-[210px] bg-slate-950/95 border border-white/10 rounded-3xl p-3 space-y-2 shadow-2xl relative overflow-hidden text-[7px]">
+                                    <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-indigo-500 to-purple-500" />
+                                    
+                                    <div className="text-center mb-1 bg-slate-950">
+                                      <h1 className="text-[10px] font-black text-white leading-none tracking-tight">
+                                        {currentTime >= 7 && currentTime < 15 ? 'Create your account' : 'Welcome back'}
+                                      </h1>
+                                      <p className="text-slate-500 text-[6px] font-bold mt-0.5 leading-none">Deploy your voice stack in seconds</p>
+                                    </div>
+
+                                    <div className="space-y-1.5 w-full">
+                                      <div>
+                                        <label className="block text-[5px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">Email Address</label>
+                                        <div className="p-1.5 bg-slate-900 border border-white/5 rounded-lg text-[6px] text-slate-400 font-mono truncate leading-none">
+                                          {currentTime >= 7 && currentTime < 15 
+                                            ? "syedasgharkazmii@gmail.com" 
+                                            : currentTime >= 15 && currentTime < 23 
+                                              ? "admin@callingagent.ai" 
+                                              : "syedasgharkazmii@gmail.com"
+                                          }
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="block text-[5px] font-black text-slate-400 uppercase tracking-widest mb-0.5 leading-none">Password</label>
+                                        <div className="p-1.5 bg-slate-900 border border-white/5 rounded-lg text-[6px] text-slate-500 tracking-widest font-mono leading-none">
+                                          ••••••••••••••••
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="pt-0.5">
+                                      <button className="w-full py-1.5 bg-indigo-600 text-white rounded-lg font-black text-[7px] hover:bg-indigo-500 transition-all uppercase tracking-wider flex items-center justify-center space-x-1 leading-none shadow shadow-indigo-600/10">
+                                        <Lock className="w-1.5 h-1.5" />
+                                        <span>
+                                          {currentTime >= 7 && currentTime < 15 ? 'Create Account' : 'Login'}
+                                        </span>
+                                      </button>
+                                    </div>
+
+                                    <div className="relative py-1 flex items-center justify-center">
+                                      <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-white/5"></div>
+                                      </div>
+                                      <span className="relative bg-slate-950 px-1 text-[5px] uppercase font-bold text-slate-500 leading-none">Or continue with</span>
+                                    </div>
+
+                                    <button className="w-full py-1 px-1 bg-white hover:bg-slate-50 text-slate-950 rounded-lg font-bold text-[6px] flex items-center justify-center space-x-1 border border-slate-200 leading-none">
+                                      <svg viewBox="0 0 24 24" className="w-1.5 h-1.5">
+                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                      </svg>
+                                      <span className="font-semibold text-slate-800">Continue with Google</span>
+                                    </button>
+
+                                    <div className="pt-0.5 text-center">
+                                      <span className="text-[5px] font-bold text-slate-500 cursor-pointer hover:text-white transition-colors">
+                                        {currentTime >= 7 && currentTime < 15 ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeVideoId === 2 && (
+                                <div className="w-full h-full flex flex-col justify-between space-y-3 font-sans">
                                   <div className="grid grid-cols-3 gap-2">
                                     <div className="p-2 bg-slate-900/90 border border-white/5 rounded-xl">
                                       <p className="text-[6px] text-slate-500 font-black uppercase tracking-widest leading-none">Total Minutes</p>
@@ -4325,7 +4642,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                     </div>
                                   </div>
                                   
-                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
+                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between font-sans">
                                     <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-1 shrink-0">
                                       <span className="text-[8px] font-black uppercase text-slate-400">Live Active Sip Trunks</span>
                                       <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
@@ -4351,18 +4668,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 </div>
                               )}
 
-                              {activeVideoId === 2 && (
-                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                              {activeVideoId === 3 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between font-sans">
                                   <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
                                     <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Agent Designer Studio</span>
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider font-sans font-medium">Agent Designer Studio</span>
                                       <span className="px-1.5 py-0.5 bg-indigo-600 rounded text-[6px] text-white font-extrabold uppercase">Emma Selected</span>
                                     </div>
                                     
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1.5 font-sans">
                                       <div>
-                                        <label className="text-[6px] uppercase font-black tracking-widest text-slate-500 block">Agent System Instructions</label>
-                                        <div className="p-1.5 bg-slate-950 rounded-lg text-[7px] font-mono text-indigo-200 border border-indigo-500/10 line-clamp-2">
+                                        <label className="text-[6px] uppercase font-bold text-slate-500 block">Agent System Instructions</label>
+                                        <div className="p-1.5 bg-slate-950 rounded-lg text-[7px] font-mono text-indigo-200 border border-indigo-500/10 line-clamp-2 leading-tight">
                                           {currentTime >= 13 
                                             ? "You are Emma, a virtual assistant. Welcome the caller, verify their account ID, and record their feedback."
                                             : "Formulating instructions prompt..."}
@@ -4382,9 +4699,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                     </div>
                                   </div>
 
-                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex items-center justify-center space-x-2">
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex items-center justify-center space-x-2 font-sans">
                                     <span className="text-[8px] font-black uppercase text-indigo-300">Synthesis Engine Output:</span>
-                                    <div className="flex items-end space-x-1 h-5">
+                                    <div className="flex items-end space-x-1 h-5 animate-pulse">
                                       {[2, 4, 1, 5, 2, 3, 2, 5, 1, 4, 2, 3, 1].map((h, idx) => (
                                         <span 
                                           key={idx}
@@ -4400,21 +4717,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 </div>
                               )}
 
-                              {activeVideoId === 3 && (
-                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
+                              {activeVideoId === 4 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between font-sans">
                                   <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">SIP Router Gateway</span>
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5 font-sans">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider font-sans">SIP Router Gateway</span>
                                       <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[6px] font-extrabold uppercase">Active Trunk</span>
                                     </div>
                                     
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1.5 font-sans">
                                       <div className="p-1.5 bg-slate-950 rounded-lg border border-white/5 flex items-center justify-between">
                                         <div>
                                           <p className="text-[6px] text-slate-500 uppercase font-black tracking-wider">Assigned Line</p>
                                           <p className="text-[10px] font-mono font-black text-white">+1 (888) 420-9991</p>
                                         </div>
-                                        <div className="bg-indigo-600 text-white rounded px-2 py-0.5 text-[7px] font-black uppercase">Emma Assigned</div>
+                                        <div className="bg-indigo-600 text-white rounded px-2 py-0.5 text-[7px] font-black uppercase font-sans">Emma Assigned</div>
                                       </div>
 
                                       <div className="p-1.5 bg-slate-950 rounded-lg border border-white/5 flex items-center justify-between">
@@ -4427,7 +4744,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                     </div>
                                   </div>
 
-                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex flex-col justify-center">
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-2.5 flex flex-col justify-center font-sans">
                                     <p className="text-[7px] font-black uppercase text-slate-500 tracking-widest text-center mb-1">Bridge Synchronization State</p>
                                     <p className="text-[9px] font-black text-emerald-400 text-center animate-pulse">
                                       {currentTime >= 20 ? "⚡ Live Handshake registered successfully with routing gateway" : "⌛ Awaiting dynamic Twilio bridge signal registration..."}
@@ -4436,9 +4753,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 </div>
                               )}
 
-                              {activeVideoId === 4 && (
-                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
-                                  <div className="grid grid-cols-2 gap-2">
+                              {activeVideoId === 5 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between font-sans">
+                                  <div className="grid grid-cols-2 gap-2 font-sans">
                                     <div className="p-2.5 bg-slate-900/95 border border-white/5 rounded-xl text-center">
                                       <p className="text-[6px] text-slate-500 font-black uppercase tracking-wider mb-0.5">Response Latency</p>
                                       <p className="text-xs font-mono font-black text-indigo-400">385ms</p>
@@ -4449,9 +4766,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                     </div>
                                   </div>
 
-                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
-                                    <p className="text-[7px] font-black uppercase text-slate-400 border-b border-white/5 pb-1 mb-1 shrink-0">Live Transcript Stream</p>
-                                    <div className="text-[8px] space-y-1 bg-slate-950 p-2 rounded-xl border border-white/5 overflow-hidden leading-relaxed max-h-16">
+                                  <div className="flex-1 min-h-0 bg-slate-900/95 border border-white/5 rounded-2xl p-3 flex flex-col justify-between font-sans">
+                                    <p className="text-[7px] font-black uppercase text-slate-400 border-b border-white/5 pb-1 mb-1 shrink-0 font-sans">Live Transcript Stream</p>
+                                    <div className="text-[8px] space-y-1 bg-slate-950 p-2 rounded-xl border border-white/5 overflow-hidden leading-relaxed max-h-16 font-sans">
                                       <p className="text-slate-400 font-medium">
                                         <span className="text-indigo-400 font-black uppercase text-[6px] tracking-wider">Customer:</span> "Yes, configure a custom calling pipeline please."
                                       </p>
@@ -4472,71 +4789,71 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                                 </div>
                               )}
 
-                              {activeVideoId === 5 && (
-                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
-                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Financial Credit Ledger</span>
-                                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[6px] font-extrabold uppercase">Linked</span>
+                              {activeVideoId === 6 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between font-sans">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2 font-sans">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5 font-sans font-medium">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider font-sans">Financial Credit Ledger</span>
+                                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[6px] font-extrabold uppercase font-sans">Linked</span>
                                     </div>
                                     
-                                    <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-white/5">
+                                    <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-white/5 font-sans">
                                       <div>
-                                        <p className="text-[6px] text-slate-500 uppercase font-black leading-none">Active Credit Balance</p>
-                                        <p className="text-sm font-mono font-black text-white mt-1">$492.50 USD</p>
+                                        <p className="text-[6px] text-slate-500 uppercase font-black leading-none font-sans">Active Credit Balance</p>
+                                        <p className="text-sm font-mono font-black text-white mt-1 font-sans">$492.50 USD</p>
                                       </div>
-                                      <span className="text-[7px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">Stripe Active</span>
+                                      <span className="text-[7px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded font-sans font-semibold">Stripe Active</span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-white/5">
-                                        <p className="text-[6px] text-slate-500 uppercase font-black">Contract Tier</p>
-                                        <p className="text-[9px] font-black text-white">Scale Plan</p>
+                                    <div className="grid grid-cols-2 gap-1.5 font-sans">
+                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-white/5 font-sans">
+                                        <p className="text-[6px] text-slate-500 uppercase font-black font-sans">Contract Tier</p>
+                                        <p className="text-[9px] font-black text-white font-sans">Scale Plan</p>
                                       </div>
-                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-indigo-500/20">
-                                        <p className="text-[6px] text-indigo-400 uppercase font-black">Active Promo Coupon</p>
-                                        <p className="text-[9px] font-black text-indigo-400">{currentTime >= 20 ? 'PROMO20 (20%)' : 'None applied'}</p>
+                                      <div className="p-1 bg-slate-950 rounded-lg text-center border border-indigo-500/20 font-sans">
+                                        <p className="text-[6px] text-indigo-400 uppercase font-black font-sans">Active Promo Coupon</p>
+                                        <p className="text-[9px] font-black text-indigo-400 font-sans font-medium">{currentTime >= 20 ? 'PROMO20 (20%)' : 'None applied'}</p>
                                       </div>
                                     </div>
                                   </div>
 
-                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-1.5 flex items-center justify-center">
-                                    <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest text-center leading-none">Auto-Renewal: Every 30 Days</span>
+                                  <div className="flex-1 min-h-0 bg-slate-900/60 border border-white/5 rounded-2xl p-1.5 flex items-center justify-center font-sans">
+                                    <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest text-center leading-none font-sans">Auto-Renewal: Every 30 Days</span>
                                   </div>
                                 </div>
                               )}
 
-                              {activeVideoId === 6 && (
-                                <div className="w-full h-full flex flex-col space-y-3 justify-between">
-                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                                      <span className="text-[8px] font-black text-white uppercase tracking-wider">Enterprise Gateway Provisioning</span>
-                                      <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[6px] font-extrabold uppercase">Tuned Rate</span>
+                              {activeVideoId === 7 && (
+                                <div className="w-full h-full flex flex-col space-y-3 justify-between font-sans">
+                                  <div className="p-3 bg-slate-900/95 border border-white/5 rounded-2xl space-y-2 font-sans">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-1.5 font-sans">
+                                      <span className="text-[8px] font-black text-white uppercase tracking-wider font-sans">Enterprise Gateway Provisioning</span>
+                                      <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[6px] font-extrabold uppercase font-sans">Tuned Rate</span>
                                     </div>
                                     
-                                    <div className="p-2 bg-slate-950 rounded-xl border border-white/5 space-y-1.5">
-                                      <div className="flex justify-between text-[6px] font-mono text-slate-500 font-black uppercase leading-none">
+                                    <div className="p-2 bg-slate-950 rounded-xl border border-white/5 space-y-1.5 font-sans">
+                                      <div className="flex justify-between text-[6px] font-mono text-slate-500 font-black uppercase leading-none font-sans">
                                         <span>Scale Target</span>
                                         <span>Rate Per Minute</span>
                                       </div>
                                       {/* Simulated slider progress based on elapsed play seconds */}
-                                      <div className="flex justify-between items-center bg-white/5 p-1.5 rounded-lg">
-                                        <span className="text-[10px] font-mono font-black text-white">
+                                      <div className="flex justify-between items-center bg-white/5 p-1.5 rounded-lg font-sans">
+                                        <span className="text-[10px] font-mono font-black text-white font-sans">
                                           {(currentTime < 15 ? 50000 : Math.min(1000000, 50000 + (currentTime - 14) * 85000)).toLocaleString(undefined, { maximumFractionDigits: 0 })} mins
                                         </span>
-                                        <span className="text-[10px] font-mono font-black text-indigo-400">
+                                        <span className="text-[10px] font-mono font-black text-indigo-400 font-sans font-medium">
                                           $0.05 / min
                                         </span>
                                       </div>
                                     </div>
                                   </div>
 
-                                  <div className="flex-1 min-h-0 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center text-center">
-                                    <p className="text-[7px] font-black uppercase text-emerald-400 tracking-widest leading-none">Calculated Operations Savings</p>
-                                    <p className="text-sm font-mono font-black text-emerald-300 mt-1">
+                                  <div className="flex-1 min-h-0 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center text-center font-sans">
+                                    <p className="text-[7px] font-black uppercase text-emerald-400 tracking-widest leading-none font-sans">Calculated Operations Savings</p>
+                                    <p className="text-sm font-mono font-black text-emerald-300 mt-1 font-bold">
                                       +${(currentTime < 15 ? 12000 : 12000 + (currentTime - 14) * 19500).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </p>
-                                    <span className="text-[5px] text-slate-500 mt-0.5 uppercase font-semibold">Allocated Dedicated SIP channels</span>
+                                    <span className="text-[5px] text-slate-500 mt-0.5 uppercase font-semibold font-sans">Allocated Dedicated SIP channels</span>
                                   </div>
                                 </div>
                               )}
@@ -4547,38 +4864,61 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         {/* Interactive floating cursor vector that glides across the dashboard frame */}
                         {(() => {
                           const getCursorCoords = (videoId: number, time: number) => {
-                            if (videoId === 1) { // Overview
-                              if (time < 12) return { x: '35%', top: '30%', text: 'Auditing high-level metrics' };
-                              if (time < 22) return { x: '8%', top: '28%', text: 'Browsing Console tab rail' };
-                              if (time < 28) return { x: '72%', top: '68%', text: 'Inspecting Outbound telemetry dials' };
-                              return { x: '45%', top: '82%', text: 'Monitoring standard active SIP logs' };
+                            if (videoId === 1) { // Portal Onboarding Auth Replica
+                              if (time < 7) return { x: '50%', top: '25%', text: 'Welcome to CallingAgent' };
+                              if (time < 10) return { x: '50%', top: '76%', action: 'click', text: 'Toggling to registration form' };
+                              if (time < 12) return { x: '45%', top: '42%', action: 'type', text: 'Configuring administrative email' };
+                              if (time < 15) return { x: '45%', top: '50%', action: 'type', text: 'Selecting strong password' };
+                              if (time < 19) return { x: '50%', top: '76%', action: 'click', text: 'Toggling back to Sign In form' };
+                              if (time < 21) return { x: '45%', top: '42%', action: 'type', text: 'Entering team login keys' };
+                              if (time < 23) return { x: '45%', top: '50%', action: 'type', text: 'Entering team password keys' };
+                              if (time < 29) return { x: '50%', top: '60%', action: 'click', text: 'Invoking secure session activation' };
+                              return { x: '50%', top: '25%', text: 'Workspace successfully loaded' };
                             }
-                            if (videoId === 2) { // Agents
-                              if (time < 10) return { x: '82%', top: '16%', action: 'click', text: 'Initializing Agent Studio' };
-                              if (time < 20) return { x: '45%', top: '35%', action: 'type', text: 'Updating core System Instructions template' };
-                              if (time < 30) return { x: '68%', top: '62%', action: 'click', text: 'Selecting Emma vocal synthesized voice' };
-                              return { x: '35%', top: '78%', action: 'drag', text: 'Fine-tuning latency & interruption bounds' };
+                            if (videoId === 2) { // Overview
+                              if (time < 6) return { x: '50%', top: '24%', text: 'Welcome to calling console' };
+                              if (time < 9) return { x: '22%', top: '20%', text: 'Auditing active Voice Minutes' };
+                              if (time < 11) return { x: '50%', top: '20%', text: 'Auditing global monthly spend' };
+                              if (time < 14) return { x: '78%', top: '20%', text: 'Auditing active concurrency limits' };
+                              if (time < 22) return { x: '8%', top: '34%', text: 'Navigating quick channels rail' };
+                              if (time < 28) return { x: '50%', top: '68%', text: 'Reviewing active SIP concurrency Radar' };
+                              return { x: '50%', top: '50%', text: 'Tracing real-time SIP trunk lines' };
                             }
-                            if (videoId === 3) { // Numbers
-                              if (time < 10) return { x: '8%', top: '48%', text: 'Accessing VoIP Phone gateway' };
-                              if (time < 20) return { x: '78%', top: '22%', action: 'click', text: 'Reserving/provisioning dynamic toll-free line' };
-                              if (time < 28) return { x: '52%', top: '48%', action: 'click', text: 'Associating line target agent' };
-                              return { x: '50%', top: '72%', text: 'Resolving gateway API handshake' };
+                            if (videoId === 3) { // Agents
+                              if (time < 6) return { x: '58%', top: '24%', text: 'Accessing Agent Designer workspace' };
+                              if (time < 13) return { x: '82%', top: '24%', action: 'click', text: 'Initializing customized agent instance' };
+                              if (time < 21) return { x: '50%', top: '50%', action: 'type', text: 'Configuring system instructions constraints' };
+                              if (time < 29) return { x: '75%', top: '65%', action: 'click', text: 'Selecting vocal synthesis sound profile (Emma)' };
+                              return { x: '40%', top: '65%', action: 'drag', text: 'Adjusting interruption latency limits' };
                             }
-                            if (videoId === 4) { // Analytics
-                              if (time < 10) return { x: '25%', top: '26%', text: 'Auditing system response lag limits' };
-                              if (time < 24) return { x: '48%', top: '58%', action: 'click', text: 'Opening live text-transcript audit log' };
-                              return { x: '72%', top: '80%', text: 'Generating 30-day sentiment trend charts' };
+                            if (videoId === 4) { // Numbers
+                              if (time < 6) return { x: '58%', top: '24%', text: 'Opening SIP Gateway configuration' };
+                              if (time < 13) return { x: '40%', top: '48%', text: 'Accessing claim-numbers telephone inventory' };
+                              if (time < 20) return { x: '80%', top: '24%', action: 'click', text: 'Leasing virtual regional telephone line' };
+                              if (time < 27) return { x: '78%', top: '48%', action: 'click', text: 'Assigning voice agent (Emma)' };
+                              return { x: '58%', top: '80%', text: 'Confirming Twilio SIP connection handshake' };
                             }
-                            if (videoId === 5) { // Billing
-                              if (time < 10) return { x: '35%', top: '32%', text: 'Inspecting USD ledger cash balance' };
-                              if (time < 20) return { x: '68%', top: '60%', action: 'click', text: 'Evaluating scale service plans upgrades' };
-                              if (time < 28) return { x: '70%', top: '74%', action: 'type', text: 'Evaluating coupon codes' };
-                              return { x: '50%', top: '86%', text: 'Confirming secure Stripe auto-topup' };
+                            if (videoId === 5) { // Analytics
+                              if (time < 6) return { x: '50%', top: '20%', text: 'Entering performance analytics suite' };
+                              if (time < 10) return { x: '28%', top: '20%', text: 'Reviewing average response latency' };
+                              if (time < 13) return { x: '72%', top: '20%', text: 'Evaluating user sentiment distribution' };
+                              if (time < 21) return { x: '50%', top: '45%', action: 'click', text: 'Reviewing Live Transcript Stream' };
+                              if (time < 28) return { x: '28%', top: '20%', text: 'Analyzing response latency optimization bounds' };
+                              return { x: '50%', top: '75%', text: 'Compiling 30-day analytics trend charts' };
                             }
-                            // Video 6: Enterprise
-                            if (time < 18) return { x: '55%', top: '66%', action: 'drag', text: 'Scaling wholesale calling commitments' };
-                            return { x: '65%', top: '82%', action: 'click', text: 'Registering private SIP hardware pipelines' };
+                            if (videoId === 6) { // Billing
+                              if (time < 6) return { x: '58%', top: '24%', text: 'Inspecting current balance account ledger' };
+                              if (time < 13) return { x: '50%', top: '40%', text: 'Reviewing active credit balance ledger' };
+                              if (time < 20) return { x: '78%', top: '40%', action: 'click', text: 'Invoking card payment gateway triggers' };
+                              if (time < 27) return { x: '72%', top: '55%', action: 'click', text: 'Applying active seasonal coupon code' };
+                              return { x: '58%', top: '78%', text: 'Formulating billing renew parameters' };
+                            }
+                            // Video 7: Enterprise
+                            if (time < 6) return { x: '50%', top: '24%', text: 'Enterprise private gateway setup' };
+                            if (time < 14) return { x: '50%', top: '44%', text: 'Comparing scaled quotas & bulk minute models' };
+                            if (time < 22) return { x: '50%', top: '44%', action: 'drag', text: 'Formulating wholesale volume targets' };
+                            if (time < 30) return { x: '72%', top: '44%', text: 'Acquiring customized downward rate values' };
+                            return { x: '50%', top: '72%', action: 'click', text: 'Reserving private hardware SIP trunk pathways' };
                           };
 
                           const cursor = getCursorCoords(activeVideoId, currentTime);
@@ -4586,8 +4926,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
                           return (
                             <motion.div 
-                              className="absolute z-20 pointer-events-none flex flex-col items-start transition-all duration-700 ease-out"
-                              style={{ left: cursor.x, top: cursor.top }}
+                              className="absolute z-20 pointer-events-none flex flex-col items-start"
+                              animate={{ left: cursor.x, top: cursor.top }}
+                              transition={{ type: 'spring', damping: 25, stiffness: 85, mass: 0.8 }}
                             >
                               <div className="relative">
                                 {/* Simulated pointer arrow */}

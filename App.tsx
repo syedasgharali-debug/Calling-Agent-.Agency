@@ -193,21 +193,37 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
 
   useEffect(() => {
+    // Attempt to load any active fallback database session on mount
+    const savedSession = localStorage.getItem('fallback_user_session');
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession);
+        setUser(parsed);
+      } catch (e) {
+        console.error("Failed to parse fallback session:", e);
+      }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const profile = await syncUserProfile(firebaseUser);
         if (profile) {
-          setUser({
+          const u = {
             email: firebaseUser.email || '',
             name: firebaseUser.displayName || '',
             profilePic: firebaseUser.photoURL || '',
             role: profile.role as UserRole,
             balance: (profile as any).balance || 0,
             credits: (profile as any).credits || 0,
-          });
+          };
+          setUser(u);
+          localStorage.setItem('fallback_user_session', JSON.stringify(u));
         }
       } else {
-        setUser(null);
+        // Only clear user state if we do not have a fallback session active in local storage
+        if (!localStorage.getItem('fallback_user_session')) {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
@@ -251,21 +267,22 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const handleLogin = (email: string, role: UserRole) => {
-    if (role === 'admin') {
-      setUser({
-        email,
-        role: 'admin',
-        name: email.split('@')[0],
-        balance: 0,
-        credits: 0
-      });
-    }
+  const handleLogin = (email: string, role: UserRole, fallbackUser?: any) => {
+    const sessionUser = fallbackUser || {
+      email,
+      role: role,
+      name: email.split('@')[0],
+      balance: role === 'admin' ? 0 : 5.00,
+      credits: role === 'admin' ? 0 : 100
+    };
+    setUser(sessionUser);
+    localStorage.setItem('fallback_user_session', JSON.stringify(sessionUser));
     navigate('dashboard');
   };
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('fallback_user_session');
       if (user && auth.currentUser) {
         await logoutUser(auth.currentUser.uid);
       } else {

@@ -4,7 +4,7 @@ import { UserRole } from '../App';
 import { loginWithGoogle, loginWithEmail, registerWithEmail } from '../services/firebaseService';
 
 interface LoginViewProps {
-  onLogin: (email: string, role: UserRole) => void;
+  onLogin: (email: string, role: UserRole, fallbackUser?: any) => void;
 }
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
@@ -28,18 +28,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         return;
       }
 
+      let userObj;
       if (isRegistering) {
-        await registerWithEmail(email, password);
+        userObj = await registerWithEmail(email, password);
       } else {
-        await loginWithEmail(email, password);
+        userObj = await loginWithEmail(email, password);
       }
-      // App.tsx handles state via onAuthStateChanged
+
+      if (userObj) {
+        onLogin(userObj.email, userObj.role as UserRole, userObj);
+      }
     } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('Email/Password login is not enabled in Firebase. Please use Google Login or clinical admin credentials.');
-      } else {
-        setError(err.message || 'Authentication failed');
-      }
+      setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

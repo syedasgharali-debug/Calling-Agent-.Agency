@@ -13,12 +13,34 @@
         "status": { "type": "string", "enum": ["online", "offline"], "description": "Current active status." }
       },
       "required": ["email", "role"]
+    },
+    "CallLog": {
+      "title": "Call Log",
+      "description": "Stores history of calls processed by AI agents.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns the agent/call." },
+        "caller": { "type": "string", "description": "The phone number or caller identifier." },
+        "agent": { "type": "string", "description": "The name of the agent handled the call." },
+        "duration": { "type": "string", "description": "The duration of the call (e.g., '1:30' or '45s')." },
+        "cost": { "type": "number", "description": "The computed cost of the call in USD." },
+        "sentiment": { "type": "string", "enum": ["Positive", "Neutral", "Negative"], "description": "Sentiment score of the call." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the call occurred." },
+        "outcome": { "type": "string", "description": "The ultimate resolution or outcome of the call." },
+        "transcript": { "type": "string", "description": "Full text transcript of the call conversation." },
+        "sentimentAnalysis": { "type": "string", "description": "Detailed explanation of the sentiment evaluation." }
+      },
+      "required": ["userId", "caller", "agent", "duration", "cost", "sentiment", "timestamp", "outcome"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Individual user profiles keyed by their Firebase Auth UID."
+    },
+    "/calls/{callId}": {
+      "schema": "CallLog",
+      "description": "Call records containing details, transcripts, sentiment, and cost."
     }
   }
 }

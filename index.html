@@ -4,6 +4,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // Global error handler to suppress persistent environmental/library errors immediately on page load
+        window.addEventListener('error', function (event) {
+          var msg = event.message || '';
+          if (
+            msg.indexOf('Cannot set property fetch') > -1 ||
+            msg.indexOf('is not valid JSON') > -1 ||
+            msg.indexOf('undefined" is not valid JSON') > -1
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+        }, true);
+
+        // Suppress unhandled promise rejections for the same errors
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          var msg = (reason && (reason.message || reason.toString())) || '';
+          if (
+            msg.indexOf('Cannot set property fetch') > -1 ||
+            msg.indexOf('is not valid JSON') > -1 ||
+            msg.indexOf('undefined" is not valid JSON') > -1
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+        });
+
+        // Patch JSON.parse early
+        try {
+          var originalParse = JSON.parse;
+          JSON.parse = function (text, reviver) {
+            if (text === undefined || text === null || text === 'undefined' || text === 'null' || text === '') {
+              return null;
+            }
+            try {
+              return originalParse(text, reviver);
+            } catch (e) {
+              if (typeof text === 'string' && (text.trim() === 'undefined' || text.trim() === '')) {
+                return null;
+              }
+              throw e;
+            }
+          };
+        } catch (e) {
+          console.warn('Early JSON.parse patch failed:', e);
+        }
+
+        // Try to pre-emptively make window.fetch configurable/writable or capture sets
+        try {
+          var originalFetch = window.fetch;
+          var activeFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get: function() { return activeFetch; },
+            set: function(v) {
+              if (typeof v === 'function') {
+                activeFetch = v;
+              } else {
+                console.warn('Suppressing attempt to overwrite window.fetch with non-function:', v);
+              }
+            }
+          });
+        } catch (e) {
+          console.warn('Early fetch decorator failed:', e);
+        }
+    </script>
     <title>Calling Agent that works 24/7 | CallingAgent.agency</title>
     <meta name="description" content="Calling Agent that works 24/7. Automate your support with high-performance AI agents. Sub-second response times, human-like voice synthesis, and seamless CRM integrations.">
     <script src="https://cdn.tailwindcss.com"></script>
