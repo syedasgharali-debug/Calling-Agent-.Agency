@@ -59,6 +59,14 @@ interface UserSession {
   balance?: number;
   credits?: number;
   agents?: any[];
+  clonedVoices?: any[];
+  notifyLowCreditEmail?: boolean;
+  notifyLowCreditSMS?: boolean;
+  notifyCallFailuresEmail?: boolean;
+  notifyCallFailuresSMS?: boolean;
+  notificationPhoneNumber?: string;
+  notificationEmail?: string;
+  lowCreditThreshold?: string;
 }
 
 const App: React.FC = () => {
@@ -220,6 +228,14 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
                   credits: data.credits !== undefined ? data.credits : parsed.credits,
                   plan: data.plan !== undefined ? data.plan : parsed.plan || 'Free',
                   agents: data.agents || parsed.agents,
+                  clonedVoices: data.clonedVoices || parsed.clonedVoices || [],
+                  notifyLowCreditEmail: data.notifyLowCreditEmail !== undefined ? data.notifyLowCreditEmail : parsed.notifyLowCreditEmail,
+                  notifyLowCreditSMS: data.notifyLowCreditSMS !== undefined ? data.notifyLowCreditSMS : parsed.notifyLowCreditSMS,
+                  notifyCallFailuresEmail: data.notifyCallFailuresEmail !== undefined ? data.notifyCallFailuresEmail : parsed.notifyCallFailuresEmail,
+                  notifyCallFailuresSMS: data.notifyCallFailuresSMS !== undefined ? data.notifyCallFailuresSMS : parsed.notifyCallFailuresSMS,
+                  notificationPhoneNumber: data.notificationPhoneNumber !== undefined ? data.notificationPhoneNumber : parsed.notificationPhoneNumber,
+                  notificationEmail: data.notificationEmail !== undefined ? data.notificationEmail : parsed.notificationEmail,
+                  lowCreditThreshold: data.lowCreditThreshold !== undefined ? data.lowCreditThreshold : parsed.lowCreditThreshold,
                 };
                 setUser(freshUser);
                 localStorage.setItem('fallback_user_session', JSON.stringify(freshUser));
@@ -250,9 +266,23 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
             credits: (profile as any).credits !== undefined ? (profile as any).credits : 100,
             plan: (profile as any).plan || 'Free',
             agents: (profile as any).agents || null,
+            clonedVoices: (profile as any).clonedVoices || [],
+            notifyLowCreditEmail: (profile as any).notifyLowCreditEmail !== undefined ? (profile as any).notifyLowCreditEmail : true,
+            notifyLowCreditSMS: (profile as any).notifyLowCreditSMS !== undefined ? (profile as any).notifyLowCreditSMS : false,
+            notifyCallFailuresEmail: (profile as any).notifyCallFailuresEmail !== undefined ? (profile as any).notifyCallFailuresEmail : true,
+            notifyCallFailuresSMS: (profile as any).notifyCallFailuresSMS !== undefined ? (profile as any).notifyCallFailuresSMS : true,
+            notificationPhoneNumber: (profile as any).notificationPhoneNumber || '',
+            notificationEmail: (profile as any).notificationEmail || firebaseUser.email || '',
+            lowCreditThreshold: (profile as any).lowCreditThreshold || '20',
           };
           setUser(u);
           localStorage.setItem('fallback_user_session', JSON.stringify(u));
+          
+          // Redirect to dashboard if the user is currently on the login screen
+          const currentHash = window.location.hash.replace('#', '');
+          if (currentHash === 'login' || currentHash === '') {
+            navigate('dashboard');
+          }
         }
       } else {
         // Only clear user state if we do not have a fallback session active in local storage
@@ -314,10 +344,11 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
         credits: fallbackUser.credits !== undefined ? fallbackUser.credits : (role === 'admin' ? 0 : 100),
         plan: fallbackUser.plan || 'Free',
         agents: fallbackUser.agents || null,
+        clonedVoices: fallbackUser.clonedVoices || [],
         profilePic: fallbackUser.profilePic || ''
       };
     } else {
-      const docId = `fallback_${role}_${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const docId = `fallback_${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
       sessionUser = {
         uid: docId,
         email: email.toLowerCase().trim(),
@@ -327,6 +358,7 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
         credits: role === 'admin' ? 0 : 100,
         plan: 'Free',
         agents: null,
+        clonedVoices: [],
         profilePic: ''
       };
     }
@@ -363,7 +395,15 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
             balance: data.balance !== undefined ? data.balance : sessionUser.balance,
             credits: data.credits !== undefined ? data.credits : sessionUser.credits,
             plan: data.plan !== undefined ? data.plan : sessionUser.plan,
-            agents: data.agents || sessionUser.agents
+            agents: data.agents || sessionUser.agents,
+            clonedVoices: data.clonedVoices || sessionUser.clonedVoices || [],
+            notifyLowCreditEmail: data.notifyLowCreditEmail !== undefined ? data.notifyLowCreditEmail : sessionUser.notifyLowCreditEmail,
+            notifyLowCreditSMS: data.notifyLowCreditSMS !== undefined ? data.notifyLowCreditSMS : sessionUser.notifyLowCreditSMS,
+            notifyCallFailuresEmail: data.notifyCallFailuresEmail !== undefined ? data.notifyCallFailuresEmail : sessionUser.notifyCallFailuresEmail,
+            notifyCallFailuresSMS: data.notifyCallFailuresSMS !== undefined ? data.notifyCallFailuresSMS : sessionUser.notifyCallFailuresSMS,
+            notificationPhoneNumber: data.notificationPhoneNumber !== undefined ? data.notificationPhoneNumber : sessionUser.notificationPhoneNumber,
+            notificationEmail: data.notificationEmail !== undefined ? data.notificationEmail : sessionUser.notificationEmail,
+            lowCreditThreshold: data.lowCreditThreshold !== undefined ? data.lowCreditThreshold : sessionUser.lowCreditThreshold,
           };
           setUser(mergedUser);
           localStorage.setItem('fallback_user_session', JSON.stringify(mergedUser));

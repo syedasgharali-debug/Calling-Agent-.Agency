@@ -48,11 +48,31 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
+    
+    // Set a safety timeout to reset the loading state if the popup gets blocked or stuck in an iframe
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Google Sign-In is taking longer than expected. Please make sure popups are allowed in your browser, or try logging in on your main domain: https://callingagent.agency');
+    }, 15000);
+
     try {
-      await loginWithGoogle();
-      // App.tsx handles state via onAuthStateChanged
+      const profile = await loginWithGoogle();
+      clearTimeout(timeoutId);
+      if (profile) {
+        onLogin(profile.email, profile.role as UserRole, profile);
+      } else {
+        setError('Could not retrieve user profile from database.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Google login failed');
+      clearTimeout(timeoutId);
+      console.error("Google login failed:", err);
+      let errMsg = err.message || 'Google login failed';
+      if (err.code === 'auth/popup-blocked') {
+        errMsg = 'The Google login popup was blocked by your browser. Please enable popups for this site.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        errMsg = 'This domain is not authorized in your Firebase Console. Please add "callingagent.agency" and your Vercel domains to the Firebase Authorized Domains list.';
+      }
+      setError(errMsg);
     } finally {
       setLoading(false);
     }

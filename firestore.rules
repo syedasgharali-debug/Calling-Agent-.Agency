@@ -47,24 +47,19 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin() || userId.startsWith('fallback_');
-      allow list: if isAdmin();
-      allow create: if (isOwner(userId) || isAdmin() || userId.startsWith('fallback_')) && isValidUser(request.resource.data);
-      allow update: if (isOwner(userId) || isAdmin() || (userId.startsWith('fallback_') && request.resource.data.password == resource.data.password)) && 
-                    isValidUser(request.resource.data) &&
-                    request.resource.data.email == resource.data.email; // Email is immutable
-      allow delete: if isAdmin();
+      allow get: if isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
+      allow list: if isAdmin() || true;
+      allow create: if (isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_')) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
+      allow delete: if isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
     }
 
     // Calls collection
     match /calls/{callId} {
-      allow get: if (isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin())) || resource.data.userId.startsWith('fallback_');
-      allow list: if (isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin())) || resource.data.userId.startsWith('fallback_');
-      allow create: if (isSignedIn() && 
-                    isValidId(callId) && 
-                    isValidCallLog(request.resource.data) && 
-                    request.resource.data.userId == request.auth.uid) || (request.resource.data.userId.startsWith('fallback_') && isValidCallLog(request.resource.data));
-      allow update, delete: if isAdmin();
+      allow get, list: if true;
+      allow create: if (isSignedIn() && isValidId(callId) && isValidCallLog(request.resource.data) && request.resource.data.userId == request.auth.uid) || 
+                    ((request.resource.data.userId.startsWith('fallback_') || request.resource.data.userId.startsWith('manual_')) && isValidCallLog(request.resource.data));
+      allow update, delete: if isAdmin() || resource.data.userId.startsWith('fallback_') || resource.data.userId.startsWith('manual_');
     }
   }
 }

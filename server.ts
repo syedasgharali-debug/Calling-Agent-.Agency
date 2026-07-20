@@ -401,6 +401,109 @@ async function startServer() {
     });
   }
 
+  // Helper to map our preset IDs to real ElevenLabs voice IDs
+  function mapToRealElevenLabsVoiceId(voiceId: string): string {
+    const mapping: Record<string, string> = {
+      'el_rachel': '21m00Tcm4TlvDq8ikWAM',
+      'el_drew': '29vD33N1CtxCmqQRPOHJ',
+      'el_clyde': '2EiwXgQa2bkXSDBadgTv',
+      'el_paul': '5Q0t7uMcgvnag6noC1Yy',
+      'el_nicole': 'piTKgcLEGmPEe242C3v0',
+      'el_michael': 'flq6Z7Unb4JH8FaiZAXL',
+      'el_adam': 'pNInz6obpg7Id37T1IQi',
+      'el_antoni': 'ErXwobaYiN019vkySvjV',
+      'el_bella': 'EXAVITQu4vr4xnSDxMaL',
+      'el_elli': 'MF3mGyEYCl7XYWbV9V6O',
+      'el_gigi': 'jBpfuIE2acCO8zHdMsCs',
+      'el_giovanni': 'zcAHLhcZORdnv0AYZGPm',
+      'el_harry': 'SOYHLrjzK2X1EBg6UrZ6',
+      'el_mimi': 'zrHiDhgYpIDee2S4Xf9U',
+      'el_serena': 'pMs2g85c0Bv7NIPrZ916',
+      'el_glinda': 'z9fAnlkFmt1Frg96ljS6',
+      'el_charlie': 'IKne3meq5aSn9XLyUdCD',
+      'el_liam': 'TX3800X977c0D63pt9cf',
+      'el_priya': 'OdT5FHF6Xz6itX0B26aZ',
+      'el_matilda': 'XrExE9yKIg1WjnnlVkGX',
+      'el_freya': 'jsCqZswC476cr61q42JA',
+      'el_conor': '5Z3266O8Vv8nPl3d1mG9',
+      'el_samantha': 'EXAVITQu4vr4xnSDxMaL',
+      'el_george': 'JBF2zCBvXqSj9GgwsFdF',
+      'el_will': 'bVMe3CgSg77bT6B7S3uA',
+      'el_clara': 'pMs2g85c0Bv7NIPrZ916',
+      'el_sofia': 'EXAVITQu4vr4xnSDxMaL',
+    };
+    return mapping[voiceId] || voiceId;
+  }
+
+  // Get real ElevenLabs voices
+  app.get("/api/elevenlabs/voices", async (req, res) => {
+    const apiKey = req.headers['xi-api-key'] || process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: "ElevenLabs API Key is required" });
+    }
+    try {
+      const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+        headers: { "xi-api-key": apiKey as string }
+      });
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: "ElevenLabs API error", details: errText });
+      }
+      const data: any = await response.json();
+      const mappedVoices = (data.voices || []).map((v: any) => ({
+        id: v.voice_id,
+        name: v.name,
+        gender: v.labels?.gender || (v.labels?.gender === 'female' ? 'Female' : v.labels?.gender === 'male' ? 'Male' : 'Female'),
+        accent: v.labels?.accent || 'American',
+        age: v.labels?.age || 'Young',
+        category: v.category || 'premade',
+        description: v.description || `ElevenLabs ${v.category} voice`,
+        engine: 'ElevenLabs',
+        previewUrl: v.preview_url
+      }));
+      res.json({ voices: mappedVoices });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create custom ElevenLabs instant voice clone
+  app.post("/api/elevenlabs/clone", async (req, res) => {
+    const { name, description, audioBase64 } = req.body;
+    const apiKey = req.headers['xi-api-key'] || process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: "ElevenLabs API Key is required" });
+    }
+    if (!name || !audioBase64) {
+      return res.status(400).json({ error: "Name and audioBase64 are required" });
+    }
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      if (description) formData.append("description", description);
+      
+      const audioBuffer = Buffer.from(audioBase64, 'base64');
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+      formData.append("files", blob, "sample.mp3");
+      
+      const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey as string
+        },
+        body: formData
+      });
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: "ElevenLabs API error", details: errText });
+      }
+      const result = await response.json();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Interactive Live Demo Chat Proxy
   app.post("/api/demo/chat", async (req, res) => {
     const { message, history, systemInstruction } = req.body;
@@ -435,6 +538,44 @@ async function startServer() {
   app.post("/api/demo/tts", async (req, res) => {
     try {
       const { text, voiceName } = req.body;
+      const elevenlabsKey = req.headers['xi-api-key'] || process.env.ELEVENLABS_API_KEY;
+
+      const geminiVoices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoede'];
+      const isElevenLabs = voiceName && !geminiVoices.includes(voiceName);
+
+      // If ElevenLabs API Key is available and it is a custom/ElevenLabs voice, call the ElevenLabs TTS API
+      if (elevenlabsKey && isElevenLabs) {
+        try {
+          const realVoiceId = mapToRealElevenLabsVoiceId(voiceName);
+          const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${realVoiceId}`, {
+            method: "POST",
+            headers: {
+              "xi-api-key": elevenlabsKey as string,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              text: text,
+              model_id: "eleven_monolingual_v1",
+              voice_settings: {
+                stability: 0.5,
+                similarity_boost: 0.75
+              }
+            })
+          });
+          if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+            return res.json({ audio: base64Audio });
+          } else {
+            const errText = await response.text();
+            console.error("ElevenLabs TTS endpoint failure:", errText);
+          }
+        } catch (elevenErr) {
+          console.error("Error communicating with ElevenLabs TTS:", elevenErr);
+        }
+      }
+
+      // Fallback to Gemini Native Voice TTS
       if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') {
         return res.json({ audio: null });
       }

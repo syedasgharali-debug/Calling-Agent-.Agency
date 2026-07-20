@@ -43,10 +43,16 @@ export class GeminiService {
 
   async generateSpeech(text: string, voiceName: string = 'Kore') {
     try {
+      let elevenlabsKey = '';
+      try {
+        elevenlabsKey = localStorage.getItem('elevenlabs_api_key') || '';
+      } catch (e) {}
+
       const response = await fetch('/api/demo/tts', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'xi-api-key': elevenlabsKey
         },
         body: JSON.stringify({ text, voiceName })
       });
