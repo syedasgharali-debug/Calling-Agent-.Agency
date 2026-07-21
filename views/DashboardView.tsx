@@ -12,6 +12,7 @@ import {
   Key, 
   History, 
   Play, 
+  PlayCircle,
   Pause, 
   Trash2, 
   Search,
@@ -22,6 +23,7 @@ import {
   Phone,
   PhoneOff,
   ArrowUpRight,
+  ExternalLink,
   ArrowDownRight,
   ShieldCheck,
   DollarSign,
@@ -102,6 +104,8 @@ interface DashboardViewProps {
   setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>;
   blogs: Blog[];
   setBlogs: React.Dispatch<React.SetStateAction<Blog[]>>;
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
 }
 
 interface Agent {
@@ -221,9 +225,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   coupons,
   setCoupons,
   blogs,
-  setBlogs
+  setBlogs,
+  theme,
+  setTheme
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning'>('overview');
   const [activePlayingAudioId, setActivePlayingAudioId] = useState<string | null>(null);
   const [selectedTestVoiceId, setSelectedTestVoiceId] = useState<string>('');
   const [testVoiceText, setTestVoiceText] = useState('Welcome back! This is your custom-cloned, production-ready AI agent from CallingAgent. Our voice parameters have been calibrated perfectly for this live quality verification test.');
@@ -284,14 +290,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [newUserRole, setNewUserRole] = useState<'customer' | 'admin'>('customer');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    try {
-      const saved = localStorage.getItem('dashboard-theme');
-      return (saved as 'dark' | 'light') || 'dark';
-    } catch (e) {
-      return 'dark';
-    }
-  });
 
   const dismissWelcome = () => {
     try {
@@ -324,12 +322,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [elevenlabsApiKey, setElevenlabsApiKey] = useState(() => {
     try { return localStorage.getItem('elevenlabs_api_key') || ''; } catch (e) { return ''; }
   });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('dashboard-theme', theme);
-    } catch (e) {}
-  }, [theme]);
 
   useEffect(() => {
     if (showElevenLabsVoiceModal && elevenlabsApiKey) {
@@ -410,23 +402,33 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const tutorialVideos = [
     {
       id: 1,
-      title: "1. Account Onboarding & Secure Portal Auth",
-      description: "Explore how incoming invitees can trigger quick signups, configure passwords, and complete dual session logins to access the calling command deck.",
-      duration: 35,
+      title: "1. Log In And Create Account To Access Dashboard",
+      description: "This tutorial guides you through logging in, entering your email and password, creating an account, and accessing the user dashboard to get started.",
+      duration: 58,
       targetTab: "auth",
+      embedUrl: "https://embed.app.guidde.com/playbooks/94DBYeEspmnRY8G9crEYwR?mode=videoOnly",
       thumbnail: "bg-gradient-to-r from-violet-600/30 via-slate-900 to-fuchsia-950",
       iconName: "Lock",
       learningPoints: [
-        "Toggle secure credentials screens (Sign In and Sign Up views)",
-        "Configure strong passwords and register administrative keys",
-        "Load workspace tokens to enter high-density call control centers"
+        "Enter your email address and password credentials",
+        "Click on Create Account to register a new user profile",
+        "Log in and access your personal AI CallingAgent dashboard"
       ],
       subtitles: [
-        { time: 0, text: "Welcome to CallingAgent! Let's explore how new users register and sign in to access the control panel." },
-        { time: 7, text: "Newly invited users can select the registration form tab to input their email and select strong passphrases." },
-        { time: 15, text: "Already have credentials? Enter your team login keys and toggle secure session token persistence." },
-        { time: 23, text: "Click Authorize Session to run automated validation and load your private communications dashboard." },
-        { time: 29, text: "After validation, the workspace session activates, granting you absolute portal-wide privileges!" }
+        { time: 0, text: "This tutorial explains how to log in and get started with the application." },
+        { time: 4, text: "You will learn the steps to create an account and navigate the user dashboard." },
+        { time: 9, text: "How to log in and get started." },
+        { time: 12, text: "We are here, so let's get this line up purchase. Just put demo." },
+        { time: 17, text: "Enter your email address." },
+        { time: 23, text: "Here is our email," },
+        { time: 24, text: "and after it, we need to put a password like demo@231. This is just one example." },
+        { time: 29, text: "We need to click on create account. We put it, and now it's in the process. It's taking some time." },
+        { time: 35, text: "Once the account is created, you'll be logged in to the account that we have." },
+        { time: 40, text: "It's just taking some time here." },
+        { time: 42, text: "We log in." },
+        { time: 44, text: "Here we have the user dashboard." },
+        { time: 47, text: "This is our dashboard. We will explore every feature in our next videos." },
+        { time: 52, text: "This tutorial guides you through logging in, entering your email and password, creating an account, and accessing the user dashboard to get started." }
       ]
     },
     {
@@ -680,7 +682,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [notifyCallFailuresSMS, setNotifyCallFailuresSMS] = useState(user.notifyCallFailuresSMS !== undefined ? user.notifyCallFailuresSMS : true);
   const [notificationPhoneNumber, setNotificationPhoneNumber] = useState(user.notificationPhoneNumber || '+1 (555) 019-2834');
   const [notificationEmail, setNotificationEmail] = useState(user.notificationEmail || user.email || '');
-  const [lowCreditThreshold, setLowCreditThreshold] = useState(user.lowCreditThreshold || '20');
+  const [lowCreditThreshold, setLowCreditThreshold] = useState(() => {
+    if (user.plan === 'Enterprise') return '100';
+    return user.lowCreditThreshold || '20';
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -907,9 +912,91 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedRegion, setSelectedRegion] = useState('US');
   const [provisioningAgentId, setProvisioningAgentId] = useState('');
 
-  const [calls, setCalls] = useState<Call[]>([]);
+  const [calls, setCalls] = useState<Call[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-calls');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'call_1',
+        caller: '+1 (415) 555-2671',
+        agent: 'Sarah (Real Estate)',
+        duration: '2m 14s',
+        outcome: 'Tour Booked',
+        sentiment: 'Positive',
+        timestamp: '10 mins ago',
+        transcript: "Sarah (Real Estate): Hello! Thanks for calling Sarah Real Estate Desk. Are you looking to see the Saturday afternoon listing?\nCustomer: Yes, I would love to book a slot for the 2 PM tour if it's still available.\nSarah (Real Estate): Perfect! I have scheduled you for the 2 PM showing. We will send the access code via SMS shortly before."
+      },
+      {
+        id: 'call_2',
+        caller: '+1 (212) 555-8930',
+        agent: 'Chloe (SaaS Billing)',
+        duration: '4m 32s',
+        outcome: 'Discount Applied',
+        sentiment: 'Positive',
+        timestamp: '1 hour ago',
+        transcript: "Customer: Hi, I'm calling about my subscription fee. It's a bit high this month.\nChloe (SaaS Billing): I understand completely. I checked your account and I can apply a retention loyalty discount of 50% for the next 3 months.\nCustomer: Oh, that is extremely helpful. Thank you so much!"
+      },
+      {
+        id: 'call_3',
+        caller: '+1 (312) 555-1209',
+        agent: 'David (Medical Clinic)',
+        duration: '1m 45s',
+        outcome: 'Appointment Scheduled',
+        sentiment: 'Neutral',
+        timestamp: '2 hours ago',
+        transcript: "David (Medical Clinic): Welcome to the clinic booking agent. What can we do for you today?\nCustomer: I need to schedule an annual physical exam.\nDavid (Medical Clinic): Excellent. I have an opening tomorrow at 10:15 AM with Dr. Mercer. Does that suit your schedule?\nCustomer: Yes, that is perfect. Please reserve that slot."
+      }
+    ];
+  });
 
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  useEffect(() => {
+    localStorage.setItem('dashboard-calls', JSON.stringify(calls));
+  }, [calls]);
+
+  const [allUsers, setAllUsers] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-users-seed');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'user_ent_1',
+        email: 'enterprise-client@callingagent.com',
+        name: 'Enterprise Client Corp',
+        role: 'customer',
+        plan: 'Enterprise',
+        balance: 150.00,
+        credits: 5000,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 * 5 },
+        lastLogin: { seconds: Math.floor(Date.now() / 1000) },
+        status: 'online'
+      },
+      {
+        id: 'user_cust_1',
+        email: 'starter-john@gmail.com',
+        name: 'John Doe',
+        role: 'customer',
+        plan: 'Starter',
+        balance: 15.00,
+        credits: 200,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 * 2 },
+        lastLogin: { seconds: Math.floor(Date.now() / 1000) - 3600 },
+        status: 'offline'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-users-seed', JSON.stringify(allUsers));
+  }, [allUsers]);
 
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -959,6 +1046,70 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   });
 
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+
+  // Campaigns & Telephony States
+  const [campaignList, setCampaignList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-campaigns');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      {
+        id: 'camp_1',
+        name: 'Enterprise Outreach Plan B',
+        type: 'Outbound',
+        status: 'Active',
+        agent: 'Sarah (Real Estate)',
+        targetCount: 150,
+        completedCount: 89,
+        successRate: 94,
+        budget: 500,
+        spend: 184.50,
+        createdAt: '2026-07-15'
+      },
+      {
+        id: 'camp_2',
+        name: 'SaaS Invoice Retention Campaign',
+        type: 'Outbound',
+        status: 'Paused',
+        agent: 'Chloe (SaaS Billing)',
+        targetCount: 300,
+        completedCount: 210,
+        successRate: 88,
+        budget: 1000,
+        spend: 442.20,
+        createdAt: '2026-07-18'
+      },
+      {
+        id: 'camp_3',
+        name: 'Medical Clinic Inbound Routing Desk',
+        type: 'Inbound',
+        status: 'Active',
+        agent: 'David (Medical Clinic)',
+        targetCount: 1000,
+        completedCount: 423,
+        successRate: 91,
+        budget: 2000,
+        spend: 615.10,
+        createdAt: '2026-07-10'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-campaigns', JSON.stringify(campaignList));
+  }, [campaignList]);
+
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('camp_1');
+  const [selectedCampaignCustomer, setSelectedCampaignCustomer] = useState<string>('user_ent_1');
+  const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('agent_sarah');
+  const [simCallStatus, setSimCallStatus] = useState<'idle' | 'dialing' | 'ringing' | 'connected' | 'ended'>('idle');
+  const [simCallType, setSimCallType] = useState<'inbound' | 'outbound'>('outbound');
+  const [simCallLogs, setSimCallLogs] = useState<string[]>([]);
+  const [simCallTranscript, setSimCallTranscript] = useState<{ sender: 'agent' | 'customer'; text: string }[]>([]);
+  const [simCallTimer, setSimCallTimer] = useState<number>(0);
+  const [simCallSentiment, setSimCallSentiment] = useState<'Positive' | 'Neutral' | 'Negative'>('Neutral');
+  const [campaignDialsInProgress, setCampaignDialsInProgress] = useState<boolean>(false);
 
   const [selectedAdminMetric, setSelectedAdminMetric] = useState<'revenue' | 'users' | 'usage'>('revenue');
   const [selectedUserMetric, setSelectedUserMetric] = useState<'minutes' | 'latency' | 'spend'>('minutes');
@@ -1139,6 +1290,168 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
+  // Start simulated call (Inbound or Outbound)
+  const handleStartSimCall = (type: 'inbound' | 'outbound') => {
+    if (simCallStatus !== 'idle') return;
+    
+    setSimCallType(type);
+    setSimCallStatus('dialing');
+    setSimCallTimer(0);
+    setSimCallSentiment('Neutral');
+    
+    const customer = allUsers.find(u => u.id === selectedCampaignCustomer) || allUsers[0];
+    const agent = agents.find(a => a.id === selectedCampaignAgent) || agents[0];
+    
+    const logPrefix = type === 'outbound' ? 'Dialing' : 'Receiving inbound call from';
+    const initialLogs = [
+      `[SIM] Telephony connection requested. Trunk: SIP/Primary-Level-0`,
+      `[SIM] ${logPrefix} ${customer?.name || 'Customer'} (${customer?.email || 'Unknown Phone'})`,
+    ];
+    setSimCallLogs(initialLogs);
+    setSimCallTranscript([]);
+
+    // 1. Progress to Ringing after 1.5s
+    setTimeout(() => {
+      setSimCallStatus('ringing');
+      setSimCallLogs(prev => [...prev, `[SIM] Carrier status: RINGING. Direct connection routing...`]);
+    }, 1500);
+
+    // 2. Connect after 3.5s
+    setTimeout(() => {
+      setSimCallStatus('connected');
+      setSimCallLogs(prev => [...prev, `[SIM] Call Answered. Audio pipeline established. SampleRate: 8000Hz.`]);
+      
+      // Start printing transcript line-by-line
+      const dialogues: { sender: 'agent' | 'customer'; text: string; delay: number; sentiment: 'Positive' | 'Neutral' | 'Negative' }[] = type === 'outbound' ? [
+        { sender: 'agent', text: `Hello! Thanks for picking up. This is ${agent?.name || 'Sarah'} here. I noticed you checked out our listings recently!`, delay: 1000, sentiment: 'Neutral' },
+        { sender: 'customer', text: `Oh, hi! Yes, I was looking at that Saturday afternoon slot. Is it still available?`, delay: 4000, sentiment: 'Positive' },
+        { sender: 'agent', text: `Yes, absolutely! It is open at 2:00 PM. Would you like me to book your private tour slot?`, delay: 8000, sentiment: 'Positive' },
+        { sender: 'customer', text: `That's wonderful, yes please! Lock in 2 PM. I will bring my family along.`, delay: 12000, sentiment: 'Positive' },
+        { sender: 'agent', text: `Perfect! I've secured your 2 PM tour and generated your access code. Looking forward to seeing you Saturday!`, delay: 16000, sentiment: 'Positive' }
+      ] : [
+        { sender: 'customer', text: `Hello? I need assistance with my billing subscription. It's showing an extra fee.`, delay: 1000, sentiment: 'Neutral' },
+        { sender: 'agent', text: `Hi there! Thanks for calling Customer Care. Let me check your account profile... ah, yes, I see the billing change.`, delay: 4000, sentiment: 'Neutral' },
+        { sender: 'customer', text: `Is there any active retention discount you can apply? I really like the software but the fee is tight.`, delay: 8000, sentiment: 'Neutral' },
+        { sender: 'agent', text: `Absolutely. I have applied a special 50% retainer coupon to your account for the next three billing periods!`, delay: 12000, sentiment: 'Positive' },
+        { sender: 'customer', text: `Oh wow, that's incredibly generous! Thank you for the super fast support.`, delay: 16000, sentiment: 'Positive' }
+      ];
+
+      dialogues.forEach(item => {
+        setTimeout(() => {
+          setSimCallTranscript(prev => [...prev, { sender: item.sender, text: item.text }]);
+          setSimCallSentiment(item.sentiment);
+          setSimCallLogs(prev => [...prev, `[SIM] Received audio payload from ${item.sender === 'agent' ? 'AI' : 'Client'}. Sentiment updated to: ${item.sentiment}`]);
+        }, item.delay);
+      });
+
+      // End Call after 21s
+      setTimeout(() => {
+        // Trigger local function closure
+        setSimCallStatus('ended');
+        setSimCallLogs(prev => [...prev, `[SIM] Call terminated by remote party. Hanging up...`]);
+        
+        // Deduct $0.45 from balance
+        const cost = 0.45;
+        const currentBalance = parseFloat((user as any).balance || 0);
+        const newBalance = Math.max(0, currentBalance - cost);
+        onUpdateUser({ balance: newBalance });
+
+        // Sync allUsers state balance for simulated customer as well!
+        setAllUsers(prev => prev.map(u => {
+          if (u.id === selectedCampaignCustomer) {
+            const uBal = parseFloat(u.balance || 0);
+            return { ...u, balance: Math.max(0, uBal - cost) };
+          }
+          return u;
+        }));
+
+        // Add to actual Call Logs list!
+        const customerObj = allUsers.find(usr => usr.id === selectedCampaignCustomer) || allUsers[0];
+        const agentObj = agents.find(agnt => agnt.id === selectedCampaignAgent) || agents[0];
+        const newCall: Call = {
+          id: `sim_call_${Date.now()}`,
+          caller: customerObj?.name || '+1 (415) 555-0100',
+          agent: agentObj?.name || 'Sarah (Real Estate)',
+          duration: '0m 21s',
+          outcome: type === 'outbound' ? 'Tour Booked' : 'Billing Handled',
+          sentiment: 'Positive',
+          timestamp: 'Just now',
+          transcript: dialogues.map(t => `${t.sender === 'agent' ? 'Agent' : 'Customer'}: ${t.text}`).join('\n')
+        };
+
+        setCalls(prev => [newCall, ...prev]);
+        triggerToast(`Simulation call completed. Ledger drawn -$0.45.`, 'success');
+
+        setTimeout(() => {
+          setSimCallStatus('idle');
+        }, 4000);
+      }, 21000);
+
+    }, 3500);
+  };
+
+  // Launch simulated campaign dialer
+  const [campProgress, setCampProgress] = useState(0);
+  const [campActiveLines, setCampActiveLines] = useState<string[]>([]);
+  const [campStats, setCampStats] = useState({ dialed: 0, connected: 0, positive: 0 });
+
+  const handleLaunchCampaignSim = () => {
+    if (campaignDialsInProgress) return;
+    setCampaignDialsInProgress(true);
+    setCampProgress(0);
+    setCampStats({ dialed: 0, connected: 0, positive: 0 });
+    setCampActiveLines(['Line 1: Standing by...', 'Line 2: Standing by...', 'Line 3: Standing by...']);
+    
+    triggerToast("Enterprise Outbound Dialer Campaign launched!", "success");
+
+    let counter = 0;
+    const maxSteps = 10;
+    const interval = setInterval(() => {
+      counter++;
+      setCampProgress(Math.floor((counter / maxSteps) * 100));
+
+      // Randomly populate logs & lines
+      const activeNumbers = [
+        `+1 (415) 555-${Math.floor(1000 + Math.random() * 9000)}`,
+        `+1 (212) 555-${Math.floor(1000 + Math.random() * 9000)}`,
+        `+1 (305) 555-${Math.floor(1000 + Math.random() * 9000)}`
+      ];
+
+      setCampActiveLines([
+        `Line 1: Dialing ${activeNumbers[0]} ... Connected (David Agent)`,
+        `Line 2: Ringing ${activeNumbers[1]} ... Ringing`,
+        `Line 3: Disconnected ${activeNumbers[2]} ... Terminated (Positive)`
+      ]);
+
+      setCampStats(prev => ({
+        dialed: prev.dialed + 3,
+        connected: prev.connected + (Math.random() > 0.3 ? 2 : 1),
+        positive: prev.positive + (Math.random() > 0.5 ? 1 : 0)
+      }));
+
+      if (counter >= maxSteps) {
+        clearInterval(interval);
+        setCampaignDialsInProgress(false);
+        setCampProgress(100);
+        setCampActiveLines([]);
+        
+        // Update campaigns list with higher completed count and spend!
+        setCampaignList(prev => prev.map(c => {
+          if (c.id === selectedCampaignId) {
+            return {
+              ...c,
+              completedCount: c.completedCount + 30,
+              spend: c.spend + 45.00
+            };
+          }
+          return c;
+        }));
+
+        triggerToast("Enterprise Campaign Completed! Stats updated.", "success");
+      }
+    }, 1500);
+  };
+
   // Invoicing Action states
   const [isChargingInvoiceId, setIsChargingInvoiceId] = useState<string | null>(null);
   const [isSendingInvoiceId, setIsSendingInvoiceId] = useState<string | null>(null);
@@ -1149,7 +1462,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [newInvoiceEmail, setNewInvoiceEmail] = useState('');
   const [selectedInvoicePlan, setSelectedInvoicePlan] = useState('Starter');
   const [selectedInvoiceCycle, setSelectedInvoiceCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
-  const [newInvoiceAmount, setNewInvoiceAmount] = useState('45.00'); // Starter Monthly rate default
+  const [newInvoiceAmount, setNewInvoiceAmount] = useState('65.00'); // Starter Monthly rate default
   const [newInvoiceStatus, setNewInvoiceStatus] = useState<'Paid' | 'Pending'>('Pending');
   const [newInvoiceDate, setNewInvoiceDate] = useState(() => {
     const today = new Date();
@@ -2732,6 +3045,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             ...(isAdmin && !isImpersonating ? [
               { id: 'enterprise', label: 'Enterprise Requests', icon: Building2 },
+              { id: 'campaigns', label: 'Campaign Manager', icon: PlayCircle },
               { id: 'integrations', label: 'API Configuration', icon: Key },
               { id: 'users', label: 'User Management', icon: ShieldCheck },
               { id: 'admin-plans', label: 'Subscription Plans', icon: Layout },
@@ -2743,6 +3057,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'profile', label: 'Settings', icon: Settings }
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
+              { id: 'campaigns', label: 'Live Campaigns', icon: PlayCircle },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
               { id: 'provision', label: 'Provision', icon: Plus },
@@ -4919,6 +5234,372 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </motion.div>
           )}
 
+          {activeTab === 'campaigns' && (
+            <motion.div 
+              key="campaigns"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              {/* Campaign Safety Shield Notification */}
+              <div className={`p-6 rounded-[2rem] border transition-all ${
+                theme === 'dark' 
+                  ? 'bg-gradient-to-r from-indigo-900/40 to-slate-900/40 border-indigo-500/10' 
+                  : 'bg-gradient-to-r from-indigo-50 to-slate-50 border-indigo-100'
+              }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                      <ShieldCheck className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className={`text-lg font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                        {user.plan === 'Enterprise' ? 'Enterprise Campaign Shield Active' : 'Campaign Balance Safeguard'}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-bold">
+                        {user.plan === 'Enterprise' 
+                          ? 'Enforcing the custom $100.00 USD balance threshold to keep enterprise trunks active.' 
+                          : 'Standard plans are set to a fallback balance threshold alerts parameter.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`px-4 py-2 rounded-xl text-center border ${
+                    user.plan === 'Enterprise'
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                      : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                  }`}>
+                    <span className="text-[10px] font-black uppercase tracking-widest block">Safe Limit</span>
+                    <span className="text-lg font-black font-mono">
+                      {user.plan === 'Enterprise' ? '$100.00 USD' : `$${lowCreditThreshold}.00 USD`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Workspace Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left side Controls - Campaign List, Custom Call Simulator */}
+                <div className="lg:col-span-7 space-y-8">
+                  {/* Real-time calling simulator console */}
+                  <div className={`p-8 border rounded-[2.5rem] transition-all ${
+                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200'
+                  }`}>
+                    <div className="mb-6">
+                      <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Interactive Telephony Simulator</h4>
+                      <p className="text-xs text-slate-500 font-bold mt-1">Select an active customer and an AI agent to trigger a live inbound/outbound call.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      {/* Target Customer Dropdown */}
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Select Test Customer</label>
+                        <select 
+                          value={selectedCampaignCustomer}
+                          onChange={(e) => setSelectedCampaignCustomer(e.target.value)}
+                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          {allUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} ({u.email}) - Bal: ${parseFloat(u.balance || 0).toFixed(2)} [Plan: {u.plan || 'Free'}]
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* AI Agent Dropdown */}
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Select AI Voice Agent</label>
+                        <select 
+                          value={selectedCampaignAgent}
+                          onChange={(e) => setSelectedCampaignAgent(e.target.value)}
+                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          {agents.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} - Voice: {a.voice} ({a.logic})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Simulation Triggers */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button 
+                        onClick={() => handleStartSimCall('inbound')}
+                        disabled={simCallStatus !== 'idle'}
+                        className={`flex items-center justify-center space-x-2 px-6 py-4 rounded-2xl font-black text-sm transition-all shadow-lg ${
+                          simCallStatus !== 'idle' 
+                            ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' 
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                        }`}
+                      >
+                        <Phone className="w-4 h-4 animate-bounce" />
+                        <span>Trigger Inbound Call Simulation</span>
+                      </button>
+
+                      <button 
+                        onClick={() => handleStartSimCall('outbound')}
+                        disabled={simCallStatus !== 'idle'}
+                        className={`flex items-center justify-center space-x-2 px-6 py-4 rounded-2xl font-black text-sm transition-all shadow-lg ${
+                          simCallStatus !== 'idle' 
+                            ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' 
+                            : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-600/20'
+                        }`}
+                      >
+                        <ArrowUpRight className="w-4 h-4" />
+                        <span>Trigger Outbound Call Simulation</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bulk Campaigns launcher (Enterprise feature) */}
+                  <div className={`p-8 border rounded-[2.5rem] transition-all ${
+                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200'
+                  }`}>
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Bulk Outreach Campaigns</h4>
+                        <p className="text-xs text-slate-500 font-bold mt-1">Automate thousands of high-concurrency phone dials. Perfect for Enterprise marketing or SaaS retention outreach.</p>
+                      </div>
+                      <span className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg tracking-wider ${
+                        user.plan === 'Enterprise' || isAdmin
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                      }`}>
+                        {user.plan === 'Enterprise' || isAdmin ? 'Enterprise Enabled' : 'Requires Upgrade'}
+                      </span>
+                    </div>
+
+                    {campaignList.map((c) => (
+                      <div 
+                        key={c.id} 
+                        onClick={() => setSelectedCampaignId(c.id)}
+                        className={`p-5 rounded-2xl border mb-4 cursor-pointer transition-all ${
+                          selectedCampaignId === c.id 
+                            ? 'border-indigo-500 bg-indigo-500/5' 
+                            : theme === 'dark' ? 'border-white/5 bg-slate-950/20 hover:bg-slate-950/40' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h5 className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.name}</h5>
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Agent: {c.agent} | Type: {c.type}</span>
+                          </div>
+                          <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg ${
+                            c.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500'
+                          }`}>
+                            {c.status}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                          <div>
+                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Target Size</span>
+                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.targetCount} contacts</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Connected</span>
+                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.completedCount}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Success Rate</span>
+                            <span className="text-xs font-black text-emerald-400">{c.successRate}%</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Spend</span>
+                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${c.spend.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="mt-6 pt-2">
+                      {user.plan === 'Enterprise' || isAdmin ? (
+                        <div className="space-y-4">
+                          <button 
+                            onClick={handleLaunchCampaignSim}
+                            disabled={campaignDialsInProgress}
+                            className={`w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-600/25 ${
+                              campaignDialsInProgress ? 'opacity-55 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {campaignDialsInProgress ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Bulk Campaign Dialing in Progress... {campProgress}%</span>
+                              </>
+                            ) : (
+                              <>
+                                <PlayCircle className="w-5 h-5" />
+                                <span>Launch Bulk Outbound Dialer Campaign</span>
+                              </>
+                            )}
+                          </button>
+
+                          {campaignDialsInProgress && (
+                            <div className="space-y-3 p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 animate-pulse">
+                              <h6 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Active Concurrent Channels:</h6>
+                              <div className="space-y-1 text-xs font-mono text-slate-400">
+                                {campActiveLines.map((line, idx) => (
+                                  <div key={idx} className="flex justify-between">
+                                    <span>{line}</span>
+                                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Live</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-indigo-500/10">
+                                <div>
+                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Total Dialed</span>
+                                  <span className="font-bold text-sm text-white">{campStats.dialed}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Connected</span>
+                                  <span className="font-bold text-sm text-white">{campStats.connected}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Positive Feedback</span>
+                                  <span className="font-bold text-sm text-emerald-400">{campStats.positive}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center p-6 border border-dashed border-amber-500/30 bg-amber-500/5 rounded-3xl">
+                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2 animate-bounce" />
+                          <h5 className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Bulk Outreach Requires Enterprise Plan</h5>
+                          <p className="text-xs text-slate-500 font-bold mt-1 max-w-sm mx-auto mb-4">Upgrade your account to leverage heavy-volume parallel outbound campaigns, multi-line concurrent trunks, and custom webhook streams.</p>
+                          <button 
+                            onClick={() => {
+                              setActiveTab('billing');
+                              triggerToast("Navigated to billing to select plan upgrade", "info");
+                            }}
+                            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all"
+                          >
+                            View Subscription Plans
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side - Mobile Phone Simulator interface */}
+                <div className="lg:col-span-5 flex flex-col justify-start">
+                  <div className={`relative w-full max-w-sm mx-auto aspect-[9/19] border-8 rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col ${
+                    theme === 'dark' ? 'bg-slate-950 border-slate-900 shadow-slate-950/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    {/* Speaker notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 dark:bg-slate-900 rounded-b-2xl z-50 flex items-center justify-center">
+                      <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
+                    </div>
+
+                    {/* Sim Call Window Content */}
+                    <div className="flex-1 flex flex-col pt-12 p-6 z-10 relative overflow-hidden">
+                      {simCallStatus === 'idle' ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                          <div className={`w-20 h-20 rounded-full flex items-center justify-center border border-dashed transition-all ${
+                            theme === 'dark' ? 'bg-slate-900/40 border-white/10' : 'bg-white border-slate-200'
+                          }`}>
+                            <Phone className="w-8 h-8 text-slate-400" />
+                          </div>
+                          <div>
+                            <h5 className={`font-black text-base ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Telephony System Standby</h5>
+                            <p className="text-xs text-slate-500 font-bold mt-2 max-w-[200px]">Simulate inbound or outbound calls from the dashboard control console to test AI responsiveness.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col justify-between">
+                          {/* Top call status info */}
+                          <div className="text-center space-y-2 pt-4">
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">
+                              {simCallType === 'outbound' ? 'Outbound Dial' : 'Inbound Connection'}
+                            </span>
+                            <h5 className={`font-black text-lg truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                              {allUsers.find(u => u.id === selectedCampaignCustomer)?.name || 'Demo Client'}
+                            </h5>
+                            <div className="flex items-center justify-center space-x-2">
+                              {simCallStatus === 'connected' ? (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                              ) : (
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              )}
+                              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                                {simCallStatus} ...
+                              </span>
+                            </div>
+
+                            {/* Sentiment and Cost indicators */}
+                            {simCallStatus === 'connected' && (
+                              <div className="flex justify-center space-x-3 pt-2">
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${
+                                  simCallSentiment === 'Positive' ? 'bg-emerald-500/10 text-emerald-400' :
+                                  simCallSentiment === 'Negative' ? 'bg-rose-500/10 text-rose-400' : 'bg-indigo-500/10 text-indigo-400'
+                                }`}>
+                                  Sentiment: {simCallSentiment}
+                                </span>
+                                <span className="px-2.5 py-1 bg-slate-500/10 text-slate-400 rounded-full text-[9px] font-black uppercase">
+                                  Cost: $0.45
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Middle: Transcript dialogues if connected */}
+                          {simCallStatus === 'connected' ? (
+                            <div className="flex-1 my-6 overflow-y-auto space-y-3 px-1 flex flex-col justify-end max-h-[220px]">
+                              {simCallTranscript.map((t, idx) => (
+                                <div 
+                                  key={idx}
+                                  className={`p-3 rounded-2xl max-w-[85%] text-xs font-semibold leading-normal ${
+                                    t.sender === 'agent' 
+                                      ? 'bg-indigo-600 text-white self-start' 
+                                      : 'bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-white self-end'
+                                  }`}
+                                >
+                                  {t.text}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex-1 flex items-center justify-center">
+                              {/* Glowing pulse rings during dialing/ringing */}
+                              <div className="relative flex items-center justify-center">
+                                <div className="absolute w-24 h-24 rounded-full bg-indigo-500/20 animate-ping"></div>
+                                <div className="absolute w-16 h-16 rounded-full bg-indigo-500/30 animate-pulse"></div>
+                                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white relative z-10 shadow-lg">
+                                  <Phone className="w-5 h-5" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bottom controls / logs inside the phone */}
+                          <div className={`p-4 rounded-2xl border text-left space-y-1.5 overflow-hidden transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-100 border-slate-200'
+                          }`}>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Telephony SIP Carrier Logs:</span>
+                            <div className="space-y-0.5 max-h-[80px] overflow-y-auto text-[9px] font-mono text-slate-400">
+                              {simCallLogs.map((log, idx) => (
+                                <div key={idx} className="truncate">{log}</div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'enterprise' && (
             <motion.div 
               key="enterprise"
@@ -5188,11 +5869,64 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 {/* Main Video Arena: Interactive Simulator & Companion Info */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                   
-                  {/* Left Column: Custom Interactive HTML5 Video Player Simulator */}
+                  {/* Left Column: Custom Interactive HTML5 / Embedded Guidde Video Player Simulator */}
                   <div className="lg:col-span-7 space-y-4">
-                    <div className={`relative aspect-video rounded-[2.5rem] border overflow-hidden group shadow-2xl flex flex-col justify-between ${
-                      theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-900 border-slate-200'
-                    }`}>
+                    {activeVideo.embedUrl ? (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center px-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+                              Official Video Guide
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-bold text-slate-300 truncate max-w-[320px]">
+                            {activeVideo.title}
+                          </span>
+                        </div>
+
+                        <div className={`relative w-full aspect-[4/3] sm:aspect-video min-h-[480px] md:min-h-[580px] rounded-[2.5rem] border overflow-hidden shadow-2xl bg-slate-950 flex flex-col ${
+                          theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+                        }`}>
+                          <iframe 
+                            width="100%" 
+                            height="100%" 
+                            src={activeVideo.embedUrl} 
+                            title={activeVideo.title} 
+                            frameBorder="0" 
+                            referrerPolicy="no-referrer" 
+                            allowFullScreen={true} 
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
+                            style={{ borderRadius: '2.5rem', width: '100%', height: '100%', minHeight: '480px' }}
+                            className="w-full h-full min-h-[480px] md:min-h-[580px] border-0 rounded-[2.5rem]"
+                          />
+                          <div style={{ display: 'none' }}>
+                            <p>00:00: This tutorial explains how to log in and get started with the application.</p>
+                            <p>00:04: You will learn the steps to create an account and navigate the user dashboard.</p>
+                            <p>00:09: How to log in and get started.</p>
+                            <p>00:12: We are here,</p>
+                            <p>00:12: so let's get this line up purchase. Just put demo.</p>
+                            <p>00:17: Enter your email address.</p>
+                            <p>00:23: Here is our email,</p>
+                            <p>00:24: and after it, we need to put a password like demo@231. This is</p>
+                            <p>00:28: just one example. We need</p>
+                            <p>00:29: to click on create account. We put it, and now</p>
+                            <p>00:32: it's in the process. It's taking some time. Once the</p>
+                            <p>00:35: account is created, you'll be logged in to the account that we have.</p>
+                            <p>00:40: It's just taking some time here.</p>
+                            <p>00:42: We log in.</p>
+                            <p>00:44: Here we have the user dashboard.</p>
+                            <p>00:47: This is our dashboard. We will explore every feature in our next videos.</p>
+                            <p>00:52: This tutorial guides you through logging in, entering your email and password, creating</p>
+                            <p>00:55: an account, and accessing the user dashboard to get started.</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={`relative aspect-video rounded-[2.5rem] border overflow-hidden group shadow-2xl flex flex-col justify-between ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-900 border-slate-200'
+                      }`}>
                       {/* Watermark / Status Header */}
                       <div className="p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10">
                         <div className="flex items-center space-x-2">
@@ -5785,6 +6519,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                       </div>
                     </div>
+                  )}
                   </div>
 
                   {/* Right Column: Information, Key Learning Points & Quick Action tab redirection */}

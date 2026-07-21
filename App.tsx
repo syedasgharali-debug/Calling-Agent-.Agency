@@ -74,12 +74,26 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<UserSession | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-theme');
+      return (saved as 'dark' | 'light') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dashboard-theme', theme);
+    } catch (e) {}
+  }, [theme]);
 
   const [plans, setPlans] = useState<Plan[]>([
     { 
       name: 'Starter', 
-      price: 45, 
-      yearlyPrice: 432, 
+      price: 65, 
+      yearlyPrice: 624, 
       mins: 100, 
       agents: 2, 
       numbers: 1,
@@ -88,8 +102,8 @@ const App: React.FC = () => {
     },
     { 
       name: 'Pro', 
-      price: 225, 
-      yearlyPrice: 2160, 
+      price: 325, 
+      yearlyPrice: 3120, 
       mins: 500, 
       agents: 10, 
       numbers: 5,
@@ -99,8 +113,8 @@ const App: React.FC = () => {
     },
     { 
       name: 'Enterprise', 
-      price: 1125, 
-      yearlyPrice: 10800, 
+      price: 1625, 
+      yearlyPrice: 15600, 
       mins: 2500, 
       agents: 50, 
       numbers: 20,
@@ -486,6 +500,8 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
             setCoupons={setCoupons}
             blogs={blogs}
             setBlogs={setBlogs}
+            theme={theme}
+            setTheme={setTheme}
           />
         ) : <LoginView onLogin={handleLogin} />;
       case 'privacy':
@@ -512,7 +528,11 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans selection:bg-indigo-500/30 text-slate-200">
+    <div className={`min-h-screen font-sans selection:bg-indigo-500/30 transition-colors duration-500 ${
+      theme === 'dark' 
+        ? 'bg-slate-950 text-slate-200' 
+        : 'bg-slate-50 text-slate-900'
+    }`}>
       <style>{`
         * { font-style: normal !important; }
         .perspective-1000 { perspective: 1000px; }
@@ -524,7 +544,16 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        {currentView !== 'dashboard' && <Navbar currentView={currentView} onNavigate={navigate} user={user} onLogout={handleLogout} />}
+        {currentView !== 'dashboard' && (
+          <Navbar 
+            currentView={currentView} 
+            onNavigate={navigate} 
+            user={user} 
+            onLogout={handleLogout} 
+            theme={theme}
+            onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          />
+        )}
         <main className="flex-grow">
           <AnimatePresence mode="wait">
             <motion.div
