@@ -55,7 +55,11 @@ import {
   Activity,
   Sparkles,
   Upload,
-  Bell
+  Bell,
+  ClipboardList,
+  Copy,
+  Filter,
+  Building
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -76,6 +80,7 @@ import Vapi from '@vapi-ai/web';
 import { auth } from '../services/firebaseService';
 import { CallLogsView } from './CallLogsView';
 import { CustomAudioPlayer } from '../components/CustomAudioPlayer';
+import { BUSINESS_TEMPLATES, BUSINESS_CATEGORIES } from '../services/businessTemplates';
 
 interface DashboardViewProps {
   user: { 
@@ -230,7 +235,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   theme,
   setTheme
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning' | 'niche-templates'>('overview');
   const [activePlayingAudioId, setActivePlayingAudioId] = useState<string | null>(null);
   const [selectedTestVoiceId, setSelectedTestVoiceId] = useState<string>('');
   const [testVoiceText, setTestVoiceText] = useState('Welcome back! This is your custom-cloned, production-ready AI agent from CallingAgent. Our voice parameters have been calibrated perfectly for this live quality verification test.');
@@ -472,6 +477,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       ]
     }
   ];
+
+  // Business Templates States
+  const [templateCategory, setTemplateCategory] = useState<string>('All');
+  const [templateSearch, setTemplateSearch] = useState<string>('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('dentist');
+  const [customBusinessName, setCustomBusinessName] = useState<string>('Apex Dental Studio');
+  const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const selectedTpl = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId);
+    if (selectedTpl) {
+      setCustomBusinessName(selectedTpl.defaultBusinessName);
+    }
+  }, [selectedTemplateId]);
 
 
 
@@ -2882,6 +2901,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'profile', label: 'Settings', icon: Settings }
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
+              { id: 'niche-templates', label: 'Business Templates', icon: ClipboardList },
               { id: 'campaigns', label: 'Live Campaigns', icon: PlayCircle },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
@@ -5969,6 +5989,310 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   </div>
 
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {activeTab === 'niche-templates' && (() => {
+            const filteredTemplates = BUSINESS_TEMPLATES.filter(tpl => {
+              const matchesCategory = templateCategory === 'All' || tpl.category === templateCategory;
+              const matchesSearch = tpl.niche.toLowerCase().includes(templateSearch.toLowerCase()) || 
+                                    tpl.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                                    tpl.category.toLowerCase().includes(templateSearch.toLowerCase());
+              return matchesCategory && matchesSearch;
+            });
+
+            const activeTemplate = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId) || BUSINESS_TEMPLATES[0];
+            const renderedPrompt = activeTemplate.baseScript.replace(/{businessName}/g, customBusinessName || activeTemplate.defaultBusinessName);
+
+            const handleCopyToClipboard = (text: string) => {
+              navigator.clipboard.writeText(text);
+              setCopiedTemplateId(activeTemplate.id);
+              triggerToast('System prompt copied to clipboard!', 'success');
+              setTimeout(() => setCopiedTemplateId(null), 2000);
+            };
+
+            const handleDeployTemplate = (tpl: any, finalPrompt: string) => {
+              const bizName = customBusinessName.trim() || tpl.defaultBusinessName;
+              setNewAgent({
+                name: `${bizName} Receptionist`,
+                voice: 'Puck',
+                gender: 'Male',
+                pitch: 1.0,
+                speed: 1.0,
+                logic: 'CallingAgent Orchestrator',
+                prompt: finalPrompt,
+                provider: 'CallingAgent',
+                vapiAssistantId: ''
+              });
+              setEditingAgentId(null);
+              setActiveTab('agents');
+              setShowCreateModal(true);
+              triggerToast(`Template applied! Customizing agent for ${bizName}.`, 'success');
+            };
+
+            return (
+              <motion.div
+                key="niche-templates"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8 max-w-7xl mx-auto"
+              >
+                {/* Header Block */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  <div>
+                    <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Niche Prompt Templates
+                    </h3>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'} mt-1`}>
+                      Choose from 50 industry-specific voice scripts. Just type your business name to generate a fully calibrated, production-ready AI agent script instantly.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Categories & Search Controls */}
+                <div className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center">
+                  {/* Category Pills */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setTemplateCategory('All')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                        templateCategory === 'All'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/25'
+                          : theme === 'dark'
+                            ? 'bg-slate-900/60 text-slate-400 border-white/5 hover:border-white/10 hover:text-white'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800'
+                      }`}
+                    >
+                      All ({BUSINESS_TEMPLATES.length})
+                    </button>
+                    {BUSINESS_CATEGORIES.map(cat => {
+                      const count = BUSINESS_TEMPLATES.filter(t => t.category === cat).length;
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setTemplateCategory(cat)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                            templateCategory === cat
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/25'
+                              : theme === 'dark'
+                                ? 'bg-slate-900/60 text-slate-400 border-white/5 hover:border-white/10 hover:text-white'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800'
+                          }`}
+                        >
+                          {cat} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative w-full xl:w-96">
+                    <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input
+                      type="text"
+                      placeholder="Search 50 business niches..."
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      className={`w-full border rounded-2xl pl-12 pr-6 py-3.5 focus:outline-none focus:border-indigo-500 transition-all text-sm font-bold placeholder:text-slate-400 ${
+                        theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                    {templateSearch && (
+                      <button
+                        onClick={() => setTemplateSearch('')}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-200"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Main Content Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left Column: Template List (lg:col-span-5) */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div className="flex items-center justify-between px-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Available Niches ({filteredTemplates.length} matches)
+                      </p>
+                    </div>
+
+                    <div className={`space-y-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-2`}>
+                      {filteredTemplates.length === 0 ? (
+                        <div className={`p-12 rounded-[2.5rem] border text-center ${
+                          theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                        }`}>
+                          <ClipboardList className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                          <h5 className={`text-base font-black ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>No Templates Found</h5>
+                          <p className="text-xs text-slate-500 mt-1">Try tweaking your search term or selecting a different category.</p>
+                        </div>
+                      ) : (
+                        filteredTemplates.map(tpl => {
+                          const isSelected = tpl.id === selectedTemplateId;
+                          return (
+                            <button
+                              key={tpl.id}
+                              onClick={() => setSelectedTemplateId(tpl.id)}
+                              className={`w-full p-5 rounded-[1.75rem] text-left border transition-all duration-300 flex items-start space-x-4 ${
+                                isSelected
+                                  ? theme === 'dark'
+                                    ? 'bg-indigo-600/10 border-indigo-500 text-white shadow-xl shadow-indigo-600/5'
+                                    : 'bg-indigo-50/50 border-indigo-400 text-slate-900 shadow-lg shadow-indigo-500/5'
+                                  : theme === 'dark'
+                                    ? 'bg-slate-900/40 border-white/5 hover:border-white/10 text-slate-300'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 shadow-sm'
+                              }`}
+                            >
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-colors ${
+                                isSelected 
+                                  ? 'bg-indigo-500/20' 
+                                  : theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'
+                              }`}>
+                                {tpl.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <h4 className="text-sm font-black truncate">{tpl.niche}</h4>
+                                  <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                                    isSelected 
+                                      ? 'bg-indigo-500 text-white' 
+                                      : theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
+                                  }`}>
+                                    {tpl.category}
+                                  </span>
+                                </div>
+                                <p className={`text-xs line-clamp-2 leading-relaxed ${
+                                  isSelected 
+                                    ? theme === 'dark' ? 'text-slate-300' : 'text-slate-600' 
+                                    : 'text-slate-500'
+                                }`}>
+                                  {tpl.description}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Customizer & Code Preview (lg:col-span-7) */}
+                  <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-6">
+                    {/* Active Template Header Card */}
+                    <div className={`p-8 rounded-[2.5rem] border ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-xl'
+                    }`}>
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-3xl flex items-center justify-center">
+                          {activeTemplate.icon}
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">
+                            Active Template • {activeTemplate.category}
+                          </span>
+                          <h4 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            {activeTemplate.niche}
+                          </h4>
+                        </div>
+                      </div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} leading-relaxed`}>
+                        {activeTemplate.description}
+                      </p>
+
+                      <div className={`border-t my-6 ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`} />
+
+                      {/* Customization Inputs */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+                            Your Business Name
+                          </label>
+                          <input
+                            type="text"
+                            value={customBusinessName}
+                            onChange={(e) => setCustomBusinessName(e.target.value)}
+                            placeholder={activeTemplate.defaultBusinessName}
+                            className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-400 ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          <p className="text-[10px] text-slate-500 font-bold mt-1.5 ml-1">
+                            Updates all business name tags in the template script dynamically.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Script Output & Action Block */}
+                    <div className={`p-8 rounded-[2.5rem] border overflow-hidden relative flex flex-col justify-between ${
+                      theme === 'dark' ? 'bg-slate-900/60 border-white/10' : 'bg-slate-950 border-slate-800 shadow-2xl'
+                    }`}>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                      
+                      <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Generated AI System Prompt Script
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleCopyToClipboard(renderedPrompt)}
+                          className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                            copiedTemplateId === activeTemplate.id
+                              ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                              : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          {copiedTemplateId === activeTemplate.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy Script</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Display Box */}
+                      <div className={`p-6 rounded-2xl border text-sm font-medium leading-relaxed mb-8 select-all whitespace-pre-wrap ${
+                        theme === 'dark' ? 'bg-slate-950/80 border-white/5 text-slate-300' : 'bg-slate-900 border-slate-800 text-slate-100'
+                      }`}>
+                        {(() => {
+                          const parts = renderedPrompt.split(new RegExp(`(${customBusinessName || activeTemplate.defaultBusinessName})`, 'g'));
+                          return parts.map((part, index) => {
+                            const isMatch = part === (customBusinessName || activeTemplate.defaultBusinessName);
+                            return isMatch ? (
+                              <span key={index} className="text-indigo-400 font-black underline decoration-indigo-400/30">
+                                {part}
+                              </span>
+                            ) : (
+                              part
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <button
+                          onClick={() => handleDeployTemplate(activeTemplate, renderedPrompt)}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-4 px-6 rounded-[1.25rem] font-black text-sm transition-all flex items-center justify-center space-x-2 shadow-xl shadow-indigo-600/35 active:scale-95"
+                        >
+                          <Plus className="w-5 h-5" />
+                          <span>Deploy Agent with this Template</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             );
