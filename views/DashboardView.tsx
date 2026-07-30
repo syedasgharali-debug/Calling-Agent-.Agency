@@ -77,7 +77,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { geminiService } from '../services/geminiService';
 import Markdown from 'react-markdown';
 import Vapi from '@vapi-ai/web';
-import { auth } from '../services/firebaseService';
+import { auth, manuallyCreateUser, deleteUserDoc, getAllUsers, updateUserBalance } from '../services/firebaseService';
 import { CallLogsView } from './CallLogsView';
 import { CustomAudioPlayer } from '../components/CustomAudioPlayer';
 import { BUSINESS_TEMPLATES, BUSINESS_CATEGORIES } from '../services/businessTemplates';
@@ -113,6 +113,26 @@ interface DashboardViewProps {
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
 }
+
+const REGION_PHONES: Record<string, { label: string, code: string, placeholder: string, price: string }> = {
+  US: { label: 'United States (+1)', code: '+1', placeholder: '+1 (555) 321-4321', price: '$2.00/mo' },
+  UK: { label: 'United Kingdom (+44)', code: '+44', placeholder: '+44 7700 900077', price: '$4.00/mo' },
+  CA: { label: 'Canada (+1)', code: '+1', placeholder: '+1 (506) 555-0199', price: '$2.50/mo' },
+  AU: { label: 'Australia (+61)', code: '+61', placeholder: '+61 491 570 156', price: '$6.00/mo' },
+  DE: { label: 'Germany (+49)', code: '+49', placeholder: '+49 170 1234567', price: '$5.00/mo' },
+  FR: { label: 'France (+33)', code: '+33', placeholder: '+33 6 1234 5678', price: '$5.00/mo' },
+  NL: { label: 'Netherlands (+31)', code: '+31', placeholder: '+31 6 12345678', price: '$4.50/mo' },
+  ES: { label: 'Spain (+34)', code: '+34', placeholder: '+34 612 345 678', price: '$5.00/mo' },
+  SG: { label: 'Singapore (+65)', code: '+65', placeholder: '+65 8123 4567', price: '$8.00/mo' },
+  JP: { label: 'Japan (+81)', code: '+81', placeholder: '+81 90 1234 5678', price: '$12.00/mo' },
+  BR: { label: 'Brazil (+55)', code: '+55', placeholder: '+55 11 91234-5678', price: '$7.00/mo' },
+  MX: { label: 'Mexico (+52)', code: '+52', placeholder: '+52 55 1234 5678', price: '$6.00/mo' },
+  ZA: { label: 'South Africa (+27)', code: '+27', placeholder: '+27 82 123 4567', price: '$8.00/mo' },
+  IE: { label: 'Ireland (+353)', code: '+353', placeholder: '+353 85 123 4567', price: '$4.00/mo' },
+  IT: { label: 'Italy (+39)', code: '+39', placeholder: '+39 312 345 6789', price: '$5.00/mo' },
+  CH: { label: 'Switzerland (+41)', code: '+41', placeholder: '+41 79 123 45 67', price: '$9.00/mo' },
+  NZ: { label: 'New Zealand (+64)', code: '+64', placeholder: '+64 21 123 4567', price: '$7.00/mo' },
+};
 
 interface Agent {
   id: string;
@@ -294,6 +314,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [ticketReply, setTicketReply] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'customer' | 'admin'>('customer');
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [customPhoneNumber, setCustomPhoneNumber] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
 
@@ -849,7 +871,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
-          const { getAllUsers } = await import('../services/firebaseService');
           const users = await getAllUsers() as any[] | undefined;
           if (users && users.length > 0) {
             // Merge loaded users with pre-seeded users (avoid duplicating by ID)
@@ -1037,7 +1058,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const handleAddUser = async () => {
     if (!newUserEmail) return;
     try {
-      const { manuallyCreateUser } = await import('../services/firebaseService');
       const newUser = await manuallyCreateUser(newUserEmail, newUserRole);
       if (newUser) {
         setAllUsers([newUser, ...allUsers]);
@@ -1099,7 +1119,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const handleRemoveUser = async (id: string) => {
     try {
-      const { deleteUserDoc } = await import('../services/firebaseService');
       await deleteUserDoc(id);
       setAllUsers(prev => prev.filter(u => u.id !== id));
       setShowDeleteModal(false);
@@ -1115,7 +1134,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     const newBalance = (userToBill.balance || 0) + val;
     
     try {
-      const { updateUserBalance } = await import('../services/firebaseService');
       await updateUserBalance(userToBill.id, newBalance);
       
       setAllUsers(prev => prev.map(u => u.id === userToBill.id ? { ...u, balance: newBalance } : u));
@@ -2898,12 +2916,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               { id: 'invoices', label: 'Revenue & Invoices', icon: DollarSign },
               { id: 'tickets', label: 'Support Tickets', icon: AlertCircle },
               { id: 'logs', label: 'Call Logs', icon: History },
+              { id: 'tutorials', label: 'Video Tutorials', icon: Play },
               { id: 'profile', label: 'Settings', icon: Settings }
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
               { id: 'niche-templates', label: 'Business Templates', icon: ClipboardList },
               { id: 'campaigns', label: 'Live Campaigns', icon: PlayCircle },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
+              { id: 'integrations', label: 'Integrations', icon: Key },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
               { id: 'provision', label: 'Provision', icon: Plus },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
@@ -2990,7 +3010,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Main Dashboard Area */}
       <main className={`flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12 transition-colors duration-500 ${
-        isAdmin && !isImpersonating ? 'bg-[#05110d] selection:bg-emerald-500/30' : 'bg-slate-950 selection:bg-indigo-500/30'
+        theme === 'dark' 
+          ? (isAdmin && !isImpersonating ? 'bg-[#05110d] selection:bg-emerald-500/30' : 'bg-slate-950 selection:bg-indigo-500/30') 
+          : 'bg-slate-50 text-slate-900 selection:bg-indigo-500/10'
       }`}>
         {isAdmin && !isImpersonating && (
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-50 z-20"></div>
@@ -3046,17 +3068,113 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${theme === 'dark' ? 'left-6' : 'left-1'}`} />
               </div>
             </button>
-            <button 
-              onClick={() => setActiveTab('profile')}
-              title="Open Settings"
-              className={`p-2.5 border rounded-2xl transition-all ${
-                theme === 'dark' 
-                  ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white' 
-                  : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 shadow-sm'
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                title="Settings & Role switcher"
+                className={`p-2.5 border rounded-2xl transition-all relative z-30 ${
+                  theme === 'dark' 
+                    ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white' 
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 shadow-sm'
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              
+              <AnimatePresence>
+                {showSettingsDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-20" 
+                      onClick={() => setShowSettingsDropdown(false)}
+                    />
+                    
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className={`absolute right-0 mt-3 w-72 border rounded-3xl p-4 shadow-2xl z-30 ${
+                        theme === 'dark' 
+                          ? 'bg-slate-900 border-white/10 text-slate-300' 
+                          : 'bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div className="px-3 py-2 border-b border-slate-100 dark:border-white/5 mb-2.5">
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Access Control</p>
+                        <p className="text-xs font-semibold text-slate-500 mt-0.5 truncate">{user.email}</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => {
+                            onUpdateUser({ role: 'customer' });
+                            setShowSettingsDropdown(false);
+                            setActiveTab('overview');
+                            triggerToast("Switched to Customer View Mode", "success");
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
+                            user.role === 'customer'
+                              ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                              : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Users className="w-4 h-4 text-violet-500" />
+                            <span>Customer View</span>
+                          </div>
+                          {user.role === 'customer' && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            onUpdateUser({ role: 'admin' });
+                            setShowSettingsDropdown(false);
+                            setActiveTab('overview');
+                            triggerToast("Switched to Admin View Mode", "success");
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
+                            user.role === 'admin'
+                              ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/20'
+                              : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                            <span>Admin View</span>
+                          </div>
+                          {user.role === 'admin' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                        </button>
+
+                        <div className="h-px bg-slate-100 dark:bg-white/5 my-2" />
+
+                        <button
+                          onClick={() => {
+                            setActiveTab('profile');
+                            setShowSettingsDropdown(false);
+                          }}
+                          className="w-full flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-slate-500 dark:text-slate-400"
+                        >
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          <span>Account Settings</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowSettingsDropdown(false);
+                            onLogout();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold hover:bg-rose-500/10 text-rose-500 transition-all"
+                        >
+                          <LogOut className="w-4 h-4 text-rose-500" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
@@ -4095,9 +4213,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           <div>
                             <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Sandbox Number:</p>
                             <p className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (888) AGENT-AI</p>
-                            <p className="text-sm text-slate-500 mt-2 font-mono">Extension: {Math.floor(1000 + Math.random() * 9000)}</p>
+                            <p className="text-sm text-slate-500 mt-2 font-mono">Extension: 4509</p>
                           </div>
-                          <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 active:scale-95 transition-all">
+                          <button 
+                            onClick={() => {
+                              const ext = Math.floor(1000 + Math.random() * 9000);
+                              const assignedAgent = agents[0]?.id || 'sandbox_agent';
+                              const newNum: any = {
+                                id: Math.random().toString(36).substr(2, 9),
+                                number: `+1 (888) AGENT-AI ext ${ext}`,
+                                agentId: assignedAgent,
+                                status: 'Active',
+                                location: 'Sandbox Extension',
+                                type: 'sandbox'
+                              };
+                              setNumbers([...numbers, newNum]);
+                              triggerToast(`Successfully claimed sandbox extension ${ext}!`, 'success');
+                              setActiveTab('numbers');
+                            }}
+                            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+                          >
                             Claim Extension
                           </button>
                         </div>
@@ -4116,15 +4251,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                             className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
                             theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                           }`}>
-                            <option value="US">United States (+1) - $2.00/mo</option>
-                            <option value="UK">United Kingdom (+44) - $4.00/mo</option>
-                            <option value="CA">Canada (+1) - $2.50/mo</option>
-                            <option value="AU">Australia (+61) - $6.00/mo</option>
+                            {Object.entries(REGION_PHONES).map(([key, data]) => (
+                              <option key={key} value={key}>
+                                {data.label} - {data.price}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
                           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Assign to Agent</label>
                           <select 
+                            id="buy-agent-select"
                             className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
                             theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                           }`}>
@@ -4135,10 +4272,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className={`p-8 border rounded-[2rem] flex justify-between items-center ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
                         <div>
                           <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Available Number:</p>
-                          <p className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>+1 (555) {Math.floor(Math.random() * 900) + 100}-{Math.floor(Math.random() * 9000) + 1000}</p>
-                          <p className="text-xs text-slate-500 mt-2">Instant activation. Includes 10 free SMS/mo.</p>
+                          <p className={`text-3xl font-black font-mono tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            {REGION_PHONES[selectedRegion]?.placeholder || '+1 (555) 321-4321'}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-2">Instant activation. Recurring monthly cost: {REGION_PHONES[selectedRegion]?.price || '$2.00/mo'}.</p>
                         </div>
-                        <button className="bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">
+                        <button 
+                          onClick={() => {
+                            const agentSelectEl = document.getElementById('buy-agent-select') as HTMLSelectElement | null;
+                            const assignedAgent = agentSelectEl?.value || (agents[0]?.id || 'unknown');
+                            if (!agents.length) {
+                              alert("Please create an agent before buying a number.");
+                              return;
+                            }
+                            const countryData = REGION_PHONES[selectedRegion] || REGION_PHONES.US;
+                            const newNum: any = {
+                              id: Math.random().toString(36).substr(2, 9),
+                              number: countryData.placeholder,
+                              agentId: assignedAgent,
+                              status: 'Active',
+                              location: countryData.label.split(' (+')[0],
+                              type: 'real'
+                            };
+                            setNumbers([...numbers, newNum]);
+                            triggerToast(`Successfully purchased and connected ${countryData.placeholder}!`, 'success');
+                            setActiveTab('numbers');
+                          }}
+                          className="bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                        >
                           Purchase Now
                         </button>
                       </div>
@@ -4156,6 +4317,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           <input 
                             type="text" 
                             placeholder="+1 555 000 0000"
+                            value={customPhoneNumber}
+                            onChange={(e) => setCustomPhoneNumber(e.target.value)}
                             className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold ${
                               theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                             }`}
@@ -4173,7 +4336,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           </select>
                         </div>
                       </div>
-                      <button className="w-full bg-slate-950 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-black text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl">
+                      <button 
+                        onClick={() => {
+                          if (!customPhoneNumber) {
+                            alert("Please enter your custom phone number.");
+                            return;
+                          }
+                          const assignedAgent = agents[0]?.id || 'unknown';
+                          const newNum: any = {
+                            id: Math.random().toString(36).substr(2, 9),
+                            number: customPhoneNumber,
+                            agentId: assignedAgent,
+                            status: 'Active',
+                            location: 'BYOC Carrier',
+                            type: 'custom'
+                          };
+                          setNumbers([...numbers, newNum]);
+                          triggerToast(`Successfully imported and mapped custom number ${customPhoneNumber}!`, 'success');
+                          setCustomPhoneNumber('');
+                          setActiveTab('numbers');
+                        }}
+                        className="w-full bg-slate-950 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-black text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+                      >
                         Verify and Connect Number
                       </button>
                     </div>
