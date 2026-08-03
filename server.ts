@@ -504,6 +504,80 @@ async function startServer() {
     }
   });
 
+  // Safe Web Document Scraper to enrich agent scripts
+  app.post("/api/fetch-url", async (req, res) => {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: "Missing document or website URL." });
+    }
+    try {
+      // Validate absolute URL format
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return res.status(400).json({ error: "Only secure HTTP/HTTPS links are supported." });
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8"
+        },
+        signal: AbortSignal.timeout(8000) // 8 seconds timeout
+      });
+
+      if (!response.ok) {
+        return res.status(400).json({ error: `Could not retrieve URL. Status: ${response.status} ${response.statusText}` });
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      let rawText = "";
+
+      if (contentType.includes("json")) {
+        const json = await response.json();
+        rawText = JSON.stringify(json, null, 2);
+      } else {
+        rawText = await response.text();
+      }
+
+      // If HTML, strip scripts, styles, footer, navigation and general tags to keep it minimal and informative
+      if (contentType.includes("html") || rawText.trim().startsWith("<")) {
+        // Strip scripts
+        rawText = rawText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+        // Strip styles
+        rawText = rawText.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+        // Strip head/nav/footer if present to focus on body context
+        rawText = rawText.replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, "");
+        rawText = rawText.replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, "");
+        
+        // Convert some blocks to line breaks
+        rawText = rawText.replace(/<\/p>|<\/div>|<br\s*\/?>|<\/h[1-6]>/gi, "\n");
+        // Strip all remaining tags
+        rawText = rawText.replace(/<[^>]*>/g, " ");
+        // Decode common HTML entities
+        rawText = rawText
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        
+        // Remove excessive empty lines
+        rawText = rawText.replace(/\n\s*\n+/g, "\n\n").trim();
+      }
+
+      // Limit length to keep prompt sizes healthy
+      if (rawText.length > 15000) {
+        rawText = rawText.slice(0, 15000) + "\n... [Content truncated for optimal AI processing]";
+      }
+
+      res.json({ text: rawText });
+    } catch (error: any) {
+      console.error("Fetch URL Error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch or parse the requested link." });
+    }
+  });
+
   // Interactive Live Demo Chat Proxy
   app.post("/api/demo/chat", async (req, res) => {
     const { message, history, systemInstruction } = req.body;

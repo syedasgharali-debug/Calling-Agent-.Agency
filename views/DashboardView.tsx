@@ -59,7 +59,9 @@ import {
   ClipboardList,
   Copy,
   Filter,
-  Building
+  Building,
+  Globe,
+  Link
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -285,6 +287,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [isLoadingRealVoices, setIsLoadingRealVoices] = useState(false);
   const [realVoicesError, setRealVoicesError] = useState<string | null>(null);
   const previewAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const campaignIntervalRef = React.useRef<any>(null);
   const [voiceCloneName, setVoiceCloneName] = useState('');
   const [voiceCloneDescription, setVoiceCloneDescription] = useState('');
   const [voiceCloneFileName, setVoiceCloneFileName] = useState('');
@@ -314,6 +317,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [ticketReply, setTicketReply] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'customer' | 'admin'>('customer');
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [customPhoneNumber, setCustomPhoneNumber] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -420,7 +424,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Video Tutorial Player State
   const [activeVideoId, setActiveVideoId] = useState<number>(1);
-  const [playerMode, setPlayerMode] = useState<'direct' | 'embedded'>('direct');
+  const [playingVideoId, setPlayingVideoId] = useState<number | null>(null);
 
   const tutorialVideos = [
     {
@@ -503,9 +507,99 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   // Business Templates States
   const [templateCategory, setTemplateCategory] = useState<string>('All');
   const [templateSearch, setTemplateSearch] = useState<string>('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('dentist');
-  const [customBusinessName, setCustomBusinessName] = useState<string>('Apex Dental Studio');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('real_estate');
+  const [customBusinessName, setCustomBusinessName] = useState<string>('Luxe Heights Realty');
   const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
+
+  // AI Creative Script Generator States
+  const [nicheSubTab, setNicheSubTab] = useState<'library' | 'ai-generator'>('library');
+  const [aiNiche, setAiNiche] = useState<string>('Real Estate');
+  const [aiBusinessName, setAiBusinessName] = useState<string>('Luxe Heights Realty');
+  const [aiGoals, setAiGoals] = useState<string>('Qualify leads, book property viewings, handle common objections about pricing.');
+  const [aiVibe, setAiVibe] = useState<string>('Professional, energetic, and highly persuasive');
+  const [aiLength, setAiLength] = useState<string>('lengthy'); // 'brief' | 'detailed' | 'lengthy'
+  const [aiGeneratedScript, setAiGeneratedScript] = useState<string>(`[IDENTITY & VOICE PROTOCOL]
+You are Aria, the Senior AI Client Relations & Advisory Host at Luxe Heights Realty. Your tone is refined, energetic, polished, and extremely welcoming. Speak with poise and absolute confidence.
+
+[CORE WORKFLOW & CUSTOMER ROUTING]
+- PROPERTY VIEWINGS & SHOWINGS:
+  1. Capture the client's preferred styling (e.g., modern loft, mid-century mansion, sleek luxury penthouse).
+  2. Inquire if they have a target budget and whether they have been pre-approved for mortgage lending.
+  3. Propose a private 45-minute VIP walkthrough of our exclusive portfolio properties.
+- LISTING & HOME VALUATIONS:
+  1. Ask for their current residence address and details.
+  2. Coordinate a complimentary valuation report compiled by our lead listing agent.
+- TENANT & LEASING SERVICES:
+  1. Capture lead details for high-end corporate leasing.
+
+[SCENARIO-BASED CUSTOMER INTAKE & TRIAGE]
+If a client is highly demanding or looking for properties not publicly listed:
+1. Assure them: "We specialize in off-market acquisitions and pocket listings. Let me register you in our private syndicate network."
+2. Escalate their credentials to our Principal Broker.
+
+[FAQ & POLICIES]
+* Office hours are Mon-Sat, 9:00 AM to 7:00 PM. Sunday is private showings only.
+* Standard broker fees are fully transparent and discussed during initial consultations.
+
+[CONVERSATIONAL CLOSING]
+"I have registered your luxury property preference profile in our exclusive MLS syndicate. A senior portfolio advisor will touch base via SMS. Is there any specific neighborhood parameter, private pool, or skyline view I should add to your criteria today?"`);
+  const [isGeneratingAiScript, setIsGeneratingAiScript] = useState<boolean>(false);
+  const [loadedAgentId, setLoadedAgentId] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+  const [uploadedFileContent, setUploadedFileContent] = useState<string>('');
+  const [aiContextDoc, setAiContextDoc] = useState<string>('');
+  const [docUrlInput, setDocUrlInput] = useState<string>('');
+  const [isFetchingDocUrl, setIsFetchingDocUrl] = useState<boolean>(false);
+
+  // New Campaign Creator States
+  const [showCreateCampaign, setShowCreateCampaign] = useState<boolean>(false);
+  const [newCampaignName, setNewCampaignName] = useState<string>('');
+  const [newCampaignType, setNewCampaignType] = useState<'Outbound' | 'Inbound'>('Outbound');
+  const [newCampaignAgent, setNewCampaignAgent] = useState<string>('');
+  const [newCampaignTargetSize, setNewCampaignTargetSize] = useState<number>(150);
+  const [newCampaignBudget, setNewCampaignBudget] = useState<number>(500);
+  const [newCampaignPurpose, setNewCampaignPurpose] = useState<string>('Sales Recall & Lead Reactivation');
+  const [newCampaignAudience, setNewCampaignAudience] = useState<string>('Warm Outbound Leads');
+  const [newCampaignGuidelines, setNewCampaignGuidelines] = useState<string>('Highlight active service. Offer consultation schedule.');
+  const [newCampaignContacts, setNewCampaignContacts] = useState<string>(
+    "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824"
+  );
+
+  // Expanded Campaign Hub & Top-Up States
+  const [campaignWalletBalance, setCampaignWalletBalance] = useState<number>(250.00);
+  const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
+  const [topUpAmountInput, setTopUpAmountInput] = useState<string>('100');
+  const [campaignPurpose, setCampaignPurpose] = useState<string>('Sales Recall & Lead Reactivation');
+  const [campaignAudience, setCampaignAudience] = useState<string>('Premium Outbound Leads');
+  const [campaignGuidelines, setCampaignGuidelines] = useState<string>('Highlight summer deal. Guide them to schedule a call.');
+  const [campaignUrlInput, setCampaignUrlInput] = useState<string>('');
+  const [isFetchingCampaignUrl, setIsFetchingCampaignUrl] = useState<boolean>(false);
+  const [campaignScheduleOption, setCampaignScheduleOption] = useState<'instant' | 'scheduled'>('instant');
+  const [campaignScheduleDate, setCampaignScheduleDate] = useState<string>('2026-08-05');
+  const [campaignScheduleTime, setCampaignScheduleTime] = useState<string>('14:00');
+  const [campaignContactsRaw, setCampaignContactsRaw] = useState<string>(
+    "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921\nDavid Brent, +1 (312) 555-1022\nFiona Gallagher, +1 (213) 555-1150\nSherlock Holmes, +1 (617) 555-3341\nBruce Wayne, +1 (312) 555-8888\nClark Kent, +1 (212) 555-9011"
+  );
+  const [campaignContactsCount, setCampaignContactsCount] = useState<number>(8);
+  const [liveDialLogs, setLiveDialLogs] = useState<any[]>([
+    { name: "John Doe", phone: "+1 (415) 555-0192", status: "Connected", duration: "1m 15s", sentiment: "Positive", transcript: "Agent Sarah: Hello, John! I see you signed up for our real estate alerts.\nCustomer John: Oh yes! I am looking for a 3-bedroom apartment in San Francisco.\nAgent Sarah: Perfect, I can link that right up!" },
+    { name: "Jane Smith", phone: "+1 (212) 555-0481", status: "Connected", duration: "45s", sentiment: "Neutral", transcript: "Agent Sarah: Hi Jane, calling from the helpdesk regarding your ticket.\nCustomer Jane: Oh, thank you. I solved it already but thanks for following up.\nAgent Sarah: Understood, have a wonderful day!" },
+    { name: "Michael Scott", phone: "+1 (305) 555-0921", status: "Busy/Voicemail", duration: "0s", sentiment: "None", transcript: "[System Log] Machine answered. Connection terminated based on VM settings." }
+  ]);
+  const [selectedLiveLogIndex, setSelectedLiveLogIndex] = useState<number | null>(0);
+
+  // Single-Lead Direct Test Call Simulator inside Live Campaigns tab
+  const [testLeadName, setTestLeadName] = useState<string>('');
+  const [testLeadPhone, setTestLeadPhone] = useState<string>('');
+  const [isTestCallModalOpen, setIsTestCallModalOpen] = useState<boolean>(false);
+  const [testCallStatus, setTestCallStatus] = useState<'idle' | 'ringing' | 'connected' | 'ended'>('idle');
+  const [testCallMessages, setTestCallMessages] = useState<{ sender: 'agent' | 'customer'; text: string }[]>([]);
+  const [testCallInput, setTestCallInput] = useState<string>('');
+  const [isAgentTyping, setIsAgentTyping] = useState<boolean>(false);
+
+  // Quick Add Lead state variables
+  const [quickAddName, setQuickAddName] = useState<string>('');
+  const [quickAddPhone, setQuickAddPhone] = useState<string>('');
 
   useEffect(() => {
     const selectedTpl = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId);
@@ -696,6 +790,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Keep agents in sync with user state
   useEffect(() => {
+    if (isImpersonating) return;
     if (user && (user as any).agents && Array.isArray((user as any).agents)) {
       const serializedUserAgents = JSON.stringify((user as any).agents);
       const serializedCurrentAgents = JSON.stringify(agents);
@@ -703,10 +798,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         setAgents((user as any).agents);
       }
     }
-  }, [user]);
+  }, [user, isImpersonating]);
 
   // Persist agents to local storage and Firestore when they change
   useEffect(() => {
+    if (isImpersonating) return;
     const userKey = user && (user as any).uid ? `dashboard-agents-${(user as any).uid}` : 'dashboard-agents';
     localStorage.setItem(userKey, JSON.stringify(agents));
     localStorage.setItem('dashboard-agents', JSON.stringify(agents));
@@ -719,7 +815,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         onUpdateUser({ agents });
       }
     }
-  }, [agents, user, onUpdateUser]);
+  }, [agents, user, onUpdateUser, isImpersonating]);
 
   useEffect(() => {
     const initLoads: Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }> = {};
@@ -916,7 +1012,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [campaignList, setCampaignList] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem('dashboard-campaigns');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((c: any) => ({
+          ...c,
+          purpose: c.purpose || 'Sales Recall & Lead Reactivation',
+          audience: c.audience || 'Premium Outbound Leads',
+          guidelines: c.guidelines || 'Identify yourself clearly. Offer the 20% discount on first booking.',
+          contactsRaw: c.contactsRaw || "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921"
+        }));
+      }
     } catch (e) {}
     return [
       {
@@ -930,7 +1035,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         successRate: 94,
         budget: 500,
         spend: 184.50,
-        createdAt: '2026-07-15'
+        createdAt: '2026-07-15',
+        purpose: 'Sales Recall & Lead Reactivation',
+        audience: 'High-Net-Worth Real Estate Prospects',
+        guidelines: 'Introduce yourself as Sarah from Real Estate desk. Ask if they are still searching for 3-bedroom houses. Offer a weekend viewing tour.',
+        contactsRaw: "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921\nDavid Brent, +1 (312) 555-1022\nFiona Gallagher, +1 (213) 555-1150\nSherlock Holmes, +1 (617) 555-3341\nBruce Wayne, +1 (312) 555-8888\nClark Kent, +1 (212) 555-9011"
       },
       {
         id: 'camp_2',
@@ -943,7 +1052,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         successRate: 88,
         budget: 1000,
         spend: 442.20,
-        createdAt: '2026-07-18'
+        createdAt: '2026-07-18',
+        purpose: 'Automated Invoice & Debt Reminder',
+        audience: 'Past Due Billing Trials & Subscriptions',
+        guidelines: 'Advise customer that credit card renewal failed. Offer to update details over a secure portal link. Keep tone friendly and helpful.',
+        contactsRaw: "Pam Beesly, +1 (570) 555-0144\nJim Halpert, +1 (570) 555-0155\nDwight Schrute, +1 (570) 555-0199"
       },
       {
         id: 'camp_3',
@@ -956,7 +1069,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         successRate: 91,
         budget: 2000,
         spend: 615.10,
-        createdAt: '2026-07-10'
+        createdAt: '2026-07-10',
+        purpose: 'Customer NPS Survey & Feedback',
+        audience: 'Post-Appointment Medical Clinic Patients',
+        guidelines: 'Ask the patients how their dental/medical scale checkup went yesterday. Ask if they want to give a 1-5 rating. Log patient feedback.',
+        contactsRaw: "Jerry Seinfeld, +1 (212) 555-4321\nCosmo Kramer, +1 (212) 555-8765\nGeorge Costanza, +1 (212) 555-0909"
       }
     ];
   });
@@ -966,8 +1083,58 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   }, [campaignList]);
 
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('camp_1');
+  const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('Sarah (Real Estate)');
+
+  // Load active campaign properties when selection changes
+  useEffect(() => {
+    const cur = campaignList.find(c => c.id === selectedCampaignId);
+    if (cur) {
+      if (cur.purpose !== undefined && cur.purpose !== campaignPurpose) {
+        setCampaignPurpose(cur.purpose);
+      }
+      if (cur.guidelines !== undefined && cur.guidelines !== campaignGuidelines) {
+        setCampaignGuidelines(cur.guidelines);
+      }
+      if (cur.contactsRaw !== undefined && cur.contactsRaw !== campaignContactsRaw) {
+        setCampaignContactsRaw(cur.contactsRaw);
+        const count = cur.contactsRaw.split('\n').filter((l: string) => l.trim().length > 0).length;
+        setCampaignContactsCount(count);
+      }
+      if (cur.agent !== undefined && cur.agent !== selectedCampaignAgent) {
+        setSelectedCampaignAgent(cur.agent);
+      }
+      if (cur.audience !== undefined && cur.audience !== campaignAudience) {
+        setCampaignAudience(cur.audience);
+      }
+    }
+  }, [selectedCampaignId]);
+
+  // Keep active campaign in sync with live user inputs on form
+  useEffect(() => {
+    if (!selectedCampaignId) return;
+    setCampaignList(prev => prev.map(c => {
+      if (c.id === selectedCampaignId) {
+        if (
+          c.purpose !== campaignPurpose ||
+          c.guidelines !== campaignGuidelines ||
+          c.contactsRaw !== campaignContactsRaw ||
+          c.agent !== selectedCampaignAgent ||
+          c.audience !== campaignAudience
+        ) {
+          return {
+            ...c,
+            purpose: campaignPurpose,
+            guidelines: campaignGuidelines,
+            contactsRaw: campaignContactsRaw,
+            agent: selectedCampaignAgent,
+            audience: campaignAudience
+          };
+        }
+      }
+      return c;
+    }));
+  }, [campaignPurpose, campaignGuidelines, campaignContactsRaw, selectedCampaignAgent, campaignAudience, selectedCampaignId]);
   const [selectedCampaignCustomer, setSelectedCampaignCustomer] = useState<string>('user_ent_1');
-  const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('agent_sarah');
   const [simCallStatus, setSimCallStatus] = useState<'idle' | 'dialing' | 'ringing' | 'connected' | 'ended'>('idle');
   const [simCallType, setSimCallType] = useState<'inbound' | 'outbound'>('outbound');
   const [simCallLogs, setSimCallLogs] = useState<string[]>([]);
@@ -1057,6 +1224,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const handleAddUser = async () => {
     if (!newUserEmail) return;
+    setIsAddingUser(true);
     try {
       const newUser = await manuallyCreateUser(newUserEmail, newUserRole);
       if (newUser) {
@@ -1103,6 +1271,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       triggerToast(`User ${newUserEmail} configured successfully in admin panel!`, 'success');
       setShowAddUserModal(false);
       setNewUserEmail('');
+    } finally {
+      setIsAddingUser(false);
     }
   };
 
@@ -1259,62 +1429,415 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
   const handleLaunchCampaignSim = () => {
     if (campaignDialsInProgress) return;
+    if (campaignWalletBalance < 5.00) {
+      triggerToast("Prepaid Campaign Wallet is low! Please Top Up your campaign balance to begin testing.", "amber");
+      return;
+    }
+
+    // Parse raw contacts list
+    const parsedContacts = campaignContactsRaw
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        const parts = line.split(',');
+        const name = parts[0] ? parts[0].trim() : "Unknown Lead";
+        const phone = parts[1] ? parts[1].trim() : "+1 (555) 019-9999";
+        return {
+          name,
+          phone,
+          status: 'Dialing',
+          duration: '0s',
+          sentiment: 'Pending',
+          transcript: 'Dialing customer...'
+        };
+      });
+
+    if (parsedContacts.length === 0) {
+      triggerToast("No lead contacts found to dial. Please enter or upload some phone numbers.", "amber");
+      return;
+    }
+
     setCampaignDialsInProgress(true);
     setCampProgress(0);
     setCampStats({ dialed: 0, connected: 0, positive: 0 });
-    setCampActiveLines(['Line 1: Standing by...', 'Line 2: Standing by...', 'Line 3: Standing by...']);
-    
-    triggerToast("Enterprise Outbound Dialer Campaign launched!", "success");
+    setCampActiveLines(['Line 1: Initalizing high-concurrency trunks...', 'Line 2: Allocating server ports...', 'Line 3: Registering SIP handlers...']);
+    setLiveDialLogs([]);
+    setSelectedLiveLogIndex(null);
 
-    let counter = 0;
-    const maxSteps = 10;
-    const interval = setInterval(() => {
-      counter++;
-      setCampProgress(Math.floor((counter / maxSteps) * 100));
+    const activeAgent = agents[0] ? agents[0].name : "Sarah";
+    triggerToast(`Bulk Outbound Dialer launched with ${parsedContacts.length} leads using ${activeAgent}!`, "success");
 
-      // Randomly populate logs & lines
-      const activeNumbers = [
-        `+1 (415) 555-${Math.floor(1000 + Math.random() * 9000)}`,
-        `+1 (212) 555-${Math.floor(1000 + Math.random() * 9000)}`,
-        `+1 (305) 555-${Math.floor(1000 + Math.random() * 9000)}`
-      ];
-
-      setCampActiveLines([
-        `Line 1: Dialing ${activeNumbers[0]} ... Connected (David Agent)`,
-        `Line 2: Ringing ${activeNumbers[1]} ... Ringing`,
-        `Line 3: Disconnected ${activeNumbers[2]} ... Terminated (Positive)`
-      ]);
-
-      setCampStats(prev => ({
-        dialed: prev.dialed + 3,
-        connected: prev.connected + (Math.random() > 0.3 ? 2 : 1),
-        positive: prev.positive + (Math.random() > 0.5 ? 1 : 0)
-      }));
-
-      if (counter >= maxSteps) {
-        clearInterval(interval);
+    let stepIndex = 0;
+    campaignIntervalRef.current = setInterval(() => {
+      if (stepIndex >= parsedContacts.length) {
+        clearInterval(campaignIntervalRef.current);
+        campaignIntervalRef.current = null;
         setCampaignDialsInProgress(false);
         setCampProgress(100);
         setCampActiveLines([]);
         
-        // Update campaigns list with higher completed count and spend!
+        // Finalize state in campaigns list
         setCampaignList(prev => prev.map(c => {
           if (c.id === selectedCampaignId) {
+            const finalConnected = parsedContacts.filter(p => p.status === 'Connected').length;
+            const finalPositive = parsedContacts.filter(p => p.sentiment === 'Positive').length;
+            const finalSuccessRate = Math.round((finalPositive / (finalConnected || 1)) * 100);
             return {
               ...c,
-              completedCount: c.completedCount + 30,
-              spend: c.spend + 45.00
+              completedCount: c.completedCount + parsedContacts.length,
+              successRate: finalSuccessRate || 85,
+              spend: c.spend + (parsedContacts.length * 0.45)
             };
           }
           return c;
         }));
 
-        triggerToast("Enterprise Campaign Completed! Stats updated.", "success");
+        triggerToast(`Bulk Campaign Completed! ${parsedContacts.length} contacts processed successfully.`, "success");
+        return;
       }
-    }, 1500);
+
+      const currentContact = parsedContacts[stepIndex];
+      const isConnected = Math.random() > 0.2; // 80% connect rate
+      const sentiments = ["Positive", "Neutral", "Interested", "Rescheduled"];
+      const chosenSentiment = isConnected ? sentiments[Math.floor(Math.random() * sentiments.length)] : "None";
+      
+      let durationStr = '0s';
+      let statusStr = 'Busy/No Answer';
+      let transcriptText = '[No Response] Lead line was busy or voicemail answered. SIP disconnect.';
+      let costDrawn = 0.10; // 10 cents for unanswered dials
+
+      if (isConnected) {
+        statusStr = 'Connected';
+        const durationSecs = Math.floor(25 + Math.random() * 95);
+        durationStr = `${Math.floor(durationSecs / 60)}m ${durationSecs % 60}s`;
+        costDrawn = 0.45; // 45 cents for successful AI call
+        
+        transcriptText = `Agent ${activeAgent}: "Hi, is this ${currentContact.name}? Calling regarding your request about ${campaignPurpose}."\n` +
+          `Customer ${currentContact.name}: "Oh yes! Hello! Thanks for reaching out so fast. Tell me more."\n` +
+          `Agent ${activeAgent}: "Of course! I can confirm our Voice agent is fully integrated with your company scripts to provide 24/7 service. Would you like to schedule a demonstration or receive SMS info?"\n` +
+          `Customer ${currentContact.name}: "That sounds amazing. Definitely interested in scheduling. Let's lock in tomorrow."\n` +
+          `Agent ${activeAgent}: "Brilliant. Sending your booking link via text message. Thank you and have an awesome day!"`;
+      }
+
+      currentContact.status = statusStr;
+      currentContact.duration = durationStr;
+      currentContact.sentiment = chosenSentiment;
+      currentContact.transcript = transcriptText;
+
+      // Update prepaid wallet balance & stats
+      setCampaignWalletBalance(prev => Math.max(0, Number((prev - costDrawn).toFixed(2))));
+      setCampStats(prev => ({
+        dialed: prev.dialed + 1,
+        connected: prev.connected + (isConnected ? 1 : 0),
+        positive: prev.positive + (chosenSentiment === 'Positive' || chosenSentiment === 'Interested' ? 1 : 0)
+      }));
+
+      // Update active trunks view
+      const activeLine1 = `Line 1: Dialing ${currentContact.name} (${currentContact.phone})`;
+      const activeLine2 = isConnected 
+        ? `Line 2: Connected to ${currentContact.name} - ${durationStr} (Agent ${activeAgent})` 
+        : `Line 2: No answer or voicemail detected for ${currentContact.name}`;
+      const activeLine3 = `Line 3: Logging sentiment [${chosenSentiment}] into Lead CRM`;
+      setCampActiveLines([activeLine1, activeLine2, activeLine3]);
+
+      // Push to live logs list
+      setLiveDialLogs(prev => {
+        const updated = [...prev, {
+          name: currentContact.name,
+          phone: currentContact.phone,
+          status: statusStr,
+          duration: durationStr,
+          sentiment: chosenSentiment,
+          transcript: transcriptText
+        }];
+        // Auto-select the first run call log to show transcripts immediately
+        if (updated.length === 1) {
+          setSelectedLiveLogIndex(0);
+        }
+        return updated;
+      });
+
+      stepIndex++;
+      setCampProgress(Math.floor((stepIndex / parsedContacts.length) * 100));
+    }, 1800);
   };
 
-  // Invoicing Action states
+  const handleStopCampaignSim = () => {
+    if (campaignIntervalRef.current) {
+      clearInterval(campaignIntervalRef.current);
+      campaignIntervalRef.current = null;
+    }
+    setCampaignDialsInProgress(false);
+    setCampActiveLines([]);
+    triggerToast("Outbound Bulk Dialer simulator stopped manually.", "info");
+  };
+
+  // Single-Lead Direct Test Call Simulator inside Live Campaigns tab
+  const handleStartCampaignTestCall = (leadName: string, leadPhone: string) => {
+    setTestLeadName(leadName);
+    setTestLeadPhone(leadPhone);
+    setIsTestCallModalOpen(true);
+    setTestCallStatus('ringing');
+    setTestCallMessages([]);
+    setTestCallInput('');
+    setIsAgentTyping(false);
+
+    // After 2 seconds, connect and have the agent introduce itself
+    setTimeout(async () => {
+      setTestCallStatus('connected');
+      setIsAgentTyping(true);
+
+      const activeAgent = agents[0] ? agents[0].name : "Sarah";
+      
+      const promptText = `You are simulated AI Voice Agent "${activeAgent}" on an outbound marketing campaign call.
+Customer/Lead Name: "${leadName}"
+Campaign Purpose: "${campaignPurpose}"
+Script Guidelines/Instructions: "${campaignGuidelines}"
+
+This is the very beginning of the phone call. Ringing has just finished and the lead answered "Hello?".
+Write a highly natural, friendly, and persuasive 1-2 sentence introduction greeting that identifies yourself, your company (CallingAgent.agency), the reason for the call based on the campaign purpose, and asks an engaging opening question.
+Return ONLY your greeting text as speech, without quotes or conversational labels.`;
+
+      try {
+        const response = await geminiService.getAgentResponse(
+          promptText,
+          [],
+          "You are a professional simulated outbound sales voice assistant. Be natural, polite, and brief."
+        );
+        setTestCallMessages([{ sender: 'agent', text: response || `Hi ${leadName}, this is ${activeAgent} here. I was reaching out regarding our exciting summer offerings about ${campaignPurpose}. How are you doing today?` }]);
+      } catch (err) {
+        setTestCallMessages([{ sender: 'agent', text: `Hi ${leadName}, this is ${activeAgent} here. I was reaching out regarding our exciting summer offerings. How are you doing today?` }]);
+      } finally {
+        setIsAgentTyping(false);
+      }
+    }, 2000);
+  };
+
+  const handleSendCampaignTestResponse = async () => {
+    if (!testCallInput.trim()) return;
+    const userText = testCallInput.trim();
+    setTestCallMessages(prev => [...prev, { sender: 'customer', text: userText }]);
+    setTestCallInput('');
+    setIsAgentTyping(true);
+
+    const activeAgent = agents[0] ? agents[0].name : "Sarah";
+    
+    // Build context
+    const conversationHistory = testCallMessages.map(m => `${m.sender === 'agent' ? 'Agent' : 'Customer'}: ${m.text}`).join('\n') + `\nCustomer: ${userText}`;
+
+    const promptText = `You are simulated AI Voice Agent "${activeAgent}" on an active phone call.
+Customer/Lead Name: "${testLeadName}"
+Campaign Purpose: "${campaignPurpose}"
+Script Guidelines/Instructions: "${campaignGuidelines}"
+
+Conversation history so far:
+${conversationHistory}
+
+Based on the history and the campaign guidelines, generate your next natural, ultra-conversational, and concise (1-2 sentences max) outbound dialer response. Try to achieve the campaign goal (such as scheduling or confirmation) while remaining helpful and highly natural. Do not use quotes, internal notes, brackets, or markdown.`;
+
+    try {
+      const response = await geminiService.getAgentResponse(
+        promptText,
+        [],
+        "You are an elite, concise simulated conversational outbound dialer. Respond to the customer naturally."
+      );
+      setTestCallMessages(prev => [...prev, { sender: 'agent', text: response || "Got it, thank you so much for that! Let's schedule that for you right away." }]);
+    } catch (err) {
+      setTestCallMessages(prev => [...prev, { sender: 'agent', text: "That sounds great! I'll record that down for you. Is there anything else I can assist with?" }]);
+    } finally {
+      setIsAgentTyping(false);
+    }
+  };
+
+  // Quick Add a contact
+  const handleQuickAddContact = () => {
+    if (!quickAddName.trim() || !quickAddPhone.trim()) {
+      triggerToast("Please provide both Name and Phone Number.", "amber");
+      return;
+    }
+    const cleanName = quickAddName.trim();
+    const cleanPhone = quickAddPhone.trim();
+    
+    const newEntry = `${cleanName}, ${cleanPhone}`;
+    setCampaignContactsRaw(prev => prev ? `${prev}\n${newEntry}` : newEntry);
+    setCampaignContactsCount(prev => prev + 1);
+    
+    setQuickAddName('');
+    setQuickAddPhone('');
+    triggerToast(`Added lead ${cleanName} successfully!`, "success");
+  };
+
+  // Structured parsed list memo
+  const parsedContactsList = useMemo(() => {
+    return campaignContactsRaw
+      .split('\n')
+      .map((line, idx) => {
+        const parts = line.split(',');
+        const name = parts[0] ? parts[0].trim() : "";
+        const phone = parts[1] ? parts[1].trim() : "";
+        return { id: idx, name, phone, raw: line };
+      })
+      .filter(c => c.name.length > 0 || c.phone.length > 0);
+  }, [campaignContactsRaw]);
+
+  const handleDeleteContactFromRaw = (idx: number) => {
+    const lines = campaignContactsRaw.split('\n');
+    lines.splice(idx, 1);
+    setCampaignContactsRaw(lines.join('\n'));
+    setCampaignContactsCount(Math.max(0, lines.filter(l => l.trim().length > 0).length));
+    triggerToast("Lead contact removed.", "success");
+  };
+
+  const handleFetchCampaignUrl = async () => {
+    if (!campaignUrlInput.trim()) {
+      triggerToast("Please enter a valid website URL for your campaign.", "amber");
+      return;
+    }
+    setIsFetchingCampaignUrl(true);
+    try {
+      const trimmedUrl = campaignUrlInput.trim();
+      let hostname = "URL";
+      try {
+        hostname = new URL(trimmedUrl).hostname;
+      } catch (e) {}
+
+      triggerToast(`Scraping campaign page content from ${hostname}...`, 'info');
+
+      const response = await fetch('/api/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: trimmedUrl })
+      });
+      const data = await response.json();
+      if (response.ok && data.text) {
+        triggerToast(`Analyzing campaign details with Gemini AI...`, 'info');
+        
+        const promptText = `You are a professional marketing copywriter. Based on the following webpage text, generate a highly focused 1-sentence outbound call campaign guideline/instructions to guide an AI voice dialer.
+Format: A single crisp sentence describing the offer, discount, or goal (e.g., 'Highlight our summer dental cleaning special of 20% off and guide them to book an appointment next week').
+Webpage Text:
+"""
+${data.text.slice(0, 7000)}
+"""
+
+Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or intros.`;
+
+        const result = await geminiService.getAgentResponse(
+          promptText,
+          [],
+          "You are a helpful marketing coordinator. Return ONLY the requested single sentence campaign guideline."
+        );
+
+        if (result) {
+          setCampaignGuidelines(result.trim());
+          setCampaignUrlInput('');
+          triggerToast(`Successfully extracted guidelines from ${hostname}!`, 'success');
+        } else {
+          triggerToast("Could not extract campaign guidelines automatically.", "amber");
+        }
+      } else {
+        triggerToast(data.error || "Failed to fetch webpage details.", "amber");
+      }
+    } catch (error) {
+      console.error("Campaign fetch error:", error);
+      triggerToast("Failed to fetch webpage details. Check your connection.", "amber");
+    } finally {
+      setIsFetchingCampaignUrl(false);
+    }
+  };
+
+  // Campaign management operations
+  const handleCreateCampaign = () => {
+    if (!newCampaignName.trim()) {
+      triggerToast("Please enter a campaign name.", "amber");
+      return;
+    }
+    const agentToUse = newCampaignAgent || (agents[0] ? agents[0].name : "Sarah (Real Estate)");
+    const newCamp = {
+      id: `camp_${Date.now()}`,
+      name: newCampaignName.trim(),
+      type: newCampaignType,
+      status: 'Active',
+      agent: agentToUse,
+      targetCount: newCampaignTargetSize || 150,
+      completedCount: 0,
+      successRate: 0,
+      budget: newCampaignBudget || 500,
+      spend: 0,
+      createdAt: new Date().toISOString().split('T')[0],
+      purpose: newCampaignPurpose,
+      audience: newCampaignAudience,
+      guidelines: newCampaignGuidelines,
+      contactsRaw: newCampaignContacts
+    };
+
+    setCampaignList(prev => [newCamp, ...prev]);
+    setSelectedCampaignId(newCamp.id);
+    setNewCampaignName('');
+    setNewCampaignType('Outbound');
+    setNewCampaignAgent('');
+    setNewCampaignTargetSize(150);
+    setNewCampaignBudget(500);
+    setNewCampaignPurpose('Sales Recall & Lead Reactivation');
+    setNewCampaignAudience('Warm Outbound Leads');
+    setNewCampaignGuidelines('Highlight active service. Offer consultation schedule.');
+    setNewCampaignContacts("Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824");
+    setShowCreateCampaign(false);
+    triggerToast(`Campaign "${newCamp.name}" successfully created!`, "success");
+  };
+
+  const handleToggleCampaignStatus = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCampaignList(prev => prev.map(c => {
+      if (c.id === id) {
+        const nextStatus = c.status === 'Active' ? 'Paused' : 'Active';
+        triggerToast(`Campaign "${c.name}" status updated to ${nextStatus}`, "success");
+        return { ...c, status: nextStatus };
+      }
+      return c;
+    }));
+  };
+
+  const handleDeleteCampaign = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCampaignList(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (selectedCampaignId === id && filtered.length > 0) {
+        setSelectedCampaignId(filtered[0].id);
+      }
+      return filtered;
+    });
+    triggerToast("Campaign deleted successfully.", "success");
+  };
+
+  const handleExportCampaignCsv = (campaignId: string) => {
+    const campaign = campaignList.find(c => c.id === campaignId);
+    if (!campaign) return;
+    
+    // Create CSV rows
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Lead Name,Phone Number,Status,Duration,Sentiment,Call Outcome\n";
+    
+    if (liveDialLogs && liveDialLogs.length > 0) {
+      liveDialLogs.forEach(log => {
+        csvContent += `"${log.name || 'Unknown'}","${log.phone || ''}","${log.status || ''}","${log.duration || ''}","${log.sentiment || ''}","${log.status === 'Connected' ? 'Interested/Nurtured' : 'No Answer'}"\n`;
+      });
+    } else {
+      csvContent += `"John Doe","+1 (415) 555-0192","Connected","1m 15s","Positive","Interested"\n`;
+      csvContent += `"Jane Smith","+1 (212) 555-0481","Connected","45s","Neutral","Informational"\n`;
+      csvContent += `"Michael Scott","+1 (305) 555-0921","Busy/Voicemail","0s","None","Unanswered"\n`;
+    }
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${campaign.name.toLowerCase().replace(/\s+/g, "_")}_dial_report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    triggerToast(`Exported CSV report for "${campaign.name}"!`, "success");
+  };
   const [isChargingInvoiceId, setIsChargingInvoiceId] = useState<string | null>(null);
   const [isSendingInvoiceId, setIsSendingInvoiceId] = useState<string | null>(null);
 
@@ -2851,7 +3374,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
       theme === 'dark' 
-        ? isAdmin && !isImpersonating ? 'bg-[#05110d] text-slate-200' : 'bg-slate-950 text-slate-200' 
+        ? 'bg-slate-950 text-slate-200' 
         : 'bg-slate-50 text-slate-900'
     }`}>
       {/* Mobile Sidebar Overlay */}
@@ -2874,9 +3397,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } ${
         theme === 'dark' 
-          ? isAdmin && !isImpersonating 
-            ? 'bg-[#042013]/95 border-emerald-500/20 shadow-[8px_0_30px_rgba(0,0,0,0.5)]' 
-            : 'bg-slate-900/95 lg:bg-slate-900/50 border-white/5' 
+          ? 'bg-slate-900/95 lg:bg-slate-900/50 border-white/5' 
           : 'bg-white/95 lg:bg-white/50 border-slate-200 shadow-xl'
       }`}>
         <div className="flex items-center space-x-3 mb-10 px-2 group cursor-pointer relative">
@@ -3011,7 +3532,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Dashboard Area */}
       <main className={`flex-1 overflow-y-auto relative p-4 sm:p-8 lg:p-12 transition-colors duration-500 ${
         theme === 'dark' 
-          ? (isAdmin && !isImpersonating ? 'bg-[#05110d] selection:bg-emerald-500/30' : 'bg-slate-950 selection:bg-indigo-500/30') 
+          ? 'bg-slate-950 selection:bg-indigo-500/30' 
           : 'bg-slate-50 text-slate-900 selection:bg-indigo-500/10'
       }`}>
         {isAdmin && !isImpersonating && (
@@ -3054,6 +3575,45 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Elegant Segmented Role Control */}
+            {activeTab !== 'tutorials' && (
+              <div className={`hidden sm:flex items-center p-1.5 rounded-2xl border transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-900 border-white/5' 
+                  : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <button
+                  onClick={() => {
+                    onUpdateUser({ role: 'customer' });
+                    setActiveTab('overview');
+                    triggerToast("Switched to Customer View Mode", "success");
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-2 ${
+                    user.role === 'customer'
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Customer</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onUpdateUser({ role: 'admin' });
+                    setActiveTab('overview');
+                    triggerToast("Switched to Admin View Mode", "success");
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-2 ${
+                    user.role === 'admin'
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Admin</span>
+                </button>
+              </div>
+            )}
             <button 
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className={`flex items-center space-x-3 border px-4 py-2.5 rounded-2xl transition-all ${
@@ -3100,54 +3660,58 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                           : 'bg-white border-slate-200 text-slate-700'
                       }`}
                     >
-                      <div className="px-3 py-2 border-b border-slate-100 dark:border-white/5 mb-2.5">
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Access Control</p>
-                        <p className="text-xs font-semibold text-slate-500 mt-0.5 truncate">{user.email}</p>
-                      </div>
+                      {activeTab !== 'tutorials' && (
+                        <>
+                          <div className="px-3 py-2 border-b border-slate-100 dark:border-white/5 mb-2.5">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Access Control</p>
+                            <p className="text-xs font-semibold text-slate-500 mt-0.5 truncate">{user.email}</p>
+                          </div>
+
+                          <div className="space-y-1 mb-2">
+                            <button
+                              onClick={() => {
+                                onUpdateUser({ role: 'customer' });
+                                setShowSettingsDropdown(false);
+                                setActiveTab('overview');
+                                triggerToast("Switched to Customer View Mode", "success");
+                              }}
+                              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
+                                user.role === 'customer'
+                                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                                  : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <Users className="w-4 h-4 text-violet-500" />
+                                <span>Customer View</span>
+                              </div>
+                              {user.role === 'customer' && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                onUpdateUser({ role: 'admin' });
+                                setShowSettingsDropdown(false);
+                                setActiveTab('overview');
+                                triggerToast("Switched to Admin View Mode", "success");
+                              }}
+                              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
+                                user.role === 'admin'
+                                  ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                <span>Admin View</span>
+                              </div>
+                              {user.role === 'admin' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                            </button>
+                          </div>
+                        </>
+                      )}
 
                       <div className="space-y-1">
-                        <button
-                          onClick={() => {
-                            onUpdateUser({ role: 'customer' });
-                            setShowSettingsDropdown(false);
-                            setActiveTab('overview');
-                            triggerToast("Switched to Customer View Mode", "success");
-                          }}
-                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
-                            user.role === 'customer'
-                              ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                              : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <Users className="w-4 h-4 text-violet-500" />
-                            <span>Customer View</span>
-                          </div>
-                          {user.role === 'customer' && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            onUpdateUser({ role: 'admin' });
-                            setShowSettingsDropdown(false);
-                            setActiveTab('overview');
-                            triggerToast("Switched to Admin View Mode", "success");
-                          }}
-                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all ${
-                            user.role === 'admin'
-                              ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/20'
-                              : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 border border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                            <span>Admin View</span>
-                          </div>
-                          {user.role === 'admin' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
-                        </button>
-
-                        <div className="h-px bg-slate-100 dark:bg-white/5 my-2" />
-
                         <button
                           onClick={() => {
                             setActiveTab('profile');
@@ -5271,360 +5835,1262 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              {/* Campaign Safety Shield Notification */}
-              <div className={`p-6 rounded-[2rem] border transition-all ${
+              {/* Row 1: Interactive prepaid Campaign Wallet Dashboard (Facebook Ads Prepaid Style) */}
+              <div className={`p-8 border rounded-[2.5rem] transition-all relative overflow-hidden ${
                 theme === 'dark' 
-                  ? 'bg-gradient-to-r from-indigo-900/40 to-slate-900/40 border-indigo-500/10' 
-                  : 'bg-gradient-to-r from-indigo-50 to-slate-50 border-indigo-100'
+                  ? 'bg-gradient-to-r from-slate-900 via-slate-950 to-indigo-950/40 border-indigo-500/10' 
+                  : 'bg-gradient-to-r from-white via-indigo-50/20 to-slate-50 border-slate-200 shadow-sm'
               }`}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                      <ShieldCheck className="w-6 h-6 animate-pulse" />
+                {/* Visual Accent */}
+                <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2.5 py-1 bg-indigo-600/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-lg">Prepaid Ad-Style Model</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                     </div>
-                    <div>
-                      <h4 className={`text-lg font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                        {user.plan === 'Enterprise' ? 'Enterprise Campaign Shield Active' : 'Campaign Balance Safeguard'}
-                      </h4>
-                      <p className="text-xs text-slate-500 font-bold">
-                        {user.plan === 'Enterprise' 
-                          ? 'Enforcing the custom $100.00 USD balance threshold to keep enterprise trunks active.' 
-                          : 'Standard plans are set to a fallback balance threshold alerts parameter.'}
-                      </p>
-                    </div>
+                    <h3 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Prepaid Campaign Wallet</h3>
+                    <p className="text-xs text-slate-500 font-bold max-w-xl">
+                      No monthly subscription required to test! Top up your campaign wallet with sandbox test credits (free) to spin up automated bulk voice dialers instantly.
+                    </p>
                   </div>
-                  <div className={`px-4 py-2 rounded-xl text-center border ${
-                    user.plan === 'Enterprise'
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-                  }`}>
-                    <span className="text-[10px] font-black uppercase tracking-widest block">Safe Limit</span>
-                    <span className="text-lg font-black font-mono">
-                      {user.plan === 'Enterprise' ? '$100.00 USD' : `$${lowCreditThreshold}.00 USD`}
+
+                  {/* Prepaid Balance & Quick Refill Control */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                    <div className={`p-4 rounded-2xl border text-center lg:text-left min-w-[160px] ${
+                      theme === 'dark' ? 'bg-slate-900/60 border-white/5' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Available Campaign Funds</span>
+                      <span className="text-2xl font-black font-mono text-indigo-500">${campaignWalletBalance.toFixed(2)}</span>
+                    </div>
+
+                    <button
+                      onClick={() => setShowTopUpModal(true)}
+                      className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95 flex items-center justify-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Top-up Wallet</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline Quick Top-Up Drawer if open */}
+                {showTopUpModal && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className={`mt-6 p-6 border rounded-2xl space-y-4 ${
+                      theme === 'dark' ? 'bg-slate-950/80 border-indigo-500/20' : 'bg-slate-100 border-indigo-100'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                      <h5 className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Refill Sandbox Campaign Wallet</h5>
+                      <button onClick={() => setShowTopUpModal(false)} className="text-slate-400 hover:text-white transition-all">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {[
+                        { amt: 50, label: "Starter Dial Package" },
+                        { amt: 100, label: "Growth Outreach Package" },
+                        { amt: 250, label: "Enterprise Bulk Package" }
+                      ].map((pkg) => (
+                        <div
+                          key={pkg.amt}
+                          onClick={() => {
+                            setCampaignWalletBalance(prev => prev + pkg.amt);
+                            triggerToast(`Successfully added $${pkg.amt}.00 simulated credits!`, "success");
+                            setShowTopUpModal(false);
+                          }}
+                          className={`p-4 border rounded-xl cursor-pointer transition-all hover:scale-[1.02] text-center ${
+                            theme === 'dark' 
+                              ? 'bg-slate-900 border-white/5 hover:border-indigo-500 hover:bg-slate-900/80' 
+                              : 'bg-white border-slate-200 hover:border-indigo-500 hover:shadow-sm'
+                          }`}
+                        >
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">{pkg.label}</span>
+                          <span className="text-xl font-black text-indigo-500 font-mono">+${pkg.amt}</span>
+                        </div>
+                      ))}
+
+                      {/* Custom Input */}
+                      <div className={`p-4 border rounded-xl flex flex-col justify-between ${
+                        theme === 'dark' ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200'
+                      }`}>
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Custom Top-Up Value</span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xs font-bold text-slate-400">$</span>
+                          <input
+                            type="number"
+                            value={topUpAmountInput}
+                            onChange={(e) => setTopUpAmountInput(e.target.value)}
+                            className={`w-full text-xs font-bold focus:outline-none focus:border-indigo-500 bg-transparent ${
+                              theme === 'dark' ? 'text-white' : 'text-slate-900'
+                            }`}
+                          />
+                          <button
+                            onClick={() => {
+                              const value = parseFloat(topUpAmountInput);
+                              if (isNaN(value) || value <= 0) {
+                                triggerToast("Please enter a valid amount.", "amber");
+                                return;
+                              }
+                              setCampaignWalletBalance(prev => prev + value);
+                              triggerToast(`Successfully added $${value.toFixed(2)} simulated credits!`, "success");
+                              setShowTopUpModal(false);
+                            }}
+                            className="p-1 px-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black"
+                          >
+                            Refill
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Outbound AI Test Call Simulator Modal Overlay */}
+              {isTestCallModalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className={`w-full max-w-2xl rounded-[2.5rem] border overflow-hidden shadow-2xl ${
+                      theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    {/* Modal Header */}
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-indigo-600/5">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                          <Volume2 className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            Live AI Outbound Sandbox Dialer
+                          </h4>
+                          <span className="text-[10px] text-slate-500 font-bold block">
+                            Simulating outbound voice pipeline with {testLeadName} ({testLeadPhone})
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setTestCallStatus('idle');
+                          setIsTestCallModalOpen(false);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Modal Body: Phone Simulator Interface */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 h-[26rem]">
+                      
+                      {/* Left Side: Connection Status Meter */}
+                      <div className={`md:col-span-4 p-6 border-r border-white/5 flex flex-col justify-between ${
+                        theme === 'dark' ? 'bg-slate-950/40' : 'bg-slate-50'
+                      }`}>
+                        <div className="space-y-4">
+                          <div className="text-center py-4 bg-white/5 rounded-2xl border border-white/5">
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Carrier Connection</span>
+                            <span className="text-xs font-mono text-indigo-400 font-bold">SIP/Trunk-01</span>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[10px] font-bold">
+                              <span className="text-slate-500">LINE SPEED:</span>
+                              <span className="font-mono">8.2 Kbps</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-bold">
+                              <span className="text-slate-500">ENCODING:</span>
+                              <span className="font-mono text-indigo-400">G.711 PCMU</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-bold">
+                              <span className="text-slate-500">VOICE SPEED:</span>
+                              <span className="font-mono">1.0x</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            {testCallStatus === 'ringing' ? (
+                              <>
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                                <span className="text-xs font-black text-amber-500 uppercase tracking-wider">Ringing lead...</span>
+                              </>
+                            ) : testCallStatus === 'connected' ? (
+                              <>
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">Line Connected</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                                <span className="text-xs font-black text-rose-500 uppercase tracking-wider">Call Ended</span>
+                              </>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => setTestCallStatus('ended')}
+                            disabled={testCallStatus === 'ended'}
+                            className="w-full flex items-center justify-center space-x-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black rounded-xl transition-all shadow-md"
+                          >
+                            <PhoneOff className="w-3.5 h-3.5" />
+                            <span>Hang Up Call</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Side: Conversation Transcript and Input sandbox */}
+                      <div className="md:col-span-8 flex flex-col justify-between h-full bg-slate-950/20">
+                        
+                        {/* Messages list */}
+                        <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[20rem]">
+                          {testCallStatus === 'ringing' && (
+                            <div className="flex flex-col items-center justify-center h-full space-y-3 text-center">
+                              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                              <div className="space-y-1">
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">Dialing Lead Contact</span>
+                                <p className="text-[11px] text-slate-500">Establishing digital audio channel... Ringing {testLeadPhone}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {testCallMessages.map((msg, idx) => (
+                            <div
+                              key={idx}
+                              className={`flex ${msg.sender === 'agent' ? 'justify-start' : 'justify-end'}`}
+                            >
+                              <div className={`p-3.5 rounded-2xl max-w-[85%] text-xs font-semibold shadow-sm leading-relaxed ${
+                                msg.sender === 'agent'
+                                  ? (theme === 'dark' ? 'bg-slate-900 border border-white/5 text-slate-100' : 'bg-white border border-slate-200 text-slate-900')
+                                  : 'bg-indigo-600 text-white'
+                              }`}>
+                                <span className="text-[8px] font-black uppercase tracking-wider block mb-1 opacity-60">
+                                  {msg.sender === 'agent' ? 'Voice Agent (Sarah)' : 'Lead response (You)'}
+                                </span>
+                                <p>{msg.text}</p>
+                              </div>
+                            </div>
+                          ))}
+
+                          {isAgentTyping && (
+                            <div className="flex justify-start">
+                              <div className={`p-3 rounded-xl text-xs font-bold ${
+                                theme === 'dark' ? 'bg-slate-900 text-slate-500' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                <span className="animate-pulse">Agent typing response...</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Sandbox Input Controls */}
+                        {testCallStatus === 'connected' && (
+                          <div className="p-4 border-t border-white/5 bg-slate-950/40 flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={testCallInput}
+                              onChange={(e) => setTestCallInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSendCampaignTestResponse();
+                              }}
+                              placeholder="Type simulated lead response (e.g. 'Yes, tell me more about the dental cleaning!')"
+                              className={`flex-1 px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-900 border-white/5 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                            <button
+                              onClick={handleSendCampaignTestResponse}
+                              className="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-md"
+                              type="button"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Advanced Interactive Campaigns Telemetry Dashboard */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className={`p-5 rounded-[2rem] border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Active Campaigns</span>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      {campaignList.filter(c => c.status === 'Active').length}
                     </span>
+                    <span className="text-xs font-bold text-slate-400">/ {campaignList.length} total</span>
                   </div>
+                </div>
+
+                <div className={`p-5 rounded-[2rem] border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Outreach Dials</span>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-2xl font-black text-indigo-500`}>
+                      {campaignList.reduce((sum, c) => sum + (c.completedCount || 0), 0)}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400">calls placed</span>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-[2rem] border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Average Connection Rate</span>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-2xl font-black text-emerald-500`}>
+                      {Math.round(campaignList.reduce((sum, c) => sum + (c.successRate || 0), 0) / (campaignList.length || 1))}%
+                    </span>
+                    <span className="text-xs font-bold text-slate-400">positive answer</span>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-[2rem] border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Combined Telecom Spend</span>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-2xl font-black text-amber-500`}>
+                      ${campaignList.reduce((sum, c) => sum + (c.spend || 0), 0).toFixed(2)}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400">out of ${campaignList.reduce((sum, c) => sum + (c.budget || 0), 0).toFixed(0)} budget</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Dial Telecom Telemetry Chart */}
+              <div className={`p-6 border rounded-[2.5rem] transition-all ${
+                theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Concurrent Outbound SIP Channels & Dial Success Rates</h4>
+                    <p className="text-[11px] text-slate-500 font-bold mt-0.5">Telecom data feed reflecting connected conversations, unanswered lines, and voicemail drops over the current dial cycle.</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleExportCampaignCsv(selectedCampaignId)}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-bold transition-all"
+                  >
+                    <Upload className="w-3.5 h-3.5 rotate-180" />
+                    <span>Export Selected Campaign Logs (CSV)</span>
+                  </button>
+                </div>
+
+                <div className="h-44 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={[
+                        { day: 'Mon', connected: 42, voicemail: 18, pending: 5 },
+                        { day: 'Tue', connected: 58, voicemail: 22, pending: 8 },
+                        { day: 'Wed', connected: 73, voicemail: 31, pending: 12 },
+                        { day: 'Thu', connected: 61, voicemail: 19, pending: 4 },
+                        { day: 'Fri', connected: 89, voicemail: 35, pending: 15 },
+                        { day: 'Sat', connected: 44, voicemail: 15, pending: 3 },
+                        { day: 'Sun', connected: 95, voicemail: 40, pending: 18 }
+                      ]}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorConnected" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorVoicemail" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} />
+                      <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff', 
+                          borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+                          borderRadius: '12px',
+                          color: theme === 'dark' ? '#ffffff' : '#000000',
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }} 
+                      />
+                      <Area type="monotone" name="Connected Conversations" dataKey="connected" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorConnected)" />
+                      <Area type="monotone" name="Voicemail Drops" dataKey="voicemail" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorVoicemail)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Main Workspace Layout */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left side Controls - Campaign List, Custom Call Simulator */}
+                
+                {/* Left Side (Col span 7): Integrated Campaign Control & Customizer */}
                 <div className="lg:col-span-7 space-y-8">
-                  {/* Real-time calling simulator console */}
+                  
+                  {/* Campaign Setup Console */}
                   <div className={`p-8 border rounded-[2.5rem] transition-all ${
-                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200'
+                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                   }`}>
-                    <div className="mb-6">
-                      <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Interactive Telephony Simulator</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1">Select an active customer and an AI agent to trigger a live inbound/outbound call.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      {/* Target Customer Dropdown */}
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Select Test Customer</label>
-                        <select 
-                          value={selectedCampaignCustomer}
-                          onChange={(e) => setSelectedCampaignCustomer(e.target.value)}
-                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
-                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        >
-                          {allUsers.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name} ({u.email}) - Bal: ${parseFloat(u.balance || 0).toFixed(2)} [Plan: {u.plan || 'Free'}]
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* AI Agent Dropdown */}
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Select AI Voice Agent</label>
-                        <select 
-                          value={selectedCampaignAgent}
-                          onChange={(e) => setSelectedCampaignAgent(e.target.value)}
-                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
-                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                          }`}
-                        >
-                          {agents.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name} - Voice: {a.voice} ({a.logic})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Simulation Triggers */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => handleStartSimCall('inbound')}
-                        disabled={simCallStatus !== 'idle'}
-                        className={`flex items-center justify-center space-x-2 px-6 py-4 rounded-2xl font-black text-sm transition-all shadow-lg ${
-                          simCallStatus !== 'idle' 
-                            ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' 
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
-                        }`}
-                      >
-                        <Phone className="w-4 h-4 animate-bounce" />
-                        <span>Trigger Inbound Call Simulation</span>
-                      </button>
-
-                      <button 
-                        onClick={() => handleStartSimCall('outbound')}
-                        disabled={simCallStatus !== 'idle'}
-                        className={`flex items-center justify-center space-x-2 px-6 py-4 rounded-2xl font-black text-sm transition-all shadow-lg ${
-                          simCallStatus !== 'idle' 
-                            ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' 
-                            : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-600/20'
-                        }`}
-                      >
-                        <ArrowUpRight className="w-4 h-4" />
-                        <span>Trigger Outbound Call Simulation</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bulk Campaigns launcher (Enterprise feature) */}
-                  <div className={`p-8 border rounded-[2.5rem] transition-all ${
-                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200'
-                  }`}>
+                    
+                    {/* Header with New Campaign Trigger */}
                     <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Bulk Outreach Campaigns</h4>
-                        <p className="text-xs text-slate-500 font-bold mt-1">Automate thousands of high-concurrency phone dials. Perfect for Enterprise marketing or SaaS retention outreach.</p>
+                        <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Campaign Manager</h4>
+                        <p className="text-xs text-slate-500 font-bold mt-1">Configure business settings, choose automated voice agents, and upload contacts list.</p>
                       </div>
-                      <span className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg tracking-wider ${
-                        user.plan === 'Enterprise' || isAdmin
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                      }`}>
-                        {user.plan === 'Enterprise' || isAdmin ? 'Enterprise Enabled' : 'Requires Upgrade'}
-                      </span>
+
+                      <button
+                        onClick={() => setShowCreateCampaign(!showCreateCampaign)}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create Campaign</span>
+                      </button>
                     </div>
 
-                    {campaignList.map((c) => (
-                      <div 
-                        key={c.id} 
-                        onClick={() => setSelectedCampaignId(c.id)}
-                        className={`p-5 rounded-2xl border mb-4 cursor-pointer transition-all ${
-                          selectedCampaignId === c.id 
-                            ? 'border-indigo-500 bg-indigo-500/5' 
-                            : theme === 'dark' ? 'border-white/5 bg-slate-950/20 hover:bg-slate-950/40' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                    {/* New Campaign Creation Drawer */}
+                    {showCreateCampaign && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className={`p-6 border rounded-2xl mb-6 space-y-4 overflow-hidden ${
+                          theme === 'dark' ? 'bg-slate-950/60 border-indigo-500/20' : 'bg-slate-50 border-indigo-100'
                         }`}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h5 className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.name}</h5>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Agent: {c.agent} | Type: {c.type}</span>
-                          </div>
-                          <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg ${
-                            c.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500'
-                          }`}>
-                            {c.status}
-                          </span>
+                        <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                          <h5 className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Configure New Campaign Header</h5>
+                          <button onClick={() => setShowCreateCampaign(false)} className="text-slate-400 hover:text-white transition-all">
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-                          <div>
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Target Size</span>
-                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.targetCount} contacts</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Title</label>
+                            <input
+                              type="text"
+                              value={newCampaignName}
+                              onChange={(e) => setNewCampaignName(e.target.value)}
+                              placeholder="e.g. Black Friday Promotion"
+                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
                           </div>
-                          <div>
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Connected</span>
-                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{c.completedCount}</span>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Assigned AI Agent</label>
+                            <select
+                              value={newCampaignAgent}
+                              onChange={(e) => setNewCampaignAgent(e.target.value)}
+                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            >
+                              <option value="">-- Choose Assigned Assistant --</option>
+                              {agents.map(a => (
+                                <option key={a.id} value={a.name}>{a.name} ({a.voice})</option>
+                              ))}
+                            </select>
                           </div>
-                          <div>
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Success Rate</span>
-                            <span className="text-xs font-black text-emerald-400">{c.successRate}%</span>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Type</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setNewCampaignType('Outbound')}
+                                className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                                  newCampaignType === 'Outbound'
+                                    ? 'bg-indigo-600 border-indigo-500 text-white'
+                                    : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                                }`}
+                              >
+                                Outbound Dialer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setNewCampaignType('Inbound')}
+                                className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                                  newCampaignType === 'Inbound'
+                                    ? 'bg-indigo-600 border-indigo-500 text-white'
+                                    : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                                }`}
+                              >
+                                Inbound Router
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider block">Spend</span>
-                            <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>${c.spend.toFixed(2)}</span>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Dials</label>
+                              <input
+                                type="number"
+                                value={newCampaignTargetSize}
+                                onChange={(e) => setNewCampaignTargetSize(Number(e.target.value))}
+                                className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                }`}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Budget ($)</label>
+                              <input
+                                type="number"
+                                value={newCampaignBudget}
+                                onChange={(e) => setNewCampaignBudget(Number(e.target.value))}
+                                className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Purpose / Business Objective</label>
+                            <input
+                              type="text"
+                              value={newCampaignPurpose}
+                              onChange={(e) => setNewCampaignPurpose(e.target.value)}
+                              placeholder="e.g. Dental Scaling Bookings / SaaS Trial Upgrade Reminders"
+                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Audience / Lead Segment Description</label>
+                            <input
+                              type="text"
+                              value={newCampaignAudience}
+                              onChange={(e) => setNewCampaignAudience(e.target.value)}
+                              placeholder="e.g. Trial users who expired last week / Local residents in NY"
+                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">AI Agent Persona Guidelines & Custom Script</label>
+                            <textarea
+                              rows={2}
+                              value={newCampaignGuidelines}
+                              onChange={(e) => setNewCampaignGuidelines(e.target.value)}
+                              placeholder="e.g. Introduce yourself, ask if they received our discount code, schedule a free session."
+                              className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Initial Leads List (Format: Name, Phone)</label>
+                            <textarea
+                              rows={2}
+                              value={newCampaignContacts}
+                              onChange={(e) => setNewCampaignContacts(e.target.value)}
+                              placeholder="Alice Johnson, +1 (415) 555-4921&#10;Robert Downey, +1 (212) 555-8824"
+                              className={`w-full border rounded-xl px-4 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
                           </div>
                         </div>
-                      </div>
-                    ))}
 
-                    <div className="mt-6 pt-2">
-                      {user.plan === 'Enterprise' || isAdmin ? (
-                        <div className="space-y-4">
-                          <button 
-                            onClick={handleLaunchCampaignSim}
-                            disabled={campaignDialsInProgress}
-                            className={`w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-600/25 ${
-                              campaignDialsInProgress ? 'opacity-55 cursor-not-allowed' : ''
+                        <div className="flex justify-end gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateCampaign(false)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCreateCampaign}
+                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md"
+                          >
+                            Add Campaign
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Quick Campaign Switch Selector */}
+                    {campaignList.length > 0 && (
+                      <div className="mb-6 p-4 rounded-2xl border border-dashed border-slate-700/50 bg-slate-900/10">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Selected Active Campaign Header</label>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <select
+                            value={selectedCampaignId}
+                            onChange={(e) => setSelectedCampaignId(e.target.value)}
+                            className={`border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-indigo-500 min-w-[200px] ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                             }`}
                           >
-                            {campaignDialsInProgress ? (
+                            {campaignList.map(c => (
+                              <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
+                            ))}
+                          </select>
+
+                          {/* Render Active selection metrics and controls */}
+                          {(() => {
+                            const cur = campaignList.find(c => c.id === selectedCampaignId);
+                            if (!cur) return null;
+                            return (
+                              <div className="flex items-center flex-wrap gap-3 text-xs font-mono">
+                                {/* Live Status Indicator */}
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/20 border border-white/5">
+                                  <span className={`w-2 h-2 rounded-full ${
+                                    cur.status === 'Active' ? 'bg-emerald-500 animate-pulse' : cur.status === 'Paused' ? 'bg-amber-400' : 'bg-slate-400'
+                                  }`} />
+                                  <span className={`text-[10px] font-black uppercase tracking-wider ${
+                                    cur.status === 'Active' ? 'text-emerald-400' : cur.status === 'Paused' ? 'text-amber-400' : 'text-slate-400'
+                                  }`}>
+                                    {cur.status}
+                                  </span>
+                                </div>
+
+                                {/* Active Run / Pause / Stop Buttons */}
+                                <div className="flex items-center space-x-1 bg-slate-950/10 p-1 rounded-xl border border-white/5">
+                                  {cur.status === 'Active' ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleCampaignStatus(cur.id, e)}
+                                      className="flex items-center space-x-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-black border border-amber-500/20 transition-all active:scale-95"
+                                      title="Pause campaign auto-dialer"
+                                    >
+                                      <Pause className="w-3 h-3" />
+                                      <span>Pause Run</span>
+                                    </button>
+                                  ) : cur.status === 'Paused' ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleCampaignStatus(cur.id, e)}
+                                      className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-black border border-emerald-500/20 transition-all active:scale-95"
+                                      title="Resume campaign auto-dialer"
+                                    >
+                                      <Play className="w-3 h-3 fill-emerald-400" />
+                                      <span>Resume Run</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCampaignList(prev => prev.map(c => c.id === cur.id ? { ...c, status: 'Active' } : c));
+                                        triggerToast(`Campaign "${cur.name}" reactivated!`, "success");
+                                      }}
+                                      className="flex items-center space-x-1 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-black border border-indigo-500/20 transition-all active:scale-95"
+                                    >
+                                      <Play className="w-3 h-3" />
+                                      <span>Reactivate</span>
+                                    </button>
+                                  )}
+
+                                  {cur.status !== 'Ended' && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCampaignList(prev => prev.map(c => c.id === cur.id ? { ...c, status: 'Ended' } : c));
+                                        triggerToast(`Campaign "${cur.name}" marked as Completed.`, "info");
+                                      }}
+                                      className="flex items-center space-x-1 px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 rounded-lg text-[10px] font-black border border-white/5 transition-all active:scale-95"
+                                      title="Stop campaign immediately"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      <span>Stop Run</span>
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Metrics indicators */}
+                                <div className="flex items-center space-x-3 text-[11px]">
+                                  <div>
+                                    <span className="text-[8px] text-slate-500 block">Spent</span>
+                                    <span className="font-bold text-indigo-400">${cur.spend.toFixed(2)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[8px] text-slate-500 block">Dials</span>
+                                    <span className="font-bold">{cur.completedCount}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[8px] text-slate-500 block">Success</span>
+                                    <span className="font-bold text-emerald-400">{cur.successRate}%</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={(e) => handleDeleteCampaign(cur.id, e)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl border border-white/5 transition-all"
+                                  title="Delete active campaign"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                             {/* Step 1: Bulk Contacts Upload Area */}
+                    <div className="space-y-4 mb-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">
+                          Step 1: Campaign Leads & Dispatch Desk
+                        </label>
+                        
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCampaignContactsRaw(
+                                "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824\nTony Stark, +1 (310) 555-9000\nPepper Potts, +1 (310) 555-9011\nSteve Rogers, +1 (718) 555-1941\nNatasha Romanoff, +1 (212) 555-0077\nThor Odinson, +1 (305) 555-4422\nBruce Banner, +1 (510) 555-0988"
+                              );
+                              setCampaignContactsCount(8);
+                              triggerToast("High-converting demo contacts loaded!", "success");
+                            }}
+                            className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold transition-all px-2 py-1 rounded bg-indigo-500/5 hover:bg-indigo-500/10"
+                          >
+                            Load Premium Demo Leads
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Interactive Tabs for Contacts view */}
+                      <div className="flex border-b border-white/5 pb-2">
+                        <button
+                          type="button"
+                          id="tab-leads-list"
+                          onClick={() => {
+                            // Default view
+                            const elList = document.getElementById('panel-leads-list');
+                            const elRaw = document.getElementById('panel-leads-raw');
+                            const tabList = document.getElementById('tab-leads-list');
+                            const tabRaw = document.getElementById('tab-leads-raw');
+                            if (elList && elRaw && tabList && tabRaw) {
+                              elList.classList.remove('hidden');
+                              elRaw.classList.add('hidden');
+                              tabList.className = "text-xs font-black pb-2 border-b-2 border-indigo-500 text-indigo-400 px-4";
+                              tabRaw.className = "text-xs font-bold pb-2 text-slate-500 hover:text-slate-400 px-4";
+                            }
+                          }}
+                          className="text-xs font-black pb-2 border-b-2 border-indigo-500 text-indigo-400 px-4"
+                        >
+                          📋 Leads List Table ({parsedContactsList.length})
+                        </button>
+                        <button
+                          type="button"
+                          id="tab-leads-raw"
+                          onClick={() => {
+                            const elList = document.getElementById('panel-leads-list');
+                            const elRaw = document.getElementById('panel-leads-raw');
+                            const tabList = document.getElementById('tab-leads-list');
+                            const tabRaw = document.getElementById('tab-leads-raw');
+                            if (elList && elRaw && tabList && tabRaw) {
+                              elList.classList.add('hidden');
+                              elRaw.classList.remove('hidden');
+                              tabList.className = "text-xs font-bold pb-2 text-slate-500 hover:text-slate-400 px-4";
+                              tabRaw.className = "text-xs font-black pb-2 border-b-2 border-indigo-500 text-indigo-400 px-4";
+                            }
+                          }}
+                          className="text-xs font-bold pb-2 text-slate-500 hover:text-slate-400 px-4"
+                        >
+                          📝 Raw Bulk Text Area
+                        </button>
+                      </div>
+
+                      {/* Panel A: Interactive Table + Quick Add */}
+                      <div id="panel-leads-list" className="space-y-4">
+                        {/* Quick Add Form */}
+                        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row gap-3 items-end ${
+                          theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <div className="flex-1 space-y-1 w-full">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Lead Full Name</span>
+                            <input
+                              type="text"
+                              value={quickAddName}
+                              onChange={(e) => setQuickAddName(e.target.value)}
+                              placeholder="e.g. Tony Stark"
+                              className={`w-full px-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:border-indigo-500 ${
+                                theme === 'dark' ? 'bg-slate-900 border-white/5 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1 w-full">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Phone Number</span>
+                            <input
+                              type="text"
+                              value={quickAddPhone}
+                              onChange={(e) => setQuickAddPhone(e.target.value)}
+                              placeholder="e.g. +1 (310) 555-9000"
+                              className={`w-full px-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:border-indigo-500 ${
+                                theme === 'dark' ? 'bg-slate-900 border-white/5 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleQuickAddContact}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 self-stretch sm:self-auto justify-center"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Quick Add</span>
+                          </button>
+                        </div>
+
+                        {/* Interactive Grid Table */}
+                        <div className={`border rounded-2xl overflow-hidden max-h-60 overflow-y-auto ${
+                          theme === 'dark' ? 'border-white/5 bg-slate-950/20' : 'border-slate-200 bg-white'
+                        }`}>
+                          {parsedContactsList.length === 0 ? (
+                            <div className="p-8 text-center text-slate-500 text-xs font-bold">
+                              No leads added yet. Use the form above or paste raw leads.
+                            </div>
+                          ) : (
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className={`border-b text-[10px] font-black text-slate-500 uppercase tracking-wider ${
+                                  theme === 'dark' ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'
+                                }`}>
+                                  <th className="px-4 py-2.5">Lead Name</th>
+                                  <th className="px-4 py-2.5">Phone Number</th>
+                                  <th className="px-4 py-2.5 text-center">Status</th>
+                                  <th className="px-4 py-2.5 text-right">Interactive Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {parsedContactsList.map((contact, idx) => (
+                                  <tr key={contact.id} className="hover:bg-indigo-500/5 transition-all">
+                                    <td className="px-4 py-3 font-bold">{contact.name}</td>
+                                    <td className="px-4 py-3 font-mono text-slate-400">{contact.phone}</td>
+                                    <td className="px-4 py-3 text-center">
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase">
+                                        Ready
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <div className="flex items-center justify-end space-x-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleStartCampaignTestCall(contact.name, contact.phone)}
+                                          className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold border border-emerald-500/20 transition-all"
+                                          title="Initiate outbound AI simulated call sandbox to this specific lead"
+                                        >
+                                          <Phone className="w-3 h-3" />
+                                          <span>Simulate AI Call</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteContactFromRaw(idx)}
+                                          className="p-1.5 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                                          title="Remove lead"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Panel B: Bulk Textarea Editor */}
+                      <div id="panel-leads-raw" className="hidden relative">
+                        <textarea
+                          rows={4}
+                          value={campaignContactsRaw}
+                          onChange={(e) => {
+                            setCampaignContactsRaw(e.target.value);
+                            const lines = e.target.value.split('\n').filter(l => l.trim().length > 0).length;
+                            setCampaignContactsCount(lines);
+                          }}
+                          placeholder="Format: Name, Phone (One per line)&#10;e.g. John Doe, +1 (415) 555-0192&#10;Jane Smith, +1 (212) 555-0481"
+                          className={`w-full border rounded-2xl px-4 py-3 text-xs font-mono leading-relaxed focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                        <div className="absolute right-3 bottom-3 px-2 py-1 rounded bg-slate-800 text-[9px] font-bold text-slate-400">
+                          {campaignContactsCount} Leads Identified
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Campaign Purpose, Audience & Guidelines */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Step 2: Choose Campaign Purpose</label>
+                        <select
+                          value={campaignPurpose}
+                          onChange={(e) => setCampaignPurpose(e.target.value)}
+                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="Sales Recall & Lead Reactivation">Sales Recall & Lead Reactivation (Summer Deals)</option>
+                          <option value="Warm Appointment Scheduling">Warm Appointment Scheduling (Real Estate / SaaS)</option>
+                          <option value="Customer NPS Survey & Feedback">Customer NPS Survey & Feedback</option>
+                          <option value="Automated Invoice & Debt Reminder">Automated Invoice & Debt Collections</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Target Audience / Segment</label>
+                        <input
+                          type="text"
+                          value={campaignAudience}
+                          onChange={(e) => setCampaignAudience(e.target.value)}
+                          placeholder="e.g. Past due subscriptions / Real estate hot leads"
+                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Script Guidelines Instructions</label>
+                        <input
+                          type="text"
+                          value={campaignGuidelines}
+                          onChange={(e) => setCampaignGuidelines(e.target.value)}
+                          placeholder="e.g. Highlight 20% summer deal. Guide them to schedule a call."
+                          className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Integrated Campaign Website/Doc URL Parser */}
+                      <div className="space-y-1.5 col-span-1 md:col-span-2">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1 flex items-center space-x-1.5">
+                          <span>🌐 Or Auto-Extract Campaign Guidelines from Website URL</span>
+                          <span className="text-[9px] text-indigo-400 font-normal uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10">1-Click AI extraction</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={campaignUrlInput}
+                            onChange={(e) => setCampaignUrlInput(e.target.value)}
+                            placeholder="e.g. https://apex.dental/summer-promotions"
+                            className={`flex-1 border rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleFetchCampaignUrl}
+                            disabled={isFetchingCampaignUrl}
+                            className="px-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1.5"
+                          >
+                            {isFetchingCampaignUrl ? (
                               <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>Bulk Campaign Dialing in Progress... {campProgress}%</span>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Scraping...</span>
                               </>
                             ) : (
                               <>
-                                <PlayCircle className="w-5 h-5" />
-                                <span>Launch Bulk Outbound Dialer Campaign</span>
+                                <span>Fetch URL & Extract</span>
                               </>
                             )}
                           </button>
-
-                          {campaignDialsInProgress && (
-                            <div className="space-y-3 p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 animate-pulse">
-                              <h6 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Active Concurrent Channels:</h6>
-                              <div className="space-y-1 text-xs font-mono text-slate-400">
-                                {campActiveLines.map((line, idx) => (
-                                  <div key={idx} className="flex justify-between">
-                                    <span>{line}</span>
-                                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Live</span>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-indigo-500/10">
-                                <div>
-                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Total Dialed</span>
-                                  <span className="font-bold text-sm text-white">{campStats.dialed}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Connected</span>
-                                  <span className="font-bold text-sm text-white">{campStats.connected}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[8px] text-slate-500 block uppercase font-bold">Positive Feedback</span>
-                                  <span className="font-bold text-sm text-emerald-400">{campStats.positive}</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      ) : (
-                        <div className="text-center p-6 border border-dashed border-amber-500/30 bg-amber-500/5 rounded-3xl">
-                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2 animate-bounce" />
-                          <h5 className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Bulk Outreach Requires Enterprise Plan</h5>
-                          <p className="text-xs text-slate-500 font-bold mt-1 max-w-sm mx-auto mb-4">Upgrade your account to leverage heavy-volume parallel outbound campaigns, multi-line concurrent trunks, and custom webhook streams.</p>
-                          <button 
-                            onClick={() => {
-                              setActiveTab('billing');
-                              triggerToast("Navigated to billing to select plan upgrade", "info");
-                            }}
-                            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all"
+                      </div>
+                    </div>
+
+                    {/* Step 3: Call Scheduler Options */}
+                    <div className="mb-6 p-4 rounded-2xl border border-white/5 bg-slate-950/10">
+                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-3 ml-1">Step 3: Campaign Dispatch Settings</label>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setCampaignScheduleOption('instant')}
+                            className={`flex-1 py-2.5 px-3 text-xs font-black rounded-xl border transition-all ${
+                              campaignScheduleOption === 'instant'
+                                ? 'bg-indigo-600 border-indigo-500 text-white'
+                                : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                            }`}
                           >
-                            View Subscription Plans
+                            Dial Instantly on Launch
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCampaignScheduleOption('scheduled')}
+                            className={`flex-1 py-2.5 px-3 text-xs font-black rounded-xl border transition-all ${
+                              campaignScheduleOption === 'scheduled'
+                                ? 'bg-indigo-600 border-indigo-500 text-white'
+                                : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                            }`}
+                          >
+                            Schedule for Later
                           </button>
                         </div>
+
+                        {campaignScheduleOption === 'scheduled' && (
+                          <div className="flex space-x-2">
+                            <input
+                              type="date"
+                              value={campaignScheduleDate}
+                              onChange={(e) => setCampaignScheduleDate(e.target.value)}
+                              className={`flex-1 border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                            <input
+                              type="time"
+                              value={campaignScheduleTime}
+                              onChange={(e) => setCampaignScheduleTime(e.target.value)}
+                              className={`flex-1 border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Launch Trigger Button / Progress Bar */}
+                    <div className="space-y-4 pt-2">
+                      {(() => {
+                        const curCamp = campaignList.find(c => c.id === selectedCampaignId);
+                        const isPaused = curCamp?.status === 'Paused';
+                        const isEnded = curCamp?.status === 'Ended';
+                        
+                        if (campaignDialsInProgress) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={handleStopCampaignSim}
+                              className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-rose-600/25 animate-pulse"
+                              title="Click to abort bulk dialer run immediately"
+                            >
+                              <Loader2 className="w-5 h-5 animate-spin text-white" />
+                              <span>Abort Live Dialer Run ({campProgress}%)</span>
+                            </button>
+                          );
+                        }
+
+                        if (isPaused) {
+                          return (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-amber-600/20 text-amber-500 border border-amber-500/25 rounded-2xl font-bold text-sm cursor-not-allowed"
+                            >
+                              <span>⏸ Campaign is Paused (Click 'Resume Run' in header)</span>
+                            </button>
+                          );
+                        }
+
+                        if (isEnded) {
+                          return (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-slate-800/40 text-slate-400 border border-white/5 rounded-2xl font-bold text-sm cursor-not-allowed"
+                            >
+                              <span>🏁 Campaign is Completed (Reactivate in header to Dial)</span>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={handleLaunchCampaignSim}
+                            disabled={campaignContactsCount === 0}
+                            className={`w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-600/25 ${
+                              campaignContactsCount === 0 ? 'opacity-55 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            <PlayCircle className="w-5 h-5" />
+                            <span>
+                              {campaignScheduleOption === 'instant' 
+                                ? "Launch Outbound AI Campaign Dialer Now" 
+                                : `Schedule Bulk AI Campaign Dispatch`}
+                            </span>
+                          </button>
+                        );
+                      })()}
+
+                      {/* Live Dialer Channels Carrier Monitor */}
+                      {campaignDialsInProgress && (
+                        <div className="p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <h6 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Active Telecom Concurrent Trunks:</h6>
+                            <span className="text-[9px] text-indigo-400 font-mono animate-pulse">Channels: 3 Max Capacity</span>
+                          </div>
+
+                          <div className="space-y-1 text-xs font-mono text-slate-400">
+                            {campActiveLines.map((line, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-[11px]">
+                                <span>{line}</span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Incremental Stats Panel */}
+                          <div className="grid grid-cols-3 gap-2 text-center pt-3 border-t border-indigo-500/10">
+                            <div>
+                              <span className="text-[8px] text-slate-500 block uppercase font-bold">Processed</span>
+                              <span className="font-black text-sm text-white">{campStats.dialed} / {campaignContactsCount}</span>
+                            </div>
+                            <div>
+                              <span className="text-[8px] text-slate-500 block uppercase font-bold">AI Connected</span>
+                              <span className="font-black text-sm text-indigo-400">{campStats.connected}</span>
+                            </div>
+                            <div>
+                              <span className="text-[8px] text-slate-500 block uppercase font-bold">Positive Sentiment</span>
+                              <span className="font-black text-sm text-emerald-400">{campStats.positive}</span>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
+
                   </div>
                 </div>
 
-                {/* Right side - Mobile Phone Simulator interface */}
-                <div className="lg:col-span-5 flex flex-col justify-start">
-                  <div className={`relative w-full max-w-sm mx-auto aspect-[9/19] border-8 rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col ${
-                    theme === 'dark' ? 'bg-slate-950 border-slate-900 shadow-slate-950/80' : 'bg-slate-50 border-slate-200'
+                {/* Right Side (Col span 5): Live Dial Logs & Interaction Transcript Viewer */}
+                <div className="lg:col-span-5 flex flex-col justify-start space-y-8">
+                  
+                  {/* Ledger of Call Logs in this Run */}
+                  <div className={`p-6 border rounded-[2.5rem] transition-all flex-1 flex flex-col ${
+                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                   }`}>
-                    {/* Speaker notch */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 dark:bg-slate-900 rounded-b-2xl z-50 flex items-center justify-center">
-                      <div className="w-12 h-1 bg-slate-800 rounded-full"></div>
+                    
+                    <div className="mb-4">
+                      <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Real-Time Dispatch Logs</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">Click any log item below to inspect the complete conversation transcript and sentiment.</p>
                     </div>
 
-                    {/* Sim Call Window Content */}
-                    <div className="flex-1 flex flex-col pt-12 p-6 z-10 relative overflow-hidden">
-                      {simCallStatus === 'idle' ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-                          <div className={`w-20 h-20 rounded-full flex items-center justify-center border border-dashed transition-all ${
-                            theme === 'dark' ? 'bg-slate-900/40 border-white/10' : 'bg-white border-slate-200'
-                          }`}>
-                            <Phone className="w-8 h-8 text-slate-400" />
+                    {/* Logs Ledger list */}
+                    <div className="space-y-2.5 overflow-y-auto max-h-[280px] pr-1 flex-1">
+                      {liveDialLogs.length === 0 ? (
+                        <div className="text-center py-12 border border-dashed border-white/5 rounded-2xl">
+                          <Activity className="w-6 h-6 text-slate-600 mx-auto mb-2 animate-bounce" />
+                          <p className="text-xs text-slate-500">Waiting to launch dialing trunks...</p>
+                        </div>
+                      ) : (
+                        liveDialLogs.map((log, index) => {
+                          const isSelected = selectedLiveLogIndex === index;
+                          return (
+                            <div
+                              key={index}
+                              onClick={() => setSelectedLiveLogIndex(index)}
+                              className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-indigo-500 bg-indigo-500/5'
+                                  : theme === 'dark' ? 'border-white/5 bg-slate-950/20 hover:bg-slate-950/40' : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-1.5">
+                                <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                  {log.name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded ${
+                                  log.status === 'Connected' 
+                                    ? 'bg-emerald-500/10 text-emerald-400' 
+                                    : 'bg-rose-500/10 text-rose-400'
+                                }`}>
+                                  {log.status}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono">
+                                <span>{log.phone}</span>
+                                <div className="flex items-center space-x-1.5">
+                                  <span>Dur: {log.duration}</span>
+                                  {log.sentiment && log.sentiment !== 'None' && log.sentiment !== 'Pending' && (
+                                    <span className={`px-1 rounded text-[8px] font-bold ${
+                                      log.sentiment === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-800 text-slate-400'
+                                    }`}>
+                                      {log.sentiment}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Interactive Live Transcript Smartphone Simulator Display */}
+                    <div className={`mt-6 p-4 rounded-3xl border ${
+                      theme === 'dark' ? 'bg-slate-950 border-white/10' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Live Conversation Transcript Analyzer</span>
+
+                      {selectedLiveLogIndex !== null && liveDialLogs[selectedLiveLogIndex] ? (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <div>
+                              <h5 className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{liveDialLogs[selectedLiveLogIndex].name}</h5>
+                              <span className="text-[9px] text-slate-500 font-mono">{liveDialLogs[selectedLiveLogIndex].phone}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-black text-emerald-400 block">Sentiment: {liveDialLogs[selectedLiveLogIndex].sentiment}</span>
+                              <span className="text-[9px] text-slate-500 block">Drawn Cost: ${liveDialLogs[selectedLiveLogIndex].status === 'Connected' ? '0.45' : '0.10'}</span>
+                            </div>
                           </div>
-                          <div>
-                            <h5 className={`font-black text-base ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Telephony System Standby</h5>
-                            <p className="text-xs text-slate-500 font-bold mt-2 max-w-[200px]">Simulate inbound or outbound calls from the dashboard control console to test AI responsiveness.</p>
+
+                          <div className="max-h-[160px] overflow-y-auto space-y-2.5 text-xs font-semibold leading-relaxed">
+                            {liveDialLogs[selectedLiveLogIndex].transcript.split('\n').map((line: string, i: number) => {
+                              const isAgent = line.startsWith('Agent');
+                              return (
+                                <div
+                                  key={i}
+                                  className={`p-2.5 rounded-2xl max-w-[85%] ${
+                                    isAgent 
+                                      ? 'bg-indigo-600 text-white self-start' 
+                                      : 'bg-slate-800 text-slate-200 dark:bg-slate-900 self-end ml-auto'
+                                  }`}
+                                >
+                                  {line}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex-1 flex flex-col justify-between">
-                          {/* Top call status info */}
-                          <div className="text-center space-y-2 pt-4">
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">
-                              {simCallType === 'outbound' ? 'Outbound Dial' : 'Inbound Connection'}
-                            </span>
-                            <h5 className={`font-black text-lg truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                              {allUsers.find(u => u.id === selectedCampaignCustomer)?.name || 'Demo Client'}
-                            </h5>
-                            <div className="flex items-center justify-center space-x-2">
-                              {simCallStatus === 'connected' ? (
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                              ) : (
-                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                              )}
-                              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                                {simCallStatus} ...
-                              </span>
-                            </div>
-
-                            {/* Sentiment and Cost indicators */}
-                            {simCallStatus === 'connected' && (
-                              <div className="flex justify-center space-x-3 pt-2">
-                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${
-                                  simCallSentiment === 'Positive' ? 'bg-emerald-500/10 text-emerald-400' :
-                                  simCallSentiment === 'Negative' ? 'bg-rose-500/10 text-rose-400' : 'bg-indigo-500/10 text-indigo-400'
-                                }`}>
-                                  Sentiment: {simCallSentiment}
-                                </span>
-                                <span className="px-2.5 py-1 bg-slate-500/10 text-slate-400 rounded-full text-[9px] font-black uppercase">
-                                  Cost: $0.45
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Middle: Transcript dialogues if connected */}
-                          {simCallStatus === 'connected' ? (
-                            <div className="flex-1 my-6 overflow-y-auto space-y-3 px-1 flex flex-col justify-end max-h-[220px]">
-                              {simCallTranscript.map((t, idx) => (
-                                <div 
-                                  key={idx}
-                                  className={`p-3 rounded-2xl max-w-[85%] text-xs font-semibold leading-normal ${
-                                    t.sender === 'agent' 
-                                      ? 'bg-indigo-600 text-white self-start' 
-                                      : 'bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-white self-end'
-                                  }`}
-                                >
-                                  {t.text}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="flex-1 flex items-center justify-center">
-                              {/* Glowing pulse rings during dialing/ringing */}
-                              <div className="relative flex items-center justify-center">
-                                <div className="absolute w-24 h-24 rounded-full bg-indigo-500/20 animate-ping"></div>
-                                <div className="absolute w-16 h-16 rounded-full bg-indigo-500/30 animate-pulse"></div>
-                                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white relative z-10 shadow-lg">
-                                  <Phone className="w-5 h-5" />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Bottom controls / logs inside the phone */}
-                          <div className={`p-4 rounded-2xl border text-left space-y-1.5 overflow-hidden transition-all ${
-                            theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-100 border-slate-200'
-                          }`}>
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Telephony SIP Carrier Logs:</span>
-                            <div className="space-y-0.5 max-h-[80px] overflow-y-auto text-[9px] font-mono text-slate-400">
-                              {simCallLogs.map((log, idx) => (
-                                <div key={idx} className="truncate">{log}</div>
-                              ))}
-                            </div>
-                          </div>
+                        <div className="text-center py-8 text-slate-500 text-xs">
+                          Click any contact log in the list above to render live transcript dialogues and carrier statistics.
                         </div>
                       )}
                     </div>
+
                   </div>
                 </div>
+
               </div>
             </motion.div>
           )}
@@ -5840,6 +7306,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             const activeVideo = tutorialVideos.find(v => v.id === activeVideoId) || tutorialVideos[0];
 
             const handleNextVideo = () => {
+              setPlayingVideoId(null);
               if (activeVideoId < tutorialVideos.length) {
                 setActiveVideoId(activeVideoId + 1);
               } else {
@@ -5848,6 +7315,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             };
 
             const handlePrevVideo = () => {
+              setPlayingVideoId(null);
               if (activeVideoId > 1) {
                 setActiveVideoId(activeVideoId - 1);
               } else {
@@ -5876,30 +7344,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       Explore our five-part visual guides to master custom agent configuration, numbers provisioning, metrics auditing, and voice cloning.
                     </p>
                   </div>
-                  
-                  {/* Premium Player Mode Switcher */}
-                  <div className={`flex p-1 rounded-xl border ${theme === 'dark' ? 'bg-slate-950/60 border-white/5' : 'bg-slate-100 border-slate-200'} shrink-0`}>
-                    <button
-                      onClick={() => setPlayerMode('direct')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                        playerMode === 'direct'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
-                      }`}
-                    >
-                      🚀 Direct Watch
-                    </button>
-                    <button
-                      onClick={() => setPlayerMode('embedded')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                        playerMode === 'embedded'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
-                      }`}
-                    >
-                      📺 Embedded Player
-                    </button>
-                  </div>
                 </div>
 
                 {/* Minimalist 2-Column Interface */}
@@ -5912,11 +7356,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className={`relative w-full aspect-video rounded-[2rem] border overflow-hidden shadow-2xl bg-black group transition-all duration-300 ${
                       theme === 'dark' ? 'border-white/10' : 'border-slate-200'
                     }`}>
-                      {playerMode === 'direct' ? (
-                        <a 
-                          href={activeVideo.watchUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      {playingVideoId === activeVideo.id ? (
+                        <iframe 
+                          width="100%" 
+                          height="100%" 
+                          src={`${activeVideo.embedUrl}?autoplay=1&rel=0`} 
+                          title={activeVideo.title} 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; autoplay; fullscreen" 
+                          allowFullScreen={true}
+                          className="w-full h-full border-0 absolute inset-0"
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => setPlayingVideoId(activeVideo.id)}
                           className="absolute inset-0 w-full h-full block cursor-pointer overflow-hidden"
                         >
                           {/* YouTube Official Thumbnail */}
@@ -5933,7 +7386,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                             {/* Top info badge */}
                             <div className="flex justify-between items-start">
                               <span className="px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-600/35">
-                                YouTube Watch Link
+                                Video Walkthrough
                               </span>
                               <span className="px-3 py-1 bg-black/60 text-white/90 backdrop-blur-md rounded-full text-[10px] font-bold tracking-wider">
                                 Click to Play
@@ -5957,70 +7410,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                               </p>
                             </div>
                           </div>
-                        </a>
-                      ) : (
-                        <iframe 
-                          width="100%" 
-                          height="100%" 
-                          src={activeVideo.embedUrl} 
-                          title={activeVideo.title} 
-                          frameBorder="0" 
-                          allowFullScreen={true} 
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
-                          className="w-full h-full border-0 absolute inset-0"
-                        />
+                        </div>
                       )}
-                    </div>
-
-                    {/* Embedding Fallback Alert Banner */}
-                    <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300 ${
-                      playerMode === 'direct'
-                        ? theme === 'dark'
-                          ? 'bg-indigo-500/5 border-indigo-500/10 text-indigo-300'
-                          : 'bg-indigo-50/40 border-indigo-100 text-indigo-900'
-                        : theme === 'dark' 
-                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' 
-                          : 'bg-amber-50 border-amber-200 text-amber-800'
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl shrink-0 ${
-                          playerMode === 'direct'
-                            ? 'bg-indigo-500/20 text-indigo-400'
-                            : 'bg-amber-500/20 text-amber-500'
-                        }`}>
-                          <ExternalLink className="w-4 h-4" />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-xs font-black tracking-tight flex items-center gap-1.5">
-                            <span>{playerMode === 'direct' ? "Direct Watch Mode Enabled" : "Embedded Playback Restricted?"}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                              playerMode === 'direct'
-                                ? 'bg-indigo-500/20 text-indigo-400'
-                                : 'bg-amber-500/20 text-amber-400'
-                            }`}>
-                              {playerMode === 'direct' ? "Error 153 Bypassed" : "Error 153 Fallback"}
-                            </span>
-                          </p>
-                          <p className={`text-[11px] font-semibold leading-relaxed mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {playerMode === 'direct' 
-                              ? "We automatically stream directly via YouTube to prevent video player configuration and embedding block errors."
-                              : "YouTube prevents certain account-restricted videos from embedding directly. Simply click the button to watch this guide live."}
-                          </p>
-                        </div>
-                      </div>
-                      <a 
-                        href={activeVideo.watchUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-lg hover:scale-[1.02] active:scale-95 ${
-                          playerMode === 'direct'
-                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/10'
-                            : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/10'
-                        }`}
-                      >
-                        <span>Watch on YouTube</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
                     </div>
 
                     {/* Active Video Info & Next Controls */}
@@ -6098,12 +7489,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                               : 'bg-indigo-50/50 border-indigo-100 text-indigo-600 hover:bg-indigo-100/50'
                           }`}
                         >
-                          Open ${activeVideo.targetTab.toUpperCase()} Tab
+                          Open {activeVideo.targetTab.toUpperCase()} Tab
                         </button>
                       </div>
                     </div>
-
                   </div>
+
+
 
                   {/* Right Column: Video Playlist Selector */}
                   <div className="lg:col-span-4 space-y-4">
@@ -6179,22 +7571,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           })()}
 
           {activeTab === 'niche-templates' && (() => {
-            const filteredTemplates = BUSINESS_TEMPLATES.filter(tpl => {
-              const matchesCategory = templateCategory === 'All' || tpl.category === templateCategory;
-              const matchesSearch = tpl.niche.toLowerCase().includes(templateSearch.toLowerCase()) || 
-                                    tpl.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                                    tpl.category.toLowerCase().includes(templateSearch.toLowerCase());
-              return matchesCategory && matchesSearch;
-            });
-
             const activeTemplate = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId) || BUSINESS_TEMPLATES[0];
-            const renderedPrompt = activeTemplate.baseScript.replace(/{businessName}/g, customBusinessName || activeTemplate.defaultBusinessName);
 
             const handleCopyToClipboard = (text: string) => {
               navigator.clipboard.writeText(text);
-              setCopiedTemplateId(activeTemplate.id);
               triggerToast('System prompt copied to clipboard!', 'success');
-              setTimeout(() => setCopiedTemplateId(null), 2000);
             };
 
             const handleDeployTemplate = (tpl: any, finalPrompt: string) => {
@@ -6216,267 +7597,782 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               triggerToast(`Template applied! Customizing agent for ${bizName}.`, 'success');
             };
 
+            const handleGenerateAiScript = async () => {
+              if (!aiBusinessName.trim() || !aiNiche.trim()) {
+                triggerToast("Please enter a Business Name and Niche/Industry", "amber");
+                return;
+              }
+              setIsGeneratingAiScript(true);
+              try {
+                const goalsText = aiGoals.trim() || "Qualify leads and answer general customer FAQs.";
+                const vibeText = aiVibe.trim() || "Professional, helpful, and polite.";
+                
+                let userPrompt = `Generate an elite, highly detailed, and creative system prompt voice script for an AI receptionist/agent.
+Business Name: "${aiBusinessName}"
+Industry/Niche: "${aiNiche}"
+Core Goals of the Call: "${goalsText}"
+Voice Vibe/Tone & Conversational style: "${vibeText}"
+Script Length: "${aiLength}"`;
+
+                if (aiContextDoc.trim()) {
+                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT & CUSTOM SCRIPTS]: Use the following uploaded file details/instructions as reference guidelines or starter layout for your output:\n"${aiContextDoc.trim()}"`;
+                }
+
+                userPrompt += `\n\nWrite a production-ready, calibrated, and incredibly detailed script with distinct headings:
+1. [IDENTITY & VOICE PROTOCOL] - Define the agent's name, voice vibe, and customer interaction manners.
+2. [CORE WORKFLOW & CUSTOMER ROUTING] - Multi-step logic on how to triage and process inquiries step-by-step.
+3. [SCENARIO-BASED CUSTOMER INTAKE & TRIAGE] - Detailed action plans for customer support, high frustration, and emergencies.
+4. [FAQ, FEES & BUSINESS POLICIES] - Realistic operation hours, service parameters, or standard policy instructions.
+5. [CONVERSATIONAL CLOSING] - Elegant closing line to lock in the lead or schedule action.
+
+Avoid any standard summaries or conversational filler. Give me ONLY the ready-to-use system prompt text itself. Ensure it is extensive, professional, and has absolutely zero brackets/placeholders like "[Insert Name Here]" — fill everything in completely based on the parameters.`;
+
+                const generatedText = await geminiService.getAgentResponse(
+                  userPrompt, 
+                  [], 
+                  "You are the Principal AI Voice Architect at CallingAgent.agency, specialized in generating elite conversational system prompt scripts."
+                );
+                
+                if (generatedText) {
+                  setAiGeneratedScript(generatedText);
+                  triggerToast("Creative AI script drafted successfully!", "success");
+                } else {
+                  triggerToast("Failed to generate a script. Please check your credentials.", "amber");
+                }
+              } catch (error) {
+                console.error("AI Script generation error:", error);
+                triggerToast("Failed to generate script. Please try again.", "amber");
+              } finally {
+                setIsGeneratingAiScript(false);
+              }
+            };
+
+            const handleDeployGeneratedScript = () => {
+              const finalPrompt = aiGeneratedScript || `[IDENTITY] You are the assistant for ${aiBusinessName}.`;
+              setNewAgent({
+                name: `${aiBusinessName} AI Agent`,
+                voice: 'Kore',
+                gender: 'Female',
+                pitch: 1.0,
+                speed: 1.0,
+                logic: 'CallingAgent Orchestrator',
+                prompt: finalPrompt,
+                provider: 'CallingAgent',
+                vapiAssistantId: ''
+              });
+              setEditingAgentId(null);
+              setActiveTab('agents');
+              setShowCreateModal(true);
+              triggerToast(`Custom script applied! Customizing agent for ${aiBusinessName}.`, 'success');
+            };
+
+            const handleLoadAgentScript = (agentId: string) => {
+              if (!agentId) {
+                setLoadedAgentId(null);
+                return;
+              }
+              const agent = agents.find(a => a.id === agentId);
+              if (agent) {
+                setLoadedAgentId(agentId);
+                setAiGeneratedScript(agent.prompt || '');
+                // Try to infer business name
+                const bizName = agent.name.replace(/ AI Agent| Receptionist| Agent/gi, '').trim();
+                setAiBusinessName(bizName || 'Luxe Heights Realty');
+                triggerToast(`Loaded script from agent "${agent.name}"`, 'success');
+              }
+            };
+
+            const handleUpdateLoadedAgentScript = () => {
+              if (!loadedAgentId) {
+                triggerToast("No active agent script is currently loaded.", "amber");
+                return;
+              }
+              setAgents(prev => prev.map(a => a.id === loadedAgentId ? {
+                ...a,
+                prompt: aiGeneratedScript
+              } : a));
+              const agentName = agents.find(a => a.id === loadedAgentId)?.name || '';
+              triggerToast(`Successfully updated prompt for agent "${agentName}"!`, 'success');
+            };
+
+            const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+
+              setUploadedFileName(file.name);
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const text = event.target?.result as string;
+                setUploadedFileContent(text || '');
+                triggerToast(`File "${file.name}" read successfully!`, 'success');
+              };
+              reader.readAsText(file);
+            };
+
+            const handleFetchDocUrl = async () => {
+              if (!docUrlInput.trim()) {
+                triggerToast("Please enter a valid website or FAQ URL.", "amber");
+                return;
+              }
+              setIsFetchingDocUrl(true);
+              try {
+                const trimmedUrl = docUrlInput.trim();
+                let hostname = "URL";
+                try {
+                  hostname = new URL(trimmedUrl).hostname;
+                } catch (e) {}
+
+                triggerToast(`Scraping entire page content from ${hostname}...`, 'info');
+
+                const response = await fetch('/api/fetch-url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: trimmedUrl })
+                });
+                const data = await response.json();
+                if (response.ok && data.text) {
+                  // We successfully fetched the content. Now let's extract metadata using Gemini!
+                  triggerToast(`Analyzing website content with Gemini AI to extract business parameters...`, 'info');
+                  
+                  const extractionPrompt = `You are an elite business metadata analyst. Analyze the following webpage text and extract:
+1. Business Name (The official company or business name)
+2. Niche Category (A clear, concise industry or category, e.g., "Dental Clinic", "Boutique Real Estate Agency", "SaaS CRM Platform")
+3. Core Action Goals (What the AI voice assistant receptionist should try to achieve, such as scheduling appointments, qualifying leads, or answering FAQs)
+4. Vibe & Persona Tone (Describe the ideal agent personality, e.g., "Warm, reassuring, and highly professional", "Confident, direct, and energetic")
+
+Webpage text:
+"""
+${data.text.slice(0, 8000)}
+"""
+
+Provide the extracted details in the following precise parseable structure. Do NOT include any other text, markdown formatting, or HTML tags:
+NAME: [extracted business name]
+NICHE: [extracted niche category]
+GOALS: [extracted core goals]
+VIBE: [extracted vibe and tone]`;
+
+                  const extractionResult = await geminiService.getAgentResponse(
+                    extractionPrompt, 
+                    [], 
+                    "You are a helpful business metadata extractor. Return ONLY the requested fields."
+                  );
+
+                  let extractedName = "";
+                  let extractedNiche = "";
+                  let extractedGoals = "";
+                  let extractedVibe = "";
+
+                  if (extractionResult) {
+                    const nameMatch = extractionResult.match(/NAME:\s*(.*)/i);
+                    const nicheMatch = extractionResult.match(/NICHE:\s*(.*)/i);
+                    const goalsMatch = extractionResult.match(/GOALS:\s*(.*)/i);
+                    const vibeMatch = extractionResult.match(/VIBE:\s*(.*)/i);
+
+                    if (nameMatch) extractedName = nameMatch[1].trim();
+                    if (nicheMatch) extractedNiche = nicheMatch[1].trim();
+                    if (goalsMatch) extractedGoals = goalsMatch[1].trim();
+                    if (vibeMatch) extractedVibe = vibeMatch[1].trim();
+                  }
+
+                  // Auto-fill parameter fields
+                  const finalName = extractedName || "Elite Services";
+                  const finalNiche = extractedNiche || "Consulting";
+                  const finalGoals = extractedGoals || "Qualify leads and guide them to schedule calls.";
+                  const finalVibe = extractedVibe || "Professional, helpful, and highly natural.";
+
+                  setAiBusinessName(finalName);
+                  setAiNiche(finalNiche);
+                  setAiGoals(finalGoals);
+                  setAiVibe(finalVibe);
+
+                  const newDocContent = data.text;
+                  setAiContextDoc(newDocContent);
+                  setDocUrlInput('');
+                  triggerToast(`Scraped parameters from ${hostname} successfully!`, 'success');
+
+                  // Now automatically generate the complete lengthy script based on the extracted details!
+                  triggerToast(`Drafting extensive custom Voice Script prompt...`, 'info');
+
+                  let userPrompt = `Generate an elite, highly detailed, and creative system prompt voice script for an AI receptionist/agent.
+Business Name: "${finalName}"
+Industry/Niche: "${finalNiche}"
+Core Goals of the Call: "${finalGoals}"
+Voice Vibe/Tone & Conversational style: "${finalVibe}"
+Script Length: "lengthy"`;
+
+                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT & CUSTOM SCRIPTS]: Use the following fetched webpage content as a source of truth for services, pricing, hours, or FAQs to weave into the voice script:\n"${newDocContent.slice(0, 4000)}"`;
+
+                  userPrompt += `\n\nWrite a production-ready, calibrated, and incredibly detailed script with distinct headings:
+1. [IDENTITY & VOICE PROTOCOL] - Define the agent's name, voice vibe, and customer interaction manners.
+2. [CORE WORKFLOW & CUSTOMER ROUTING] - Multi-step logic on how to triage and process inquiries step-by-step.
+3. [SCENARIO-BASED CUSTOMER INTAKE & TRIAGE] - Detailed action plans for customer support, high frustration, and emergencies.
+4. [FAQ, FEES & BUSINESS POLICIES] - Realistic operation hours, service parameters, or standard policy instructions.
+5. [CONVERSATIONAL CLOSING] - Elegant closing line to lock in the lead or schedule action.
+
+Avoid any standard summaries or conversational filler. Give me ONLY the ready-to-use system prompt text itself. Ensure it is extensive, professional, and has absolutely zero brackets/placeholders like "[Insert Name Here]" — fill everything in completely based on the parameters. Ensure the script is very long, exhaustive, and detailed so that it is production-ready.`;
+
+                  const generatedText = await geminiService.getAgentResponse(
+                    userPrompt, 
+                    [], 
+                    "You are the Principal AI Voice Architect at CallingAgent.agency, specialized in generating elite conversational system prompt scripts."
+                  );
+                  
+                  if (generatedText) {
+                    setAiGeneratedScript(generatedText);
+                    triggerToast(`Premium Voice Script drafted for ${finalName}!`, "success");
+                  } else {
+                    triggerToast("Scraped details populated, but failed to generate the script automatically.", "amber");
+                  }
+                } else {
+                  triggerToast(data.error || "Failed to fetch document link content.", "amber");
+                }
+              } catch (error) {
+                console.error("Link fetch error:", error);
+                triggerToast("Connection failed. Check your URL address or network connection.", "amber");
+              } finally {
+                setIsFetchingDocUrl(false);
+              }
+            };
+
+            const handleOptimizeScript = async (action: 'conversational' | 'objections' | 'qualification' | 'spanish') => {
+              if (!aiGeneratedScript.trim()) {
+                triggerToast("Please generate or enter a script first before optimizing.", "amber");
+                return;
+              }
+              setIsGeneratingAiScript(true);
+              try {
+                let instruction = "";
+                if (action === 'conversational') {
+                  instruction = "Enhance the conversational flow and tone of this script. Make it sound highly natural, charismatic, and persuasive. Remove any stiff, robotic, or overly repetitive phrasing.";
+                } else if (action === 'objections') {
+                  instruction = "Inject high-converting objection handling logic into this script. Add bullet-proof rebuttals for pricing complaints, lack of time, and common industry hesitancy.";
+                } else if (action === 'qualification') {
+                  instruction = "Add a strict qualification protocol into the script rules. Ensure the agent tactfully captures the lead's full name, email, budget, and exact purchase intent before moving to a close.";
+                } else if (action === 'spanish') {
+                  instruction = "Translate the dialogue and behavioral instructions of this script to standard Spanish, while keeping the main block structure and system bracket headers (like [IDENTITY], [FAQ], etc.) intact.";
+                }
+
+                const systemPrompt = "You are the Principal AI Conversational Designer at CallingAgent.agency. Your job is to refine, upgrade, or translate system prompts for optimal telephony execution.";
+                const userPrompt = `Please optimize the following voice agent script.
+                
+Optimization Instruction: ${instruction}
+
+Current Script:
+"""
+${aiGeneratedScript}
+"""
+
+Return ONLY the fully updated script. Do not include any notes, intros, or markdown blocks.`;
+
+                const optimized = await geminiService.getAgentResponse(userPrompt, [], systemPrompt);
+                if (optimized) {
+                  setAiGeneratedScript(optimized);
+                  triggerToast(`Script successfully optimized: ${action.toUpperCase()}!`, "success");
+                } else {
+                  triggerToast("Failed to optimize script. Please check your AI connection.", "amber");
+                }
+              } catch (error) {
+                console.error("AI Script optimization error:", error);
+                triggerToast("Failed to optimize script. Please try again.", "amber");
+              } finally {
+                setIsGeneratingAiScript(false);
+              }
+            };
+
             return (
               <motion.div
                 key="niche-templates"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-8 max-w-7xl mx-auto"
+                className="space-y-4 max-w-7xl mx-auto"
               >
-                {/* Header Block */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                  <div>
-                    <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                      Niche Prompt Templates
-                    </h3>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'} mt-1`}>
-                      Choose from 50 industry-specific voice scripts. Just type your business name to generate a fully calibrated, production-ready AI agent script instantly.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Categories & Search Controls */}
-                <div className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center">
-                  {/* Category Pills */}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setTemplateCategory('All')}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-                        templateCategory === 'All'
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/25'
-                          : theme === 'dark'
-                            ? 'bg-slate-900/60 text-slate-400 border-white/5 hover:border-white/10 hover:text-white'
-                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800'
-                      }`}
-                    >
-                      All ({BUSINESS_TEMPLATES.length})
-                    </button>
-                    {BUSINESS_CATEGORIES.map(cat => {
-                      const count = BUSINESS_TEMPLATES.filter(t => t.category === cat).length;
-                      return (
-                        <button
-                          key={cat}
-                          onClick={() => setTemplateCategory(cat)}
-                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-                            templateCategory === cat
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/25'
-                              : theme === 'dark'
-                                ? 'bg-slate-900/60 text-slate-400 border-white/5 hover:border-white/10 hover:text-white'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-800'
-                          }`}
-                        >
-                          {cat} ({count})
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Search Bar */}
-                  <div className="relative w-full xl:w-96">
-                    <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
-                    <input
-                      type="text"
-                      placeholder="Search 50 business niches..."
-                      value={templateSearch}
-                      onChange={(e) => setTemplateSearch(e.target.value)}
-                      className={`w-full border rounded-2xl pl-12 pr-6 py-3.5 focus:outline-none focus:border-indigo-500 transition-all text-sm font-bold placeholder:text-slate-400 ${
-                        theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                      }`}
-                    />
-                    {templateSearch && (
-                      <button
-                        onClick={() => setTemplateSearch('')}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-200"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Main Content Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left Column: Template List (lg:col-span-5) */}
+                {/* Unified Single-Screen Layout Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* Left Column (col-span-5): Input parameters, Knowledge Base & Predefined Library */}
                   <div className="lg:col-span-5 space-y-4">
-                    <div className="flex items-center justify-between px-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        Available Niches ({filteredTemplates.length} matches)
-                      </p>
-                    </div>
-
-                    <div className={`space-y-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-2`}>
-                      {filteredTemplates.length === 0 ? (
-                        <div className={`p-12 rounded-[2.5rem] border text-center ${
-                          theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                        }`}>
-                          <ClipboardList className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                          <h5 className={`text-base font-black ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>No Templates Found</h5>
-                          <p className="text-xs text-slate-500 mt-1">Try tweaking your search term or selecting a different category.</p>
-                        </div>
-                      ) : (
-                        filteredTemplates.map(tpl => {
-                          const isSelected = tpl.id === selectedTemplateId;
-                          return (
-                            <button
-                              key={tpl.id}
-                              onClick={() => setSelectedTemplateId(tpl.id)}
-                              className={`w-full p-5 rounded-[1.75rem] text-left border transition-all duration-300 flex items-start space-x-4 ${
-                                isSelected
-                                  ? theme === 'dark'
-                                    ? 'bg-indigo-600/10 border-indigo-500 text-white shadow-xl shadow-indigo-600/5'
-                                    : 'bg-indigo-50/50 border-indigo-400 text-slate-900 shadow-lg shadow-indigo-500/5'
-                                  : theme === 'dark'
-                                    ? 'bg-slate-900/40 border-white/5 hover:border-white/10 text-slate-300'
-                                    : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 shadow-sm'
-                              }`}
-                            >
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-colors ${
-                                isSelected 
-                                  ? 'bg-indigo-500/20' 
-                                  : theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'
-                              }`}>
-                                {tpl.icon}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <h4 className="text-sm font-black truncate">{tpl.niche}</h4>
-                                  <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
-                                    isSelected 
-                                      ? 'bg-indigo-500 text-white' 
-                                      : theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
-                                  }`}>
-                                    {tpl.category}
-                                  </span>
-                                </div>
-                                <p className={`text-xs line-clamp-2 leading-relaxed ${
-                                  isSelected 
-                                    ? theme === 'dark' ? 'text-slate-300' : 'text-slate-600' 
-                                    : 'text-slate-500'
-                                }`}>
-                                  {tpl.description}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Column: Customizer & Code Preview (lg:col-span-7) */}
-                  <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-6">
-                    {/* Active Template Header Card */}
-                    <div className={`p-8 rounded-[2.5rem] border ${
-                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-xl'
+                    
+                    {/* Block A: Dynamic Preset Selector */}
+                    <div className={`p-4 border rounded-2xl transition-all relative overflow-hidden ${
+                      theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                     }`}>
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-3xl flex items-center justify-center">
-                          {activeTemplate.icon}
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xs font-bold">
+                          ⚡
                         </div>
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">
-                            Active Template • {activeTemplate.category}
-                          </span>
-                          <h4 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                            {activeTemplate.niche}
+                          <h4 className={`text-[11px] font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            Niche Templates Preset Hub
                           </h4>
                         </div>
                       </div>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} leading-relaxed`}>
-                        {activeTemplate.description}
-                      </p>
 
-                      <div className={`border-t my-6 ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`} />
+                      {/* Integrated Library Sub-Module */}
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                            <input
+                              type="text"
+                              placeholder="Search industry scripts..."
+                              value={templateSearch}
+                              onChange={(e) => setTemplateSearch(e.target.value)}
+                              className={`w-full border rounded-xl pl-9 pr-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+                        </div>
 
-                      {/* Customization Inputs */}
-                      <div className="space-y-4">
+                        {/* Category Badges */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                          <button
+                            type="button"
+                            onClick={() => setTemplateCategory('All')}
+                            className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider whitespace-nowrap transition-all border ${
+                              templateCategory === 'All'
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : theme === 'dark' ? 'bg-slate-900 border-white/5 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+                            }`}
+                          >
+                            All
+                          </button>
+                          {BUSINESS_CATEGORIES.map(cat => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setTemplateCategory(cat)}
+                              className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider whitespace-nowrap transition-all border ${
+                                templateCategory === cat
+                                  ? 'bg-indigo-600 text-white border-indigo-600'
+                                  : theme === 'dark' ? 'bg-slate-900 border-white/5 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+                              }`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Presets List */}
+                        <div className={`grid grid-cols-2 gap-2 max-h-[100px] overflow-y-auto pr-1 ${theme === 'dark' ? 'scrollbar-dark' : 'scrollbar-light'}`}>
+                          {BUSINESS_TEMPLATES.filter(tpl => {
+                            const matchesCategory = templateCategory === 'All' || tpl.category === templateCategory;
+                            const matchesSearch = tpl.niche.toLowerCase().includes(templateSearch.toLowerCase()) || 
+                                                  tpl.description.toLowerCase().includes(templateSearch.toLowerCase());
+                            return matchesCategory && matchesSearch;
+                          }).map(tpl => {
+                            const isSelected = tpl.id === selectedTemplateId;
+                            return (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTemplateId(tpl.id);
+                                  setAiBusinessName(tpl.defaultBusinessName);
+                                  setAiNiche(tpl.niche);
+                                  setAiGoals(tpl.description);
+                                  const rendered = tpl.baseScript.replace(/{businessName}/g, tpl.defaultBusinessName);
+                                  setAiGeneratedScript(rendered);
+                                  triggerToast(`Applied high-converting ${tpl.niche} template!`, 'success');
+                                }}
+                                className={`p-2.5 rounded-xl border text-left transition-all ${
+                                  isSelected
+                                    ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 font-bold'
+                                    : theme === 'dark' ? 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/10' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                }`}
+                              >
+                                <div className="flex items-center space-x-2 truncate">
+                                  <span className="text-sm">{tpl.icon}</span>
+                                  <span className="text-[11px] font-bold truncate">{tpl.niche}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Block B: Tuning Parameters */}
+                    <div className={`p-4 border rounded-2xl transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xs font-bold">
+                          🤖
+                        </div>
                         <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
-                            Your Business Name
-                          </label>
-                          <input
-                            type="text"
-                            value={customBusinessName}
-                            onChange={(e) => setCustomBusinessName(e.target.value)}
-                            placeholder={activeTemplate.defaultBusinessName}
-                            className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-400 ${
+                          <h4 className={`text-[11px] font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            Model Parameter Tuning
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-0.5">
+                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Business Name</label>
+                            <input
+                              type="text"
+                              value={aiBusinessName}
+                              onChange={(e) => setAiBusinessName(e.target.value)}
+                              placeholder="e.g. Zenith Solutions"
+                              className={`w-full border rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Niche Category</label>
+                            <input
+                              type="text"
+                              value={aiNiche}
+                              onChange={(e) => setAiNiche(e.target.value)}
+                              placeholder="e.g. Chiropractic Clinic"
+                              className={`w-full border rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Core Action Goals</label>
+                          <textarea
+                            rows={1.5}
+                            value={aiGoals}
+                            onChange={(e) => setAiGoals(e.target.value)}
+                            placeholder="State what the voice bot should accomplish on calls..."
+                            className={`w-full border rounded-xl px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 transition-all font-semibold leading-relaxed ${
                               theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                             }`}
                           />
-                          <p className="text-[10px] text-slate-500 font-bold mt-1.5 ml-1">
-                            Updates all business name tags in the template script dynamically.
-                          </p>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Vibe & Persona Tone</label>
+                          <input
+                            type="text"
+                            value={aiVibe}
+                            onChange={(e) => setAiVibe(e.target.value)}
+                            placeholder="e.g. Confident and empathetic outbound host"
+                            className={`w-full border rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {['Persuasive & Salesy', 'Warm & Empathic', 'Polite & Crisp'].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setAiVibe(v)}
+                                className={`px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all border ${
+                                  aiVibe === v
+                                    ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/30'
+                                    : 'bg-transparent text-slate-500 border-slate-200 dark:border-white/5 hover:border-slate-300'
+                                }`}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-0.5">
+                          <div className="space-y-0.5">
+                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Script Depth</label>
+                            <div className="grid grid-cols-3 gap-1">
+                              {['brief', 'detailed', 'lengthy'].map((len) => (
+                                <button
+                                  key={len}
+                                  type="button"
+                                  onClick={() => setAiLength(len)}
+                                  className={`py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${
+                                    aiLength === len
+                                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                                      : 'bg-transparent text-slate-500 border-slate-200 dark:border-white/5'
+                                  }`}
+                                >
+                                  {len}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              onClick={handleGenerateAiScript}
+                              disabled={isGeneratingAiScript}
+                              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white py-1.5 px-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-1 shadow-md shadow-indigo-600/20 active:scale-95"
+                            >
+                              {isGeneratingAiScript ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Generate</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Script Output & Action Block */}
-                    <div className={`p-8 rounded-[2.5rem] border overflow-hidden relative flex flex-col justify-between ${
-                      theme === 'dark' ? 'bg-slate-900/60 border-white/10' : 'bg-slate-950 border-slate-800 shadow-2xl'
+                    {/* Block C: Grounding Knowledge Base */}
+                    <div className={`p-4 border rounded-2xl transition-all relative overflow-hidden ${
+                      theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                     }`}>
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                      
-                      <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            Generated AI System Prompt Script
-                          </span>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xs font-bold">
+                          📁
                         </div>
-                        <button
-                          onClick={() => handleCopyToClipboard(renderedPrompt)}
-                          className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                            copiedTemplateId === activeTemplate.id
-                              ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                              : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          {copiedTemplateId === activeTemplate.id ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Copied!</span>
-                            </>
+                        <div>
+                          <h4 className={`text-[11px] font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            Grounded Knowledge Base
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* Website Fetcher */}
+                        <div className="space-y-0.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Fetch URL Address</label>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="url"
+                              value={docUrlInput}
+                              onChange={(e) => setDocUrlInput(e.target.value)}
+                              placeholder="e.g. https://apex.dental/prices"
+                              className={`flex-1 border rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleFetchDocUrl}
+                              disabled={isFetchingDocUrl}
+                              className="px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black transition-all"
+                            >
+                              {isFetchingDocUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Fetch'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* File Upload zone */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <input
+                              type="file"
+                              id="context-file-upload"
+                              accept=".txt,.md,.json,.csv"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor="context-file-upload"
+                              className={`flex items-center justify-center border border-dashed rounded-xl px-2 py-1 text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                                uploadedFileName 
+                                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                                  : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20'
+                              }`}
+                            >
+                              <span>{uploadedFileName ? 'Change Doc' : 'Upload File'}</span>
+                            </label>
+                          </div>
+
+                          {uploadedFileName ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const combined = aiContextDoc 
+                                  ? `${aiContextDoc}\n\n--- Appended uploaded file "${uploadedFileName}" context ---\n${uploadedFileContent}`
+                                  : uploadedFileContent;
+                                setAiContextDoc(combined);
+                                setUploadedFileName('');
+                                triggerToast("Appended file contents to context base!", "success");
+                              }}
+                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider rounded-xl transition-all"
+                            >
+                              Link Attachment
+                            </button>
                           ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" />
-                              <span>Copy Script</span>
-                            </>
+                            <div className="flex items-center justify-center text-[8px] text-slate-500 font-bold uppercase tracking-widest border border-slate-800 rounded-xl">
+                              Ready for PDF
+                            </div>
                           )}
-                        </button>
-                      </div>
+                        </div>
 
-                      {/* Display Box */}
-                      <div className={`p-6 rounded-2xl border text-sm font-medium leading-relaxed mb-8 select-all whitespace-pre-wrap ${
-                        theme === 'dark' ? 'bg-slate-950/80 border-white/5 text-slate-300' : 'bg-slate-900 border-slate-800 text-slate-100'
-                      }`}>
-                        {(() => {
-                          const parts = renderedPrompt.split(new RegExp(`(${customBusinessName || activeTemplate.defaultBusinessName})`, 'g'));
-                          return parts.map((part, index) => {
-                            const isMatch = part === (customBusinessName || activeTemplate.defaultBusinessName);
-                            return isMatch ? (
-                              <span key={index} className="text-indigo-400 font-black underline decoration-indigo-400/30">
-                                {part}
-                              </span>
-                            ) : (
-                              part
-                            );
-                          });
-                        })()}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <button
-                          onClick={() => handleDeployTemplate(activeTemplate, renderedPrompt)}
-                          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-4 px-6 rounded-[1.25rem] font-black text-sm transition-all flex items-center justify-center space-x-2 shadow-xl shadow-indigo-600/35 active:scale-95"
-                        >
-                          <Plus className="w-5 h-5" />
-                          <span>Deploy Agent with this Template</span>
-                        </button>
+                        {/* Text representation of Context */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between items-center ml-1">
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Grounded Text Context</span>
+                            {aiContextDoc && (
+                              <button onClick={() => setAiContextDoc('')} className="text-[8px] text-rose-400 font-bold hover:underline">Clear</button>
+                            )}
+                          </div>
+                          <textarea
+                            rows={1.5}
+                            value={aiContextDoc}
+                            onChange={(e) => setAiContextDoc(e.target.value)}
+                            placeholder="Business FAQ sheets or custom links parsed context appears here..."
+                            className={`w-full border rounded-xl px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 transition-all font-mono leading-relaxed ${
+                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                            }`}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Right Column (col-span-7): The Live IDE-Style Canvas & Co-Pilot Optimizer */}
+                  <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-6">
+                    
+                    {/* The Prompt Canvas Terminal container */}
+                    <div className={`p-4 border rounded-2xl overflow-hidden relative flex flex-col justify-between ${
+                      theme === 'dark' ? 'bg-slate-900/60 border-white/10' : 'bg-slate-950 border-slate-800 shadow-xl'
+                    }`}>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-indigo-500 to-purple-500" />
+                      
+                      {/* Live Canvas Toolbar */}
+                      <div className="flex justify-between items-center mb-2 flex-wrap gap-y-1">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Interactive Voice Script IDE
+                          </span>
+                        </div>
+
+                        {/* Custom agent import selector */}
+                        <div className="flex items-center space-x-1.5">
+                          <select
+                            value={loadedAgentId || ''}
+                            onChange={(e) => handleLoadAgentScript(e.target.value)}
+                            className="border border-white/10 rounded-xl px-2 py-1 text-[9px] font-black bg-slate-900 text-slate-300 focus:outline-none focus:border-indigo-500"
+                          >
+                            <option value="">-- Import from Agent --</option>
+                            {agents.map(a => (
+                              <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                          </select>
+                          
+                          <button
+                            type="button"
+                            onClick={() => handleCopyToClipboard(aiGeneratedScript)}
+                            className="p-1 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-white transition-all"
+                            title="Copy Prompt Script"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Line Numbered IDE Editor Box */}
+                      <div className="relative mb-2 flex border border-white/5 rounded-2xl bg-slate-950/80 overflow-hidden">
+                        {/* Line Numbers Strip */}
+                        <div className="w-8 bg-slate-900/50 select-none text-right pr-2 py-2 border-r border-white/5 font-mono text-[9px] text-slate-600 leading-normal space-y-0 text-opacity-80">
+                          {Array.from({ length: Math.max(32, aiGeneratedScript.split('\n').length + 5) }).map((_, i) => (
+                            <div key={i}>{i + 1}</div>
+                          ))}
+                        </div>
+
+                        {/* Text Area Canvas */}
+                        <textarea
+                          value={aiGeneratedScript}
+                          onChange={(e) => setAiGeneratedScript(e.target.value)}
+                          rows={26}
+                          className="flex-1 w-full p-2.5 text-[11px] font-mono leading-normal select-text whitespace-pre-wrap focus:outline-none bg-transparent border-0 text-slate-300 custom-scrollbar resize-none"
+                          placeholder="Configure or generate script text. Tweak anything manually directly in real-time on this screen..."
+                        />
+                      </div>
+
+                      {/* IDE Status indicator bar */}
+                      <div className="flex justify-between items-center text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-2 px-1">
+                        <span>Status: Stable</span>
+                        <span>Length: {aiGeneratedScript.length} chars</span>
+                        <span className="text-teal-400">✓ Calibrated Voice Prompt</span>
+                      </div>
+
+                      {/* AI CO-PILOT OPTIMIZER (1-Click Enhancements) */}
+                      <div className="border-t border-white/5 pt-2 mb-2">
+                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1.5 ml-1">
+                          🚀 AI Script Co-Pilot (1-Click Optimizations)
+                        </span>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOptimizeScript('conversational')}
+                            disabled={isGeneratingAiScript}
+                            className="p-1.5 border border-white/5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 rounded-xl transition-all text-center flex flex-col items-center justify-center space-y-1 font-bold"
+                          >
+                            <span className="text-sm">⚡</span>
+                            <span className="text-[8px] font-black uppercase tracking-wider leading-none">Enhance Flow</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOptimizeScript('objections')}
+                            disabled={isGeneratingAiScript}
+                            className="p-1.5 border border-white/5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 rounded-xl transition-all text-center flex flex-col items-center justify-center space-y-1 font-bold"
+                          >
+                            <span className="text-sm">🎯</span>
+                            <span className="text-[8px] font-black uppercase tracking-wider leading-none">Handle Doubts</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOptimizeScript('qualification')}
+                            disabled={isGeneratingAiScript}
+                            className="p-1.5 border border-white/5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 rounded-xl transition-all text-center flex flex-col items-center justify-center space-y-1 font-bold"
+                          >
+                            <span className="text-sm">🔒</span>
+                            <span className="text-[8px] font-black uppercase tracking-wider leading-none">Capture Leads</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOptimizeScript('spanish')}
+                            disabled={isGeneratingAiScript}
+                            className="p-1.5 border border-white/5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 rounded-xl transition-all text-center flex flex-col items-center justify-center space-y-1 font-bold"
+                          >
+                            <span className="text-sm">🌐</span>
+                            <span className="text-[8px] font-black uppercase tracking-wider leading-none">Spanish Mode</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Primary Canvas Deployment control deck */}
+                      <div className="flex gap-2">
+                        {loadedAgentId && (
+                          <button
+                            type="button"
+                            onClick={handleUpdateLoadedAgentScript}
+                            className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 px-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-1 shadow-lg shadow-amber-600/20 active:scale-95 animate-fadeIn"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save Live Changes</span>
+                          </button>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={handleDeployGeneratedScript}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-1 shadow-lg shadow-indigo-600/30 active:scale-95"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Deploy Agent with Script</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+
                 </div>
               </motion.div>
             );
@@ -7670,10 +9566,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   </button>
                   <button 
                     onClick={handleAddUser}
-                    disabled={!newUserEmail}
-                    className="flex-1 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newUserEmail || isAddingUser}
+                    className="flex-1 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    Add User
+                    {isAddingUser && (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                    <span>{isAddingUser ? 'Adding...' : 'Add User'}</span>
                   </button>
                 </div>
               </div>
@@ -7817,10 +9716,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         className={`w-full border rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold appearance-none ${
                         theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}>
-                        <option value="US">United States (+1) - $2.00/mo</option>
-                        <option value="UK">United Kingdom (+44) - $4.00/mo</option>
-                        <option value="CA">Canada (+1) - $2.50/mo</option>
-                        <option value="AU">Australia (+61) - $6.00/mo</option>
+                        {Object.entries(REGION_PHONES).map(([key, data]) => (
+                          <option key={key} value={key}>
+                            {data.label} - {data.price}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className={`p-6 border rounded-2xl ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
@@ -7877,12 +9777,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         alert("Please select an agent first.");
                         return;
                       }
+                      const countryData = REGION_PHONES[selectedRegion] || REGION_PHONES.US;
+                      const genNumber = provisionTab === 'sandbox' 
+                        ? '+1 (888) AGENT-AI' 
+                        : countryData.placeholder.replace(/\d/g, () => Math.floor(Math.random() * 10).toString());
+
                       const newNum: Number = {
                         id: Math.random().toString(36).substr(2, 9),
-                        number: provisionTab === 'sandbox' ? '+1 (888) AGENT-AI' : '+1 (555) 321-4321',
+                        number: genNumber,
                         agentId: provisioningAgentId,
                         status: 'Active',
-                        location: provisionTab === 'sandbox' ? 'Sandbox' : (selectedRegion === 'US' ? 'United States' : 'International'),
+                        location: provisionTab === 'sandbox' ? 'Sandbox' : (countryData.label.split(' (')[0] || 'International'),
                         type: provisionTab === 'buy' ? 'real' : provisionTab
                       };
                       setNumbers([...numbers, newNum]);
