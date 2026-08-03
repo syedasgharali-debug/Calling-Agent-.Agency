@@ -8,6 +8,20 @@ export interface LiveCallbacks {
 }
 
 export class GeminiService {
+  private getHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...extraHeaders
+    };
+    try {
+      const key = localStorage.getItem('gemini_api_key');
+      if (key) {
+        headers['x-gemini-api-key'] = key;
+      }
+    } catch (e) {}
+    return headers;
+  }
+
   // Backwards compatibility for Live connect if ever invoked
   async connectLive(systemInstruction: string, callbacks: LiveCallbacks, voiceName: string = 'Zephyr') {
     console.warn("Live WebSocket connection called. Reverting to secure HTTPS endpoint.");
@@ -28,9 +42,7 @@ export class GeminiService {
     try {
       const response = await fetch('/api/demo/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({ message, history, systemInstruction })
       });
       const data = await response.json();
@@ -50,10 +62,9 @@ export class GeminiService {
 
       const response = await fetch('/api/demo/tts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: this.getHeaders({
           'xi-api-key': elevenlabsKey
-        },
+        }),
         body: JSON.stringify({ text, voiceName })
       });
       const data = await response.json();
@@ -71,7 +82,7 @@ export class GeminiService {
     try {
       const response = await fetch('/api/demo/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           message: `Analyze the sentiment of this call transcript. Return ONLY one word: Positive, Neutral, or Negative.\n\nTranscript: ${transcript}`,
           systemInstruction: "Return ONLY Positive, Neutral, or Negative."
@@ -88,7 +99,7 @@ export class GeminiService {
     try {
       const response = await fetch('/api/demo/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           message: `Summarize this call transcript in 2-3 bullet points.\n\nTranscript: ${transcript}`,
           systemInstruction: "You are a professional call analytics assistant. Summarize the text concisely."

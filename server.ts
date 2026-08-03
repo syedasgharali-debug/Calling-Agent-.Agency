@@ -10,14 +10,10 @@ import { GoogleGenAI, Modality } from "@google/genai";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Lazy initialization of GoogleGenAI
-let aiInstance: GoogleGenAI | null = null;
-function getAI() {
-  if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    aiInstance = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
-  }
-  return aiInstance;
+// Dynamic initialization of GoogleGenAI
+function getAI(customApiKey?: string) {
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+  return new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
 }
 
 // Simulated responses database for CallingAgent voice scenarios
@@ -581,13 +577,16 @@ async function startServer() {
   // Interactive Live Demo Chat Proxy
   app.post("/api/demo/chat", async (req, res) => {
     const { message, history, systemInstruction } = req.body;
-    try {
-      const ai = getAI();
+    const clientApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+    const resolvedApiKey = clientApiKey || process.env.GEMINI_API_KEY;
 
-      if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') {
+    try {
+      if (!resolvedApiKey || resolvedApiKey === 'dummy-key') {
         const fallbackResponse = getSimulatedAgentResponse(message, systemInstruction);
         return res.json({ text: fallbackResponse });
       }
+
+      const ai = getAI(resolvedApiKey);
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -650,11 +649,14 @@ async function startServer() {
       }
 
       // Fallback to Gemini Native Voice TTS
-      if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') {
+      const clientApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+      const resolvedApiKey = clientApiKey || process.env.GEMINI_API_KEY;
+
+      if (!resolvedApiKey || resolvedApiKey === 'dummy-key') {
         return res.json({ audio: null });
       }
 
-      const ai = getAI();
+      const ai = getAI(resolvedApiKey);
       let selectedVoice = voiceName || 'Aoede';
       const allowedVoices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'];
       if (!allowedVoices.includes(selectedVoice)) {

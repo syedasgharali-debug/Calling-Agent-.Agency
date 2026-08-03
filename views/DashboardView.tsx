@@ -354,6 +354,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [elevenlabsApiKey, setElevenlabsApiKey] = useState(() => {
     try { return localStorage.getItem('elevenlabs_api_key') || ''; } catch (e) { return ''; }
   });
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    try { return localStorage.getItem('gemini_api_key') || ''; } catch (e) { return ''; }
+  });
 
   useEffect(() => {
     if (showElevenLabsVoiceModal && elevenlabsApiKey) {
@@ -4724,6 +4727,57 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
                       Unlocks 1000+ high fidelity voices and lets you clone voices instantly. Retrieve your key from <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" className="text-indigo-400 hover:underline">elevenlabs.io</a>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Google Gemini Integration */}
+                <div className={`p-10 rounded-[2.5rem] space-y-6 relative overflow-hidden group border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+                }`}>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all"></div>
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-3 shadow-lg">
+                        <Sparkles className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h4 className={`text-2xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Google Gemini</h4>
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Core AI Brain Engine</p>
+                      </div>
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${geminiApiKey ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse'}`}>
+                      {geminiApiKey ? 'Connected (Custom)' : 'Using AI Studio Dev Key'}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4 relative z-10">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Gemini API Key</label>
+                      <div className="flex space-x-2">
+                        <input 
+                          type="password" 
+                          value={geminiApiKey}
+                          onChange={(e) => setGeminiApiKey(e.target.value)}
+                          className={`flex-1 rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-400 border ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`} 
+                          placeholder="AIzaSy..." 
+                        />
+                        <button 
+                          onClick={() => handleSaveConfig('gemini_api_key', geminiApiKey)}
+                          className={`px-6 py-4 rounded-2xl font-black text-xs transition-all shadow-lg ${
+                            saveFeedback['gemini_api_key'] 
+                              ? 'bg-emerald-600 text-white shadow-emerald-600/20' 
+                              : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-600/20'
+                          }`}
+                        >
+                          {saveFeedback['gemini_api_key'] ? 'Saved!' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                      Required for live AI chat, sentiment analysis, and call summaries to function on custom domains like <span className="font-mono text-indigo-400 font-bold">callingagent.agency</span>. Get your key from <a href="https://aistudio.google.com/" target="_blank" className="text-indigo-400 hover:underline">Google AI Studio</a>.
                     </p>
                   </div>
                 </div>
