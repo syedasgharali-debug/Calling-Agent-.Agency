@@ -174,7 +174,7 @@ async function startServer() {
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${req.headers.origin}/dashboard?payment=success`,
+        success_url: `${req.headers.origin}/dashboard?payment=success&amount=${amount}`,
         cancel_url: `${req.headers.origin}/dashboard?payment=cancel`,
       });
       res.json({ id: session.id, url: session.url });
@@ -502,10 +502,20 @@ async function startServer() {
 
   // Safe Web Document Scraper to enrich agent scripts
   app.post("/api/fetch-url", async (req, res) => {
-    const { url } = req.body;
+    let { url } = req.body;
     if (!url) {
       return res.status(400).json({ error: "Missing document or website URL." });
     }
+    
+    // Trim and automatically prepend https:// if protocol is missing (very common for custom URLs)
+    url = url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = "https://" + url;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout limit
+
     try {
       // Validate absolute URL format
       const parsedUrl = new URL(url);
@@ -518,8 +528,10 @@ async function startServer() {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8"
         },
-        signal: AbortSignal.timeout(8000) // 8 seconds timeout
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         return res.status(400).json({ error: `Could not retrieve URL. Status: ${response.status} ${response.statusText}` });

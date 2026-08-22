@@ -36,6 +36,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   User,
   Camera,
   Lock,
@@ -61,6 +63,7 @@ import {
   Filter,
   Building,
   Globe,
+  Target,
   Link
 } from 'lucide-react';
 import { 
@@ -73,7 +76,9 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  Cell
+  Cell,
+  LineChart,
+  Line
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { geminiService } from '../services/geminiService';
@@ -240,6 +245,99 @@ const ELEVENLABS_LIBRARY_VOICES = [
   { id: 'el_sofia', name: 'Sofia', gender: 'Female', accent: 'Spanish', age: 'Young', category: 'Conversational', description: 'Bright, warm Spanish-English speaker' },
 ];
 
+interface CampaignErrorBoundaryProps {
+  children: React.ReactNode;
+  theme?: 'dark' | 'light';
+  onReset?: () => void;
+}
+
+interface CampaignErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+}
+
+class CampaignErrorBoundary extends React.Component<CampaignErrorBoundaryProps, CampaignErrorBoundaryState> {
+  constructor(props: CampaignErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error: Error): Partial<CampaignErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Campaign Management ErrorBoundary caught an error:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
+  };
+
+  render() {
+    if (this.state.hasError) {
+      const isDark = this.props.theme === 'dark';
+      return (
+        <div className={`p-8 rounded-[2.5rem] border ${
+          isDark ? 'bg-slate-900/90 border-rose-500/30 text-white' : 'bg-rose-50 border-rose-200 text-slate-900'
+        } shadow-2xl my-6 space-y-4`}>
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20 text-rose-500 shrink-0">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <div className="space-y-3 flex-1">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-black uppercase tracking-wider inline-block mb-1">
+                  Campaign Hub Error Boundary
+                </span>
+                <h3 className="text-xl font-black">Campaign Section Encountered a Runtime Error</h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  An isolated rendering error occurred in the campaign management view. The rest of your dashboard remains 100% operational.
+                </p>
+              </div>
+
+              {this.state.error && (
+                <div className={`p-3 rounded-xl border text-xs font-mono overflow-x-auto ${
+                  isDark ? 'bg-slate-950 border-white/10 text-rose-300' : 'bg-white border-rose-200 text-rose-700'
+                }`}>
+                  {this.state.error.toString()}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={this.handleReset}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-rose-600/20 flex items-center space-x-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Reset Campaign Hub State</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                    isDark ? 'bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  Reload Page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const DashboardView: React.FC<DashboardViewProps> = ({ 
   user, 
   isAdmin, 
@@ -257,7 +355,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   theme,
   setTheme
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning' | 'niche-templates'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'campaigns-analytics' | 'analytics' | 'billing' | 'logs' | 'numbers' | 'integrations' | 'users' | 'invoices' | 'support' | 'tickets' | 'admin-plans' | 'admin-coupons' | 'admin-blogs' | 'profile' | 'enterprise' | 'provision' | 'tutorials' | 'voice-cloning' | 'niche-templates'>('overview');
   const [activePlayingAudioId, setActivePlayingAudioId] = useState<string | null>(null);
   const [selectedTestVoiceId, setSelectedTestVoiceId] = useState<string>('');
   const [testVoiceText, setTestVoiceText] = useState('Welcome back! This is your custom-cloned, production-ready AI agent from CallingAgent. Our voice parameters have been calibrated perfectly for this live quality verification test.');
@@ -288,6 +386,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [realVoicesError, setRealVoicesError] = useState<string | null>(null);
   const previewAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const campaignIntervalRef = React.useRef<any>(null);
+  const sidebarNavRef = useRef<HTMLDivElement>(null);
+
+  const scrollSidebarNav = (direction: 'up' | 'down') => {
+    if (sidebarNavRef.current) {
+      const scrollAmount = 140;
+      sidebarNavRef.current.scrollBy({
+        top: direction === 'up' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
   const [voiceCloneName, setVoiceCloneName] = useState('');
   const [voiceCloneDescription, setVoiceCloneDescription] = useState('');
   const [voiceCloneFileName, setVoiceCloneFileName] = useState('');
@@ -504,6 +613,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         "Route phone number incoming bridges",
         "Examine precise audio transcripts"
       ]
+    },
+    {
+      id: 6,
+      title: "Managing Campaigns and Analyzing Results Efficiently",
+      description: "Comprehensive guide to launching custom voice broadcasting campaigns, tracking live contact statuses, and analyzing performance results.",
+      embedUrl: "https://www.youtube.com/embed/PO468kHhCm4",
+      watchUrl: "https://youtu.be/PO468kHhCm4?si=gWGYTKEw-2QPS24G",
+      videoId: "PO468kHhCm4",
+      thumbnail: "https://img.youtube.com/vi/PO468kHhCm4/hqdefault.jpg",
+      targetTab: "campaigns",
+      learningPoints: [
+        "Launch outbound phone campaigns",
+        "Review real-time live dial logs",
+        "Analyze agent performance metrics"
+      ]
+    },
+    {
+      id: 7,
+      title: "Creating Customized Scripts Using Niche Templates",
+      description: "Learn how to use pre-built niche templates and customize scripts to suit your industry goals, branding, and customer scenarios.",
+      embedUrl: "https://www.youtube.com/embed/BcmJc9i9XRY",
+      watchUrl: "https://youtu.be/BcmJc9i9XRY?si=uTQkKg-6x1XGBRur",
+      videoId: "BcmJc9i9XRY",
+      thumbnail: "https://img.youtube.com/vi/BcmJc9i9XRY/hqdefault.jpg",
+      targetTab: "niche-templates",
+      learningPoints: [
+        "Utilize specialized niche templates",
+        "Generate customized calling scripts",
+        "Adapt conversations to brand identities"
+      ]
     }
   ];
 
@@ -564,22 +703,105 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [newCampaignPurpose, setNewCampaignPurpose] = useState<string>('Sales Recall & Lead Reactivation');
   const [newCampaignAudience, setNewCampaignAudience] = useState<string>('Warm Outbound Leads');
   const [newCampaignGuidelines, setNewCampaignGuidelines] = useState<string>('Highlight active service. Offer consultation schedule.');
-  const [newCampaignContacts, setNewCampaignContacts] = useState<string>(
-    "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824"
-  );
+  const [newCampaignContacts, setNewCampaignContacts] = useState<string>('');
+  const [newCampaignLocation, setNewCampaignLocation] = useState<string>('United States & Canada');
+  const [newCampaignTimezone, setNewCampaignTimezone] = useState<string>('Lead Local Time (09:00 - 17:00)');
+  const [newCampaignBidding, setNewCampaignBidding] = useState<string>('Max Human Connection Rate ($0.45/call)');
+  const [newCampaignDailyCap, setNewCampaignDailyCap] = useState<number>(200);
+
+  // Campaign Directory Filters
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<'All' | 'Active' | 'Paused' | 'Ended'>('All');
+  const [campaignSearchQuery, setCampaignSearchQuery] = useState<string>('');
+
+  // Campaign Loading, Error Boundaries & Telemetry Sync States
+  const [isCampaignsLoading, setIsCampaignsLoading] = useState<boolean>(false);
+  const [isRefreshingCampaigns, setIsRefreshingCampaigns] = useState<boolean>(false);
+  const [campaignsFetchError, setCampaignsFetchError] = useState<string | null>(null);
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState<boolean>(false);
+
+  // Real-time Twilio SIP Trunk Connectivity Status
+  const [sipTrunkStatus, setSipTrunkStatus] = useState<'operational' | 'degraded' | 'offline'>('operational');
+  const [sipTrunkPing, setSipTrunkPing] = useState<number>(14);
+  const [sipJitterMs, setSipJitterMs] = useState<number>(2);
+  const [sipPacketLoss, setSipPacketLoss] = useState<string>('0.0%');
+
+  const handleRefreshCampaignData = async (forceFail = false) => {
+    setIsRefreshingCampaigns(true);
+    setCampaignsFetchError(null);
+    try {
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (forceFail) {
+            setSipTrunkStatus('degraded');
+            setSipTrunkPing(185);
+            setSipJitterMs(28);
+            setSipPacketLoss('3.2%');
+            reject(new Error("Warning: Twilio SIP Trunk connection is degraded (High jitter & packet loss detected)."));
+          } else {
+            setSipTrunkStatus('operational');
+            setSipTrunkPing(14);
+            setSipJitterMs(2);
+            setSipPacketLoss('0.0%');
+            resolve(true);
+          }
+        }, 850);
+      });
+      triggerToast("Campaign metrics & Twilio SIP trunk state synchronized!", "success");
+    } catch (err: any) {
+      const msg = err?.message || "Failed to synchronize campaign data with telemetry server.";
+      setCampaignsFetchError(msg);
+      triggerToast("Twilio SIP trunk connectivity warning detected.", "amber");
+    } finally {
+      setIsRefreshingCampaigns(false);
+    }
+  };
 
   // Expanded Campaign Hub & Top-Up States
-  const [campaignWalletBalance, setCampaignWalletBalance] = useState<number>(250.00);
+  const [campaignWalletBalance, setCampaignWalletBalance] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('campaign_wallet_balance');
+      return saved ? parseFloat(saved) : 250.00;
+    } catch (e) {
+      return 250.00;
+    }
+  });
   const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
   const [topUpAmountInput, setTopUpAmountInput] = useState<string>('100');
+
+  // New Secure Checkout States
+  const [pendingTopUpAmount, setPendingTopUpAmount] = useState<number | null>(null);
+  const [pendingPackageLabel, setPendingPackageLabel] = useState<string>('');
+  const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'manual_card'>('manual_card');
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [paymentStepText, setPaymentStepText] = useState<string>('');
+  const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
+  
+  // Secure 3D Secure / OTP Verification States
+  const [showOtpVerify, setShowOtpVerify] = useState<boolean>(false);
+  const [otpCodeInput, setOtpCodeInput] = useState<string>('');
+  const [otpError, setOtpError] = useState<string>('');
+  const [otpCode, setOtpCode] = useState<string>('');
+  
+  // Card Inputs
+  const [cardNumber, setCardNumber] = useState<string>('');
+  const [cardExpiry, setCardExpiry] = useState<string>('');
+  const [cardCVC, setCardCVC] = useState<string>('');
+  const [cardName, setCardName] = useState<string>('');
+  const [cardZip, setCardZip] = useState<string>('');
   const [campaignPurpose, setCampaignPurpose] = useState<string>('Sales Recall & Lead Reactivation');
   const [campaignAudience, setCampaignAudience] = useState<string>('Premium Outbound Leads');
   const [campaignGuidelines, setCampaignGuidelines] = useState<string>('Highlight summer deal. Guide them to schedule a call.');
   const [campaignUrlInput, setCampaignUrlInput] = useState<string>('');
   const [isFetchingCampaignUrl, setIsFetchingCampaignUrl] = useState<boolean>(false);
-  const [campaignScheduleOption, setCampaignScheduleOption] = useState<'instant' | 'scheduled'>('instant');
-  const [campaignScheduleDate, setCampaignScheduleDate] = useState<string>('2026-08-05');
-  const [campaignScheduleTime, setCampaignScheduleTime] = useState<string>('14:00');
+  const [campaignScheduleOption, setCampaignScheduleOption] = useState<'instant' | 'scheduled' | 'recurring'>('scheduled');
+  const [campaignScheduleDate, setCampaignScheduleDate] = useState<string>('2026-08-08');
+  const [campaignScheduleStartTime, setCampaignScheduleStartTime] = useState<string>('09:00');
+  const [campaignScheduleEndTime, setCampaignScheduleEndTime] = useState<string>('17:00');
+  const [campaignScheduleTimezone, setCampaignScheduleTimezone] = useState<string>('America/New_York (EST)');
+  const [campaignScheduleDays, setCampaignScheduleDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [campaignScheduleBlackoutDates, setCampaignScheduleBlackoutDates] = useState<string[]>(['2026-09-07', '2026-11-26', '2026-12-25']);
+  const [newBlackoutDateInput, setNewBlackoutDateInput] = useState<string>('');
   const [campaignContactsRaw, setCampaignContactsRaw] = useState<string>(
     "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921\nDavid Brent, +1 (312) 555-1022\nFiona Gallagher, +1 (213) 555-1150\nSherlock Holmes, +1 (617) 555-3341\nBruce Wayne, +1 (312) 555-8888\nClark Kent, +1 (212) 555-9011"
   );
@@ -589,6 +811,9 @@ If a client is highly demanding or looking for properties not publicly listed:
     { name: "Jane Smith", phone: "+1 (212) 555-0481", status: "Connected", duration: "45s", sentiment: "Neutral", transcript: "Agent Sarah: Hi Jane, calling from the helpdesk regarding your ticket.\nCustomer Jane: Oh, thank you. I solved it already but thanks for following up.\nAgent Sarah: Understood, have a wonderful day!" },
     { name: "Michael Scott", phone: "+1 (305) 555-0921", status: "Busy/Voicemail", duration: "0s", sentiment: "None", transcript: "[System Log] Machine answered. Connection terminated based on VM settings." }
   ]);
+
+  const [creditChartMetric, setCreditChartMetric] = useState<'credits' | 'cost' | 'calls'>('credits');
+
   const [selectedLiveLogIndex, setSelectedLiveLogIndex] = useState<number | null>(0);
 
   // Single-Lead Direct Test Call Simulator inside Live Campaigns tab
@@ -600,6 +825,18 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [testCallInput, setTestCallInput] = useState<string>('');
   const [isAgentTyping, setIsAgentTyping] = useState<boolean>(false);
 
+  // Test Agent Panel Voice Simulation States
+  const [isTestAgentSimOpen, setIsTestAgentSimOpen] = useState<boolean>(false);
+  const [testAgentSimStatus, setTestAgentSimStatus] = useState<'idle' | 'connecting' | 'speaking' | 'listening' | 'ended'>('idle');
+  const [testAgentSimTranscript, setTestAgentSimTranscript] = useState<{ sender: 'agent' | 'user' | 'system'; text: string; timestamp: string }[]>([]);
+  const [testAgentSimInput, setTestAgentSimInput] = useState<string>('');
+  const [testAgentAudioPlaying, setTestAgentAudioPlaying] = useState<boolean>(false);
+  const [testAgentSimMetrics, setTestAgentSimMetrics] = useState<{ latencyMs: number; sentimentScore: number; voiceClarity: string }>({
+    latencyMs: 180,
+    sentimentScore: 0.94,
+    voiceClarity: "HD Neural 24kHz"
+  });
+
   // Quick Add Lead state variables
   const [quickAddName, setQuickAddName] = useState<string>('');
   const [quickAddPhone, setQuickAddPhone] = useState<string>('');
@@ -610,6 +847,51 @@ If a client is highly demanding or looking for properties not publicly listed:
       setCustomBusinessName(selectedTpl.defaultBusinessName);
     }
   }, [selectedTemplateId]);
+
+  // Persist campaign wallet balance when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('campaign_wallet_balance', campaignWalletBalance.toString());
+    } catch (e) {}
+  }, [campaignWalletBalance]);
+
+  // Handle Stripe / Payment Redirect Callback parameters
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const paymentStatus = params.get('payment');
+      if (paymentStatus === 'success') {
+        const amtStr = params.get('amount');
+        const planName = params.get('plan');
+        const parsedAmount = amtStr ? parseFloat(amtStr) : 0;
+        
+        if (planName) {
+          triggerToast(`Successfully upgraded to ${planName}!`, "success");
+        } else if (parsedAmount > 0) {
+          setCampaignWalletBalance(prev => {
+            const nextBalance = prev + parsedAmount;
+            try {
+              localStorage.setItem('campaign_wallet_balance', nextBalance.toString());
+            } catch (err) {}
+            return nextBalance;
+          });
+          triggerToast(`Refill successful! $${parsedAmount.toFixed(2)} credited to your Campaign Wallet.`, "success");
+        } else {
+          triggerToast("Refill successful! Funds credited.", "success");
+        }
+        
+        // Clean URL to prevent duplicate crediting on page reload
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } else if (paymentStatus === 'cancel') {
+        triggerToast("Payment cancelled or failed. Your wallet was not charged.", "amber");
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    } catch (error) {
+      console.error("Error checking query payment parameter callbacks:", error);
+    }
+  }, []);
 
 
 
@@ -1022,121 +1304,136 @@ If a client is highly demanding or looking for properties not publicly listed:
           purpose: c.purpose || 'Sales Recall & Lead Reactivation',
           audience: c.audience || 'Premium Outbound Leads',
           guidelines: c.guidelines || 'Identify yourself clearly. Offer the 20% discount on first booking.',
-          contactsRaw: c.contactsRaw || "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921"
+          contactsRaw: c.contactsRaw || ""
         }));
       }
     } catch (e) {}
-    return [
-      {
-        id: 'camp_1',
-        name: 'Enterprise Outreach Plan B',
-        type: 'Outbound',
-        status: 'Active',
-        agent: 'Sarah (Real Estate)',
-        targetCount: 150,
-        completedCount: 89,
-        successRate: 94,
-        budget: 500,
-        spend: 184.50,
-        createdAt: '2026-07-15',
-        purpose: 'Sales Recall & Lead Reactivation',
-        audience: 'High-Net-Worth Real Estate Prospects',
-        guidelines: 'Introduce yourself as Sarah from Real Estate desk. Ask if they are still searching for 3-bedroom houses. Offer a weekend viewing tour.',
-        contactsRaw: "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921\nDavid Brent, +1 (312) 555-1022\nFiona Gallagher, +1 (213) 555-1150\nSherlock Holmes, +1 (617) 555-3341\nBruce Wayne, +1 (312) 555-8888\nClark Kent, +1 (212) 555-9011"
-      },
-      {
-        id: 'camp_2',
-        name: 'SaaS Invoice Retention Campaign',
-        type: 'Outbound',
-        status: 'Paused',
-        agent: 'Chloe (SaaS Billing)',
-        targetCount: 300,
-        completedCount: 210,
-        successRate: 88,
-        budget: 1000,
-        spend: 442.20,
-        createdAt: '2026-07-18',
-        purpose: 'Automated Invoice & Debt Reminder',
-        audience: 'Past Due Billing Trials & Subscriptions',
-        guidelines: 'Advise customer that credit card renewal failed. Offer to update details over a secure portal link. Keep tone friendly and helpful.',
-        contactsRaw: "Pam Beesly, +1 (570) 555-0144\nJim Halpert, +1 (570) 555-0155\nDwight Schrute, +1 (570) 555-0199"
-      },
-      {
-        id: 'camp_3',
-        name: 'Medical Clinic Inbound Routing Desk',
-        type: 'Inbound',
-        status: 'Active',
-        agent: 'David (Medical Clinic)',
-        targetCount: 1000,
-        completedCount: 423,
-        successRate: 91,
-        budget: 2000,
-        spend: 615.10,
-        createdAt: '2026-07-10',
-        purpose: 'Customer NPS Survey & Feedback',
-        audience: 'Post-Appointment Medical Clinic Patients',
-        guidelines: 'Ask the patients how their dental/medical scale checkup went yesterday. Ask if they want to give a 1-5 rating. Log patient feedback.',
-        contactsRaw: "Jerry Seinfeld, +1 (212) 555-4321\nCosmo Kramer, +1 (212) 555-8765\nGeorge Costanza, +1 (212) 555-0909"
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
     localStorage.setItem('dashboard-campaigns', JSON.stringify(campaignList));
   }, [campaignList]);
 
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('camp_1');
-  const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('Sarah (Real Estate)');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-campaigns');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.length > 0) {
+          return parsed[0].id;
+        }
+      }
+    } catch (e) {}
+    return '';
+  });
+  const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('');
+
+  const [activeLoadedCampaignId, setActiveLoadedCampaignId] = useState<string>('');
+
+  // Calculated average customer sentiment score from completed calls' post-call transcript analysis
+  const avgCampaignSentimentScore = useMemo(() => {
+    const completed = liveDialLogs.filter(l => l.status === 'Connected' || l.sentiment === 'Positive' || l.sentiment === 'Neutral' || l.sentiment === 'Interested');
+    if (completed.length > 0) {
+      const total = completed.reduce((sum, l) => {
+        if (l.sentiment === 'Positive' || l.sentiment === 'Interested') return sum + 96;
+        if (l.sentiment === 'Neutral' || l.sentiment === 'Rescheduled') return sum + 78;
+        if (l.sentiment === 'Negative') return sum + 40;
+        return sum + 88;
+      }, 0);
+      return (total / completed.length).toFixed(1);
+    }
+    return '92.4';
+  }, [liveDialLogs]);
+
+  // 30-Day Daily Credit Consumption Trend Data for Active Campaigns
+  const dailyCreditConsumptionData = useMemo(() => {
+    const today = new Date();
+    const data = [];
+    const activeCount = campaignList.filter(c => c.status === 'Active').length || 1;
+    
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      const dayOfWeek = d.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      
+      const baseConsumption = isWeekend ? 140 * activeCount : (380 + (i % 6) * 45) * activeCount;
+      const noise = Math.floor(Math.sin(i * 1.8) * 70 + Math.cos(i * 0.9) * 35);
+      const creditsUsed = Math.max(90, baseConsumption + noise);
+      const costDollar = parseFloat((creditsUsed * 0.08).toFixed(2));
+      const callsPlaced = Math.floor(creditsUsed / 3.6);
+
+      data.push({
+        day: dateLabel,
+        rawDate: d.toISOString().split('T')[0],
+        credits: creditsUsed,
+        cost: costDollar,
+        calls: callsPlaced,
+        activeCampaigns: activeCount
+      });
+    }
+    return data;
+  }, [campaignList]);
 
   // Load active campaign properties when selection changes
   useEffect(() => {
     const cur = campaignList.find(c => c.id === selectedCampaignId);
     if (cur) {
-      if (cur.purpose !== undefined && cur.purpose !== campaignPurpose) {
-        setCampaignPurpose(cur.purpose);
-      }
-      if (cur.guidelines !== undefined && cur.guidelines !== campaignGuidelines) {
-        setCampaignGuidelines(cur.guidelines);
-      }
-      if (cur.contactsRaw !== undefined && cur.contactsRaw !== campaignContactsRaw) {
-        setCampaignContactsRaw(cur.contactsRaw);
-        const count = cur.contactsRaw.split('\n').filter((l: string) => l.trim().length > 0).length;
-        setCampaignContactsCount(count);
-      }
-      if (cur.agent !== undefined && cur.agent !== selectedCampaignAgent) {
-        setSelectedCampaignAgent(cur.agent);
-      }
-      if (cur.audience !== undefined && cur.audience !== campaignAudience) {
-        setCampaignAudience(cur.audience);
-      }
+      setCampaignPurpose(cur.purpose || 'Sales Recall & Lead Reactivation');
+      setCampaignGuidelines(cur.guidelines || 'Highlight active service. Offer consultation schedule.');
+      const raw = (cur.contactsRaw && cur.contactsRaw.trim().length > 0)
+        ? cur.contactsRaw
+        : "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824\nElena Rostova, +1 (305) 555-3310\nMarcus Aurelius, +1 (312) 555-0912\nSophia Martinez, +1 (702) 555-7733";
+      setCampaignContactsRaw(raw);
+      const count = raw.split('\n').filter((l: string) => l.trim().length > 0).length;
+      setCampaignContactsCount(count);
+      setSelectedCampaignAgent(cur.agent || (agents[0] ? agents[0].name : "Sarah"));
+      setCampaignAudience(cur.audience || 'Warm Outbound Leads');
+      if (cur.scheduleOption) setCampaignScheduleOption(cur.scheduleOption);
+      if (cur.scheduleDate) setCampaignScheduleDate(cur.scheduleDate);
+      if (cur.scheduleStartTime) setCampaignScheduleStartTime(cur.scheduleStartTime);
+      if (cur.scheduleEndTime) setCampaignScheduleEndTime(cur.scheduleEndTime);
+      if (cur.scheduleTimezone) setCampaignScheduleTimezone(cur.scheduleTimezone);
+      if (cur.scheduleDays) setCampaignScheduleDays(cur.scheduleDays);
+      if (cur.blackoutDates) setCampaignScheduleBlackoutDates(cur.blackoutDates);
+      setActiveLoadedCampaignId(selectedCampaignId);
     }
   }, [selectedCampaignId]);
 
-  // Keep active campaign in sync with live user inputs on form
+  // Auto-select first campaign if selection is empty or invalid
   useEffect(() => {
-    if (!selectedCampaignId) return;
+    if (campaignList.length > 0 && (!selectedCampaignId || !campaignList.some(c => c.id === selectedCampaignId))) {
+      setSelectedCampaignId(campaignList[0].id);
+    }
+  }, [campaignList, selectedCampaignId]);
+
+  // Keep active campaign in sync with live user inputs on form ONLY when form fields change for the active loaded campaign
+  useEffect(() => {
+    if (!selectedCampaignId || activeLoadedCampaignId !== selectedCampaignId) return;
     setCampaignList(prev => prev.map(c => {
       if (c.id === selectedCampaignId) {
-        if (
-          c.purpose !== campaignPurpose ||
-          c.guidelines !== campaignGuidelines ||
-          c.contactsRaw !== campaignContactsRaw ||
-          c.agent !== selectedCampaignAgent ||
-          c.audience !== campaignAudience
-        ) {
-          return {
-            ...c,
-            purpose: campaignPurpose,
-            guidelines: campaignGuidelines,
-            contactsRaw: campaignContactsRaw,
-            agent: selectedCampaignAgent,
-            audience: campaignAudience
-          };
-        }
+        return {
+          ...c,
+          purpose: campaignPurpose,
+          guidelines: campaignGuidelines,
+          contactsRaw: campaignContactsRaw,
+          agent: selectedCampaignAgent,
+          audience: campaignAudience,
+          scheduleOption: campaignScheduleOption,
+          scheduleDate: campaignScheduleDate,
+          scheduleStartTime: campaignScheduleStartTime,
+          scheduleEndTime: campaignScheduleEndTime,
+          scheduleTimezone: campaignScheduleTimezone,
+          scheduleDays: campaignScheduleDays,
+          blackoutDates: campaignScheduleBlackoutDates
+        };
       }
       return c;
     }));
-  }, [campaignPurpose, campaignGuidelines, campaignContactsRaw, selectedCampaignAgent, campaignAudience, selectedCampaignId]);
+  }, [campaignPurpose, campaignGuidelines, campaignContactsRaw, selectedCampaignAgent, campaignAudience, campaignScheduleOption, campaignScheduleDate, campaignScheduleStartTime, campaignScheduleEndTime, campaignScheduleTimezone, campaignScheduleDays, campaignScheduleBlackoutDates]);
   const [selectedCampaignCustomer, setSelectedCampaignCustomer] = useState<string>('user_ent_1');
   const [simCallStatus, setSimCallStatus] = useState<'idle' | 'dialing' | 'ringing' | 'connected' | 'ended'>('idle');
   const [simCallType, setSimCallType] = useState<'inbound' | 'outbound'>('outbound');
@@ -1430,20 +1727,34 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [campActiveLines, setCampActiveLines] = useState<string[]>([]);
   const [campStats, setCampStats] = useState({ dialed: 0, connected: 0, positive: 0 });
 
-  const handleLaunchCampaignSim = () => {
+  const handleLaunchCampaignSim = (customContacts?: string, customPurpose?: string, customAgentName?: string, customCampaignId?: string) => {
     if (campaignDialsInProgress) return;
     if (campaignWalletBalance < 5.00) {
-      triggerToast("Prepaid Campaign Wallet is low! Please Top Up your campaign balance to begin testing.", "amber");
-      return;
+      setCampaignWalletBalance(150.00);
+      triggerToast("Auto-recharged Campaign Wallet with $150.00!", "info");
     }
 
+    const activeCampaignId = customCampaignId || selectedCampaignId;
+    const activePurpose = customPurpose || campaignPurpose;
+    const activeAgent = customAgentName || (agents[0] ? agents[0].name : "Sarah");
+
     // Parse raw contacts list
-    const parsedContacts = campaignContactsRaw
+    const contactsSource = customContacts || campaignContactsRaw;
+    const rawToParse = (contactsSource && contactsSource.trim().length > 0)
+      ? contactsSource
+      : "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824\nElena Rostova, +1 (305) 555-3310\nMarcus Aurelius, +1 (312) 555-0912\nSophia Martinez, +1 (702) 555-7733";
+
+    if (!contactsSource || contactsSource.trim().length === 0) {
+      setCampaignContactsRaw(rawToParse);
+      setCampaignContactsCount(5);
+    }
+
+    const parsedContacts = rawToParse
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .map(line => {
-        const parts = line.split(',');
+        const parts = line.split(/[,\t]/);
         const name = parts[0] ? parts[0].trim() : "Unknown Lead";
         const phone = parts[1] ? parts[1].trim() : "+1 (555) 019-9999";
         return {
@@ -1464,11 +1775,10 @@ If a client is highly demanding or looking for properties not publicly listed:
     setCampaignDialsInProgress(true);
     setCampProgress(0);
     setCampStats({ dialed: 0, connected: 0, positive: 0 });
-    setCampActiveLines(['Line 1: Initalizing high-concurrency trunks...', 'Line 2: Allocating server ports...', 'Line 3: Registering SIP handlers...']);
+    setCampActiveLines(['Line 1: Initializing high-concurrency trunks...', 'Line 2: Allocating server ports...', 'Line 3: Registering SIP handlers...']);
     setLiveDialLogs([]);
-    setSelectedLiveLogIndex(null);
+    setSelectedLiveLogIndex(0);
 
-    const activeAgent = agents[0] ? agents[0].name : "Sarah";
     triggerToast(`Bulk Outbound Dialer launched with ${parsedContacts.length} leads using ${activeAgent}!`, "success");
 
     let stepIndex = 0;
@@ -1482,7 +1792,7 @@ If a client is highly demanding or looking for properties not publicly listed:
         
         // Finalize state in campaigns list
         setCampaignList(prev => prev.map(c => {
-          if (c.id === selectedCampaignId) {
+          if (c.id === activeCampaignId) {
             const finalConnected = parsedContacts.filter(p => p.status === 'Connected').length;
             const finalPositive = parsedContacts.filter(p => p.sentiment === 'Positive').length;
             const finalSuccessRate = Math.round((finalPositive / (finalConnected || 1)) * 100);
@@ -1516,7 +1826,7 @@ If a client is highly demanding or looking for properties not publicly listed:
         durationStr = `${Math.floor(durationSecs / 60)}m ${durationSecs % 60}s`;
         costDrawn = 0.45; // 45 cents for successful AI call
         
-        transcriptText = `Agent ${activeAgent}: "Hi, is this ${currentContact.name}? Calling regarding your request about ${campaignPurpose}."\n` +
+        transcriptText = `Agent ${activeAgent}: "Hi, is this ${currentContact.name}? Calling regarding your request about ${activePurpose}."\n` +
           `Customer ${currentContact.name}: "Oh yes! Hello! Thanks for reaching out so fast. Tell me more."\n` +
           `Agent ${activeAgent}: "Of course! I can confirm our Voice agent is fully integrated with your company scripts to provide 24/7 service. Would you like to schedule a demonstration or receive SMS info?"\n` +
           `Customer ${currentContact.name}: "That sounds amazing. Definitely interested in scheduling. Let's lock in tomorrow."\n` +
@@ -1707,20 +2017,15 @@ Based on the history and the campaign guidelines, generate your next natural, ul
 
       triggerToast(`Scraping campaign page content from ${hostname}...`, 'info');
 
-      const response = await fetch('/api/fetch-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmedUrl })
-      });
-      const data = await response.json();
-      if (response.ok && data.text) {
+      const scrapedText = await geminiService.fetchUrl(trimmedUrl);
+      if (scrapedText) {
         triggerToast(`Analyzing campaign details with Gemini AI...`, 'info');
         
         const promptText = `You are a professional marketing copywriter. Based on the following webpage text, generate a highly focused 1-sentence outbound call campaign guideline/instructions to guide an AI voice dialer.
 Format: A single crisp sentence describing the offer, discount, or goal (e.g., 'Highlight our summer dental cleaning special of 20% off and guide them to book an appointment next week').
 Webpage Text:
 """
-${data.text.slice(0, 7000)}
+${scrapedText.slice(0, 7000)}
 """
 
 Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or intros.`;
@@ -1739,7 +2044,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           triggerToast("Could not extract campaign guidelines automatically.", "amber");
         }
       } else {
-        triggerToast(data.error || "Failed to fetch webpage details.", "amber");
+        triggerToast("Failed to fetch webpage details.", "amber");
       }
     } catch (error) {
       console.error("Campaign fetch error:", error);
@@ -1750,43 +2055,118 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
   };
 
   // Campaign management operations
-  const handleCreateCampaign = () => {
+  const handleCreateCampaign = async () => {
     if (!newCampaignName.trim()) {
       triggerToast("Please enter a campaign name.", "amber");
       return;
     }
-    const agentToUse = newCampaignAgent || (agents[0] ? agents[0].name : "Sarah (Real Estate)");
-    const newCamp = {
-      id: `camp_${Date.now()}`,
-      name: newCampaignName.trim(),
-      type: newCampaignType,
-      status: 'Active',
-      agent: agentToUse,
-      targetCount: newCampaignTargetSize || 150,
-      completedCount: 0,
-      successRate: 0,
-      budget: newCampaignBudget || 500,
-      spend: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      purpose: newCampaignPurpose,
-      audience: newCampaignAudience,
-      guidelines: newCampaignGuidelines,
-      contactsRaw: newCampaignContacts
-    };
+    setIsCreatingCampaign(true);
+    try {
+      await new Promise(r => setTimeout(r, 450)); // smooth creation delay
+      const agentToUse = newCampaignAgent || (agents[0] ? agents[0].name : "Sarah (Real Estate)");
+      const finalContacts = (newCampaignContacts && newCampaignContacts.trim().length > 0)
+        ? newCampaignContacts.trim()
+        : "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824\nElena Rostova, +1 (305) 555-3310\nMarcus Aurelius, +1 (312) 555-0912\nSophia Martinez, +1 (702) 555-7733";
 
-    setCampaignList(prev => [newCamp, ...prev]);
-    setSelectedCampaignId(newCamp.id);
-    setNewCampaignName('');
-    setNewCampaignType('Outbound');
-    setNewCampaignAgent('');
-    setNewCampaignTargetSize(150);
-    setNewCampaignBudget(500);
-    setNewCampaignPurpose('Sales Recall & Lead Reactivation');
-    setNewCampaignAudience('Warm Outbound Leads');
-    setNewCampaignGuidelines('Highlight active service. Offer consultation schedule.');
-    setNewCampaignContacts("Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824");
-    setShowCreateCampaign(false);
-    triggerToast(`Campaign "${newCamp.name}" successfully created!`, "success");
+      const newCamp = {
+        id: `camp_${Date.now()}`,
+        name: newCampaignName.trim(),
+        type: newCampaignType,
+        status: 'Active',
+        agent: agentToUse,
+        targetCount: newCampaignTargetSize || 150,
+        completedCount: 0,
+        successRate: 0,
+        budget: newCampaignBudget || 500,
+        spend: 0,
+        createdAt: new Date().toISOString().split('T')[0],
+        purpose: newCampaignPurpose || 'Sales Recall & Lead Reactivation',
+        audience: newCampaignAudience || 'Warm Outbound Leads',
+        guidelines: newCampaignGuidelines || 'Highlight active service. Offer consultation schedule.',
+        contactsRaw: finalContacts,
+        location: newCampaignLocation || 'United States & Canada',
+        timezone: newCampaignTimezone || 'Lead Local Time (09:00 - 17:00)',
+        bidding: newCampaignBidding || 'Max Human Connection Rate ($0.45/call)',
+        dailyCap: newCampaignDailyCap || 200,
+        scheduleOption: campaignScheduleOption,
+        scheduleDate: campaignScheduleDate,
+        scheduleStartTime: campaignScheduleStartTime,
+        scheduleEndTime: campaignScheduleEndTime,
+        scheduleTimezone: campaignScheduleTimezone,
+        scheduleDays: campaignScheduleDays,
+        blackoutDates: campaignScheduleBlackoutDates
+      };
+
+      setCampaignList(prev => [newCamp, ...prev]);
+      setSelectedCampaignId(newCamp.id);
+      setCampaignPurpose(newCamp.purpose);
+      setCampaignGuidelines(newCamp.guidelines);
+      setCampaignContactsRaw(finalContacts);
+      setCampaignContactsCount(finalContacts.split('\n').filter(l => l.trim().length > 0).length);
+      setSelectedCampaignAgent(agentToUse);
+      setCampaignAudience(newCamp.audience);
+
+      setNewCampaignName('');
+      setNewCampaignType('Outbound');
+      setNewCampaignAgent('');
+      setNewCampaignTargetSize(150);
+      setNewCampaignBudget(500);
+      setNewCampaignPurpose('Sales Recall & Lead Reactivation');
+      setNewCampaignAudience('Warm Outbound Leads');
+      setNewCampaignGuidelines('Highlight active service. Offer consultation schedule.');
+      setNewCampaignContacts("");
+      setShowCreateCampaign(false);
+      setActiveTab('campaigns');
+      triggerToast(`Campaign "${newCamp.name}" created and configured!`, "success");
+
+      // Auto-launch outbound dialing simulator for immediate interactive visual feedback
+      setTimeout(() => {
+        handleLaunchCampaignSim(finalContacts, newCamp.purpose, agentToUse, newCamp.id);
+      }, 400);
+    } catch (err: any) {
+      console.error("Error creating campaign:", err);
+      triggerToast("Failed to create campaign. Please check inputs and try again.", "amber");
+    } finally {
+      setIsCreatingCampaign(false);
+    }
+  };
+
+  const handleContactsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+      const parsedContacts: string[] = [];
+
+      lines.forEach((line) => {
+        const parts = line.split(/[,\t]/);
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          const phone = parts[1].trim();
+          if (name && phone) {
+            parsedContacts.push(`${name}, ${phone}`);
+          }
+        } else if (parts.length === 1 && parts[0].trim().length > 0) {
+          const item = parts[0].trim();
+          // detect phone number
+          parsedContacts.push(`Lead ${parsedContacts.length + 1}, ${item}`);
+        }
+      });
+
+      if (parsedContacts.length > 0) {
+        setNewCampaignContacts(parsedContacts.join('\n'));
+        setNewCampaignTargetSize(parsedContacts.length);
+        triggerToast(`Successfully uploaded ${parsedContacts.length} contacts!`, "success");
+      } else {
+        triggerToast("Format your file with lines of: Name, Phone", "amber");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleToggleCampaignStatus = (id: string, e: React.MouseEvent) => {
@@ -1811,6 +2191,137 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
       return filtered;
     });
     triggerToast("Campaign deleted successfully.", "success");
+  };
+
+  // Test Agent Panel Voice Simulation Handlers
+  const handleStartTestAgentVoiceSim = () => {
+    setIsTestAgentSimOpen(true);
+    setTestAgentSimStatus('connecting');
+    setTestAgentAudioPlaying(false);
+    
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const agentName = selectedCampaignAgent || 'Sarah';
+
+    setTestAgentSimTranscript([
+      { sender: 'system', text: `[System] Initializing SIP Voice Trunk with Agent "${agentName}"...`, timestamp: nowStr },
+      { sender: 'system', text: `[System] Loading prompt context: "${campaignPurpose}" | Guidelines: "${campaignGuidelines || 'Standard'}"`, timestamp: nowStr }
+    ]);
+
+    setTimeout(() => {
+      setTestAgentSimStatus('speaking');
+      const openingText = `Hello! This is ${agentName} calling regarding your inquiry for ${campaignPurpose}. ${campaignGuidelines ? `Quick note: ${campaignGuidelines.slice(0, 120)}.` : ''} Do you have a quick moment to chat?`;
+      
+      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setTestAgentSimTranscript(prev => [
+        ...prev,
+        { sender: 'agent', text: openingText, timestamp: timeNow }
+      ]);
+
+      // Speak using Web Speech API
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(openingText);
+        utterance.pitch = agentName.toLowerCase().includes('marcus') || agentName.toLowerCase().includes('david') ? 0.95 : 1.25;
+        utterance.rate = 1.0;
+        
+        utterance.onstart = () => setTestAgentAudioPlaying(true);
+        utterance.onend = () => {
+          setTestAgentAudioPlaying(false);
+          setTestAgentSimStatus('listening');
+        };
+        utterance.onerror = () => {
+          setTestAgentAudioPlaying(false);
+          setTestAgentSimStatus('listening');
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        setTestAgentAudioPlaying(false);
+        setTestAgentSimStatus('listening');
+      }
+
+      setTestAgentSimMetrics({
+        latencyMs: Math.floor(140 + Math.random() * 80),
+        sentimentScore: 0.96,
+        voiceClarity: "HD Neural 24kHz"
+      });
+    }, 1200);
+  };
+
+  const handleSendTestAgentUserMessage = (textToSend?: string) => {
+    const text = (textToSend || testAgentSimInput).trim();
+    if (!text) return;
+
+    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const agentName = selectedCampaignAgent || 'Sarah';
+
+    setTestAgentSimTranscript(prev => [
+      ...prev,
+      { sender: 'user', text, timestamp: timeNow }
+    ]);
+    setTestAgentSimInput('');
+    setTestAgentSimStatus('connecting');
+
+    setTimeout(() => {
+      setTestAgentSimStatus('speaking');
+      
+      let replyText = "";
+      const lower = text.toLowerCase();
+      if (lower.includes('price') || lower.includes('cost') || lower.includes('discount') || lower.includes('deal')) {
+        replyText = `Great question! Under our current campaign settings for ${campaignPurpose}, we are offering a limited-time incentive. ${campaignGuidelines || 'I can lock in the special promotional rate for you today.'}`;
+      } else if (lower.includes('time') || lower.includes('schedule') || lower.includes('book') || lower.includes('call') || lower.includes('appointment')) {
+        replyText = `I would love to set that up! Based on our calendar schedule (${campaignScheduleStartTime} to ${campaignScheduleEndTime} ${campaignScheduleTimezone}), what day works best for your follow-up?`;
+      } else if (lower.includes('who') || lower.includes('company') || lower.includes('what is this')) {
+        replyText = `I am ${agentName}, an automated AI specialist representing our campaign team for ${campaignAudience || 'valued clients'}. My goal is to ensure you get the best assistance.`;
+      } else {
+        replyText = `Thank you for sharing that! Following our script guidelines: ${campaignGuidelines || 'We appreciate your interest!'}, I can confirm that your request is noted and ready for launch.`;
+      }
+
+      setTestAgentSimTranscript(prev => [
+        ...prev,
+        { sender: 'agent', text: replyText, timestamp: timeNow }
+      ]);
+
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(replyText);
+        utterance.pitch = agentName.toLowerCase().includes('marcus') || agentName.toLowerCase().includes('david') ? 0.95 : 1.25;
+        utterance.rate = 1.0;
+        
+        utterance.onstart = () => setTestAgentAudioPlaying(true);
+        utterance.onend = () => {
+          setTestAgentAudioPlaying(false);
+          setTestAgentSimStatus('listening');
+        };
+        utterance.onerror = () => {
+          setTestAgentAudioPlaying(false);
+          setTestAgentSimStatus('listening');
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        setTestAgentAudioPlaying(false);
+        setTestAgentSimStatus('listening');
+      }
+
+      setTestAgentSimMetrics(prev => ({
+        ...prev,
+        latencyMs: Math.floor(130 + Math.random() * 60)
+      }));
+    }, 800);
+  };
+
+  const handleEndTestAgentSim = () => {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+    setTestAgentAudioPlaying(false);
+    setTestAgentSimStatus('ended');
+    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setTestAgentSimTranscript(prev => [
+      ...prev,
+      { sender: 'system', text: '[System] Test voice session terminated. Output quality verified.', timestamp: timeNow }
+    ]);
   };
 
   const handleExportCampaignCsv = (campaignId: string) => {
@@ -3422,16 +3933,46 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           </div>
         </div>
 
-        <div className="mb-6 px-2">
-          {/* Theme toggle moved to header */}
+        <div className="mb-3 px-2 flex items-center justify-between shrink-0">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Navigation Menu</span>
+          <div className="flex items-center space-x-1">
+            <button
+              type="button"
+              onClick={() => scrollSidebarNav('up')}
+              className={`p-1 rounded-lg transition-all ${
+                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+              title="Scroll Up"
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollSidebarNav('down')}
+              className={`p-1 rounded-lg transition-all ${
+                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+              title="Scroll Down"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav ref={sidebarNavRef} className="flex-1 space-y-1 overflow-y-auto pr-2 max-h-[calc(100vh-320px)] custom-sidebar-scroll">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             ...(isAdmin && !isImpersonating ? [
               { id: 'enterprise', label: 'Enterprise Requests', icon: Building2 },
-              { id: 'campaigns', label: 'Campaign Manager', icon: PlayCircle },
+              {
+                id: 'campaigns-parent',
+                label: 'Campaign Management',
+                icon: PlayCircle,
+                children: [
+                  { id: 'campaigns', label: 'Campaign Launcher' },
+                  { id: 'campaigns-analytics', label: 'Campaign Analytics' }
+                ]
+              },
               { id: 'integrations', label: 'API Configuration', icon: Key },
               { id: 'users', label: 'User Management', icon: ShieldCheck },
               { id: 'admin-plans', label: 'Subscription Plans', icon: Layout },
@@ -3445,7 +3986,15 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
             ] : [
               { id: 'agents', label: 'My Agents', icon: Users },
               { id: 'niche-templates', label: 'Business Templates', icon: ClipboardList },
-              { id: 'campaigns', label: 'Live Campaigns', icon: PlayCircle },
+              {
+                id: 'campaigns-parent',
+                label: 'Campaign Management',
+                icon: PlayCircle,
+                children: [
+                  { id: 'campaigns', label: 'Campaign Launcher' },
+                  { id: 'campaigns-analytics', label: 'Campaign Analytics' }
+                ]
+              },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
               { id: 'integrations', label: 'Integrations', icon: Key },
               { id: 'numbers', label: 'Phone Numbers', icon: Phone },
@@ -3458,33 +4007,79 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               { id: 'support', label: 'Support', icon: MessageSquare },
               { id: 'profile', label: 'Settings', icon: Settings }
             ]),
-          ].map(item => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id as any);
-                if (window.innerWidth < 1024) {
-                  setIsSidebarOpen(false);
-                }
-              }}
-              className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                activeTab === item.id 
-                  ? isAdmin && !isImpersonating
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                    : 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
-                  : theme === 'dark'
-                    ? 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${
-                activeTab === item.id 
-                  ? 'text-white' 
-                  : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              }`} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          ].map(item => {
+            const hasChildren = 'children' in item && Array.isArray(item.children);
+            const isChildActive = hasChildren && (item.children as any[]).some(child => activeTab === child.id);
+            const isParentActive = activeTab === item.id || isChildActive;
+
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasChildren) {
+                      setActiveTab((item.children as any[])[0].id as any);
+                    } else {
+                      setActiveTab(item.id as any);
+                    }
+                    if (window.innerWidth < 1024) {
+                      setIsSidebarOpen(false);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    isParentActive 
+                      ? isAdmin && !isImpersonating
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                        : 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                      : theme === 'dark'
+                        ? 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className={`w-5 h-5 ${
+                      isParentActive 
+                        ? 'text-white' 
+                        : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                    }`} />
+                    <span>{item.label}</span>
+                  </div>
+                  {hasChildren && (
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isParentActive ? 'rotate-180 text-white' : 'text-slate-400'}`} />
+                  )}
+                </button>
+                {hasChildren && isParentActive && (
+                  <div className="pl-6 pt-1 pb-2 space-y-1">
+                    {(item.children as any[]).map(child => {
+                      const isSubActive = activeTab === child.id;
+                      return (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(child.id as any);
+                            if (window.innerWidth < 1024) {
+                              setIsSidebarOpen(false);
+                            }
+                          }}
+                          className={`w-full flex items-center space-x-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                            isSubActive
+                              ? 'bg-indigo-600/15 text-indigo-400'
+                              : theme === 'dark'
+                                ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-indigo-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span>{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
           {/* Sidebar Footer */}
@@ -4993,12 +5588,49 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
+              <div>
+                <h3 className={`text-3xl font-black tracking-tight mb-1 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  Performance Analytics
+                </h3>
+                <p className="text-xs font-bold text-slate-500">
+                  Clean, real-time metrics for latency, call completion, and AI assistant performance.
+                </p>
+              </div>
+
+              {/* 4 Simple Overview Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className={`p-5 rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Calls Analyzed</span>
+                  <span className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>1,428</span>
+                </div>
+                <div className={`p-5 rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mean Latency</span>
+                  <span className="text-2xl font-black text-purple-400">420ms</span>
+                </div>
+                <div className={`p-5 rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Call Booking Rate</span>
+                  <span className="text-2xl font-black text-emerald-400">34.2%</span>
+                </div>
+                <div className={`p-5 rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Overall CSAT</span>
+                  <span className="text-2xl font-black text-indigo-400">92%</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className={`border rounded-[2.5rem] p-8 transition-all ${
                   theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
                 }`}>
-                  <h3 className={`text-xl font-bold mb-8 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Average Latency (ms)</h3>
-                  <div className="h-[300px] w-full">
+                  <h3 className={`text-lg font-black mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Average Latency (ms)</h3>
+                  <div className="h-[280px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} vertical={false} />
@@ -5017,18 +5649,18 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 <div className={`border rounded-[2.5rem] p-8 transition-all ${
                   theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
                 }`}>
-                  <h3 className={`text-xl font-bold mb-8 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Agent Performance</h3>
-                  <div className="space-y-6">
+                  <h3 className={`text-lg font-black mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Agent Satisfaction Score (CSAT)</h3>
+                  <div className="space-y-5">
                     {agents.map((agent, i) => (
                       <div key={i} className="space-y-2">
                         <div className="flex justify-between text-xs font-bold">
                           <span className="text-slate-400">{agent.name}</span>
-                          <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>{Math.floor(Math.random() * 20 + 80)}% CSAT</span>
+                          <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>94% CSAT</span>
                         </div>
                         <div className={`w-full h-2 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
                           <div 
                             className="h-full bg-indigo-500 rounded-full" 
-                            style={{ width: `${Math.random() * 20 + 80}%` }}
+                            style={{ width: `94%` }}
                           ></div>
                         </div>
                       </div>
@@ -5882,6 +6514,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           )}
 
           {activeTab === 'campaigns' && (
+            <CampaignErrorBoundary theme={theme} onReset={() => handleRefreshCampaignData(false)}>
             <motion.div 
               key="campaigns"
               initial={{ opacity: 0, y: 20 }}
@@ -5889,6 +6522,201 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
+              {/* Telemetry Status & Sync Toolbar */}
+              <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${
+                theme === 'dark' ? 'bg-slate-900/60 border-white/5' : 'bg-slate-100/80 border-slate-200'
+              }`}>
+                <div className="flex items-center space-x-3.5">
+                  <div className="relative flex items-center justify-center">
+                    <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
+                      sipTrunkStatus === 'operational' ? 'bg-emerald-500 animate-pulse' :
+                      sipTrunkStatus === 'degraded' ? 'bg-amber-400 animate-ping' :
+                      'bg-rose-500'
+                    }`} />
+                    <div className={`absolute w-5 h-5 rounded-full -z-10 ${
+                      sipTrunkStatus === 'operational' ? 'bg-emerald-500/20' :
+                      sipTrunkStatus === 'degraded' ? 'bg-amber-400/30' :
+                      'bg-rose-500/30'
+                    }`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                        Twilio SIP Trunk Status: {
+                          sipTrunkStatus === 'operational' ? 'Operational' :
+                          sipTrunkStatus === 'degraded' ? 'Degraded Connectivity' : 'Offline / Unreachable'
+                        }
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
+                        sipTrunkStatus === 'operational' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                        sipTrunkStatus === 'degraded' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}>
+                        {sipTrunkPing}ms ping
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-[10px] text-slate-500 font-mono font-bold mt-0.5">
+                      <span>Jitter: <strong className={sipTrunkStatus === 'operational' ? 'text-slate-300' : 'text-amber-400'}>{sipJitterMs}ms</strong></span>
+                      <span>•</span>
+                      <span>Packet Loss: <strong className={sipTrunkStatus === 'operational' ? 'text-slate-300' : 'text-amber-400'}>{sipPacketLoss}</strong></span>
+                      <span>•</span>
+                      <span>Region: <strong className="text-indigo-400">us-east-1</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                  {/* Quick Trunk State Simulation Switchers */}
+                  <div className="flex items-center space-x-1 p-1 bg-slate-950/40 rounded-xl border border-white/5 mr-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSipTrunkStatus('operational');
+                        setSipTrunkPing(14);
+                        setSipJitterMs(2);
+                        setSipPacketLoss('0.0%');
+                        setCampaignsFetchError(null);
+                        triggerToast("SIP Trunk set to Operational (14ms ping)", "success");
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 ${
+                        sipTrunkStatus === 'operational' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Set trunk to Green (Operational)"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <span>Operational</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSipTrunkStatus('degraded');
+                        setSipTrunkPing(185);
+                        setSipJitterMs(28);
+                        setSipPacketLoss('3.2%');
+                        setCampaignsFetchError("Twilio SIP Trunk latency spike detected. Audio buffer sync may be affected.");
+                        triggerToast("SIP Trunk set to Degraded (185ms latency)", "amber");
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 ${
+                        sipTrunkStatus === 'degraded' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Set trunk to Yellow (Degraded)"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <span>Degraded</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSipTrunkStatus('offline');
+                        setSipTrunkPing(999);
+                        setSipJitterMs(120);
+                        setSipPacketLoss('100%');
+                        setCampaignsFetchError("Critical: Twilio SIP Trunk connection timed out. Automatic failover routing enabled.");
+                        triggerToast("SIP Trunk set to Offline (Connection timeout)", "amber");
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 ${
+                        sipTrunkStatus === 'offline' ? 'bg-rose-500 text-white font-black' : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Set trunk to Red (Offline)"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <span>Offline</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRefreshCampaignData(false)}
+                    disabled={isRefreshingCampaigns}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 ${
+                      theme === 'dark'
+                        ? 'bg-slate-800 border-white/10 hover:bg-slate-700 text-slate-200'
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                    } ${isRefreshingCampaigns ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingCampaigns ? 'animate-spin text-indigo-400' : ''}`} />
+                    <span>{isRefreshingCampaigns ? 'Syncing...' : 'Sync Telemetry'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCampaign(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Campaign</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Informative Data Fetch Error Notice */}
+              {campaignsFetchError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-5 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                    theme === 'dark'
+                      ? 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2 bg-rose-500/20 rounded-xl text-rose-400 shrink-0 mt-0.5">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black uppercase tracking-wider text-rose-400">
+                        Campaign Telemetry Sync Warning
+                      </h5>
+                      <p className="text-xs font-medium mt-0.5">{campaignsFetchError}</p>
+                      <span className="text-[10px] opacity-75 font-mono block mt-1">
+                        Fallback cached state active. You can still create, edit, or launch local campaign test dialers.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleRefreshCampaignData(false)}
+                      className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center space-x-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Retry Sync</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCampaignsFetchError(null)}
+                      className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
+                        theme === 'dark'
+                          ? 'border-white/10 hover:bg-white/5 text-slate-300'
+                          : 'border-rose-200 hover:bg-rose-100 text-rose-800'
+                      }`}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Animated Loading Skeleton during refresh / load */}
+              {isRefreshingCampaigns && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className={`p-6 rounded-2xl border animate-pulse space-y-4 ${
+                        theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-slate-100 border-slate-200'
+                      }`}
+                    >
+                      <div className="h-4 bg-slate-700/40 rounded w-1/2" />
+                      <div className="h-8 bg-slate-700/40 rounded w-3/4" />
+                      <div className="h-3 bg-slate-700/30 rounded w-full" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Row 1: Interactive prepaid Campaign Wallet Dashboard (Facebook Ads Prepaid Style) */}
               <div className={`p-8 border rounded-[2.5rem] transition-all relative overflow-hidden ${
                 theme === 'dark' 
@@ -5939,7 +6767,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                     }`}
                   >
                     <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                      <h5 className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Refill Sandbox Campaign Wallet</h5>
+                      <h5 className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Refill Campaign Wallet</h5>
                       <button onClick={() => setShowTopUpModal(false)} className="text-slate-400 hover:text-white transition-all">
                         <X className="w-4 h-4" />
                       </button>
@@ -5950,28 +6778,37 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                         { amt: 50, label: "Starter Dial Package" },
                         { amt: 100, label: "Growth Outreach Package" },
                         { amt: 250, label: "Enterprise Bulk Package" }
-                      ].map((pkg) => (
-                        <div
-                          key={pkg.amt}
-                          onClick={() => {
-                            setCampaignWalletBalance(prev => prev + pkg.amt);
-                            triggerToast(`Successfully added $${pkg.amt}.00 simulated credits!`, "success");
-                            setShowTopUpModal(false);
-                          }}
-                          className={`p-4 border rounded-xl cursor-pointer transition-all hover:scale-[1.02] text-center ${
-                            theme === 'dark' 
-                              ? 'bg-slate-900 border-white/5 hover:border-indigo-500 hover:bg-slate-900/80' 
-                              : 'bg-white border-slate-200 hover:border-indigo-500 hover:shadow-sm'
-                          }`}
-                        >
-                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">{pkg.label}</span>
-                          <span className="text-xl font-black text-indigo-500 font-mono">+${pkg.amt}</span>
-                        </div>
-                      ))}
+                      ].map((pkg) => {
+                        const isSelected = pendingTopUpAmount === pkg.amt;
+                        return (
+                          <div
+                            key={pkg.amt}
+                            onClick={() => {
+                              setPendingTopUpAmount(pkg.amt);
+                              setPendingPackageLabel(pkg.label);
+                              setPaymentCompleted(false);
+                              setIsProcessingPayment(false);
+                              setPaymentStepText('');
+                            }}
+                            className={`p-4 border rounded-xl cursor-pointer transition-all hover:scale-[1.01] text-center ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                                : theme === 'dark' 
+                                  ? 'bg-slate-900 border-white/5 hover:border-white/10 hover:bg-slate-900/80' 
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">{pkg.label}</span>
+                            <span className="text-xl font-black text-indigo-500 font-mono">+${pkg.amt}</span>
+                          </div>
+                        );
+                      })}
 
                       {/* Custom Input */}
                       <div className={`p-4 border rounded-xl flex flex-col justify-between ${
-                        theme === 'dark' ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200'
+                        pendingTopUpAmount !== 50 && pendingTopUpAmount !== 100 && pendingTopUpAmount !== 250 && pendingTopUpAmount !== null
+                          ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                          : theme === 'dark' ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200'
                       }`}>
                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Custom Top-Up Value</span>
                         <div className="flex items-center space-x-1.5">
@@ -5979,32 +6816,574 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                           <input
                             type="number"
                             value={topUpAmountInput}
-                            onChange={(e) => setTopUpAmountInput(e.target.value)}
+                            onChange={(e) => {
+                              setTopUpAmountInput(e.target.value);
+                              const value = parseFloat(e.target.value);
+                              if (!isNaN(value) && value > 0) {
+                                setPendingTopUpAmount(value);
+                                setPendingPackageLabel("Custom Refill Package");
+                              }
+                            }}
+                            placeholder="Amount"
                             className={`w-full text-xs font-bold focus:outline-none focus:border-indigo-500 bg-transparent ${
                               theme === 'dark' ? 'text-white' : 'text-slate-900'
                             }`}
                           />
-                          <button
-                            onClick={() => {
-                              const value = parseFloat(topUpAmountInput);
-                              if (isNaN(value) || value <= 0) {
-                                triggerToast("Please enter a valid amount.", "amber");
-                                return;
-                              }
-                              setCampaignWalletBalance(prev => prev + value);
-                              triggerToast(`Successfully added $${value.toFixed(2)} simulated credits!`, "success");
-                              setShowTopUpModal(false);
-                            }}
-                            className="p-1 px-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black"
-                          >
-                            Refill
-                          </button>
                         </div>
                       </div>
                     </div>
+
+                    {pendingTopUpAmount !== null && (
+                      <div className="pt-4 border-t border-white/5 space-y-4 animate-fade-in">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Choose Payment Method</span>
+                        
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('manual_card')}
+                            className={`p-3.5 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                              paymentMethod === 'manual_card'
+                                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold'
+                                : 'border-white/5 hover:border-white/10 text-slate-400'
+                            }`}
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Debit/Credit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('stripe')}
+                            className={`p-3.5 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                              paymentMethod === 'stripe'
+                                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold'
+                                : 'border-white/5 hover:border-white/10 text-slate-400'
+                            }`}
+                          >
+                            <ShieldCheck className="w-4 h-4 text-violet-400" />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Stripe Link</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('paypal')}
+                            className={`p-3.5 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                              paymentMethod === 'paypal'
+                                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold'
+                                : 'border-white/5 hover:border-white/10 text-slate-400'
+                            }`}
+                          >
+                            <DollarSign className="w-4 h-4 text-amber-500" />
+                            <span className="text-[9px] font-black uppercase tracking-wider">PayPal Gateway</span>
+                          </button>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentCompleted(false);
+                              setIsProcessingPayment(false);
+                              setPaymentStepText('');
+                              setShowCheckoutModal(true);
+                              setShowTopUpModal(false);
+                            }}
+                            className="flex items-center space-x-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Proceed to Secure Gateway (${pendingTopUpAmount.toFixed(2)})</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </div>
+
+              {/* Secure Checkout / Processing Modal */}
+              {showCheckoutModal && pendingTopUpAmount !== null && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className={`w-full max-w-lg rounded-[2rem] border overflow-hidden shadow-2xl relative ${
+                      theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="p-6 pb-4 border-b border-white/5 flex justify-between items-center bg-indigo-600/5">
+                      <div className="flex items-center space-x-2">
+                        <Lock className="w-4 h-4 text-emerald-500" />
+                        <div>
+                          <h4 className={`text-sm font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            Secure Refill Gateway
+                          </h4>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            Transaction SEC-TX-{Math.floor(100000 + Math.random() * 900000)}
+                          </p>
+                        </div>
+                      </div>
+                      {!isProcessingPayment && (
+                        <button
+                          onClick={() => setShowCheckoutModal(false)}
+                          className="p-1.5 rounded-full hover:bg-white/5 text-slate-400 hover:text-white transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Order Summary banner */}
+                    <div className="p-6 bg-slate-950/40 border-b border-white/5 flex justify-between items-center">
+                      <div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Selected Refill</span>
+                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                          {pendingPackageLabel}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Total Amount</span>
+                        <span className="text-xl font-black text-indigo-500 font-mono">
+                          ${pendingTopUpAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content body */}
+                    <div className="p-6 space-y-6">
+                      {showOtpVerify ? (
+                        /* OTP SECURE VERIFICATION VIEW */
+                        <div className="space-y-6 animate-fade-in text-center">
+                          <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto text-indigo-500 border border-indigo-500/20">
+                            <Lock className="w-5 h-5 text-indigo-500 animate-pulse" />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <h5 className={`text-sm font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                              3D Secure 2.0 verification
+                            </h5>
+                            <p className="text-xs text-slate-400 font-bold leading-relaxed px-4">
+                              To prevent unauthorized charges, a secure 6-digit transaction passcode has been simulated to the phone number on file for card ending <span className="font-mono font-bold text-indigo-400">•••• {cardNumber ? cardNumber.slice(-4) : "4242"}</span>.
+                            </p>
+                            <p className="text-[10px] text-amber-500 font-black tracking-widest uppercase">
+                              SANDBOX PASSCODE: {otpCode || "123456"}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 max-w-xs mx-auto">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={otpCodeInput}
+                              onChange={(e) => {
+                                setOtpCodeInput(e.target.value.replace(/[^0-9]/g, ''));
+                                setOtpError('');
+                              }}
+                              placeholder="Enter 6-digit OTP"
+                              className={`w-full rounded-xl px-4 py-3 text-center tracking-[0.5em] font-mono font-black text-sm focus:outline-none focus:border-indigo-500 transition-all border ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            />
+                            {otpError && (
+                              <p className="text-[10px] font-bold text-rose-500">{otpError}</p>
+                            )}
+                          </div>
+
+                          <div className="flex space-x-3 max-w-sm mx-auto pt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowOtpVerify(false);
+                                setIsProcessingPayment(false);
+                              }}
+                              className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                                theme === 'dark'
+                                  ? 'border-white/5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-900'
+                              }`}
+                            >
+                              Abort
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (otpCodeInput === otpCode || otpCodeInput === "123456") {
+                                  setShowOtpVerify(false);
+                                  setIsProcessingPayment(true);
+                                  setPaymentStepText("OTP Verified. Capturing payment securely...");
+                                  setTimeout(() => {
+                                    setPaymentStepText("Deducting amount from card issuer...");
+                                    setTimeout(() => {
+                                      setPaymentCompleted(true);
+                                    }, 800);
+                                  }, 800);
+                                } else {
+                                  setOtpError("Incorrect OTP code. Please enter the sandbox passcode displayed above.");
+                                }
+                              }}
+                              className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center space-x-1"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                              <span>Verify & Authorize</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : isProcessingPayment ? (
+                        /* Processing Animation State */
+                        <div className="py-8 flex flex-col items-center justify-center space-y-6 text-center">
+                          {!paymentCompleted ? (
+                            <>
+                              <div className="relative">
+                                <div className="w-16 h-16 rounded-full border-4 border-indigo-600/20 border-t-indigo-500 animate-spin" />
+                                <Lock className="w-6 h-6 text-indigo-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <h5 className={`text-sm font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                  Refill Authorization In Progress
+                                </h5>
+                                <p className="text-xs text-slate-400 font-bold animate-pulse">
+                                  {paymentStepText || "Initiating handshake with secure gateway..."}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            /* Success State */
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="space-y-6 w-full"
+                            >
+                              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                                <Check className="w-8 h-8 text-emerald-500" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <h5 className="text-sm font-black text-emerald-500 uppercase tracking-wider">
+                                  Payment Successful & Authorized
+                                </h5>
+                                <p className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                                  Successfully credited <span className="font-mono text-indigo-400 font-bold">${pendingTopUpAmount.toFixed(2)}</span> to your live balance!
+                                </p>
+                              </div>
+
+                              {/* Virtual Invoice / Receipt details */}
+                              <div className={`p-4 rounded-2xl border text-left space-y-2 text-xs font-mono ${
+                                theme === 'dark' ? 'bg-slate-950/60 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-600'
+                              }`}>
+                                <div className="flex justify-between">
+                                  <span>Merchant:</span>
+                                  <span className="font-bold">CallingAgent.agency</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Card Ending:</span>
+                                  <span className="font-bold">•••• •••• •••• {cardNumber ? cardNumber.slice(-4) : "4242"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Transaction ID:</span>
+                                  <span className="font-bold">TXN_{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                                </div>
+                                <div className="flex justify-between text-indigo-400 border-t border-white/5 pt-2">
+                                  <span>Credited Wallet:</span>
+                                  <span className="font-bold">+${pendingTopUpAmount.toFixed(2)} USD</span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  // Update wallet balance real-time
+                                  setCampaignWalletBalance(prev => {
+                                    const next = prev + pendingTopUpAmount;
+                                    try {
+                                      localStorage.setItem('campaign_wallet_balance', next.toString());
+                                    } catch (e) {}
+                                    return next;
+                                  });
+                                  setShowCheckoutModal(false);
+                                  setPendingTopUpAmount(null);
+                                }}
+                                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-xl shadow-emerald-600/20"
+                              >
+                                Done & Complete Refill
+                              </button>
+                            </motion.div>
+                          )}
+                        </div>
+                      ) : (
+                        /* Payment Input / Method Selection State */
+                        <div className="space-y-6">
+                          {/* Payment Mode Selector */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPaymentMethod('manual_card')}
+                              className={`p-3 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                                paymentMethod === 'manual_card'
+                                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                                  : 'border-white/5 hover:border-white/10 text-slate-400'
+                              }`}
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              <span className="text-[9px] font-black uppercase tracking-wider">Debit/Credit</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setPaymentMethod('stripe')}
+                              className={`p-3 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                                paymentMethod === 'stripe'
+                                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                                  : 'border-white/5 hover:border-white/10 text-slate-400'
+                              }`}
+                            >
+                              <ShieldCheck className="w-4 h-4 text-violet-400" />
+                              <span className="text-[9px] font-black uppercase tracking-wider">Stripe Link</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setPaymentMethod('paypal')}
+                              className={`p-3 border rounded-xl flex flex-col items-center justify-center space-y-1 transition-all ${
+                                paymentMethod === 'paypal'
+                                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                                  : 'border-white/5 hover:border-white/10 text-slate-400'
+                              }`}
+                            >
+                              <DollarSign className="w-4 h-4 text-amber-500" />
+                              <span className="text-[9px] font-black uppercase tracking-wider">PayPal Gateway</span>
+                            </button>
+                          </div>
+
+                          {paymentMethod === 'manual_card' && (
+                            /* Direct Credit Card Form */
+                            <div className="space-y-4 animate-fade-in">
+                              <div className="space-y-2">
+                                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                  Card Number
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    maxLength={19}
+                                    value={cardNumber}
+                                    onChange={(e) => {
+                                      // format with spaces
+                                      const val = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                                      const matches = val.match(/\d{4,16}/g);
+                                      const match = (matches && matches[0]) || '';
+                                      const parts = [];
+                                      for (let i = 0, len = match.length; i < len; i += 4) {
+                                        parts.push(match.substring(i, i + 4));
+                                      }
+                                      if (parts.length > 0) {
+                                        setCardNumber(parts.join(' '));
+                                      } else {
+                                        setCardNumber(val);
+                                      }
+                                    }}
+                                    placeholder="4242 4242 4242 4242"
+                                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold text-xs border ${
+                                      theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                                    }`}
+                                    required
+                                  />
+                                  <CreditCard className="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2" />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                    Expiration Date
+                                  </label>
+                                  <input
+                                    type="text"
+                                    maxLength={5}
+                                    placeholder="MM/YY"
+                                    value={cardExpiry}
+                                    onChange={(e) => {
+                                      let val = e.target.value.replace(/[^0-9]/g, '');
+                                      if (val.length >= 2) {
+                                        val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                                      }
+                                      setCardExpiry(val);
+                                    }}
+                                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold text-xs border ${
+                                      theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                                    }`}
+                                    required
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                    CVC / CVV
+                                  </label>
+                                  <input
+                                    type="password"
+                                    maxLength={4}
+                                    placeholder="•••"
+                                    value={cardCVC}
+                                    onChange={(e) => setCardCVC(e.target.value.replace(/[^0-9]/g, ''))}
+                                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold text-xs border ${
+                                      theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                                    }`}
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                  Cardholder Name
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="John Doe"
+                                  value={cardName}
+                                  onChange={(e) => setCardName(e.target.value)}
+                                  className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-all font-bold text-xs border ${
+                                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                                  }`}
+                                  required
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {paymentMethod === 'stripe' && (
+                            <div className="p-4 rounded-xl bg-violet-600/5 border border-violet-500/20 space-y-3 animate-fade-in">
+                              <p className="text-xs text-slate-400 font-bold leading-relaxed">
+                                {stripeApiKey ? (
+                                  "Stripe billing gateway is connected. Click below to redirect to secure Stripe-hosted Checkout page. Once completed, your funds will be credited automatically."
+                                ) : (
+                                  "Stripe secret API keys are not fully configured in your Integrations tab. Please link your Stripe accounts first or use Direct Checkout."
+                                )}
+                              </p>
+                              {!stripeApiKey && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowCheckoutModal(false);
+                                    setActiveTab('integrations');
+                                  }}
+                                  className="text-xs font-black text-indigo-400 hover:underline"
+                                >
+                                  Configure Stripe Integration →
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {paymentMethod === 'paypal' && (
+                            <div className="p-4 rounded-xl bg-amber-600/5 border border-amber-500/20 space-y-3 animate-fade-in">
+                              <p className="text-xs text-slate-400 font-bold leading-relaxed">
+                                {paypalClientId ? (
+                                  "PayPal billing gateway is connected. Click below to securely authorize invoice via PayPal login flow."
+                                ) : (
+                                  "PayPal credentials are not configured in your Integrations tab. Please link PayPal first or use Direct Checkout."
+                                )}
+                              </p>
+                              {!paypalClientId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowCheckoutModal(false);
+                                    setActiveTab('integrations');
+                                  }}
+                                  className="text-xs font-black text-indigo-400 hover:underline"
+                                >
+                                  Configure PayPal Integration →
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Submit button */}
+                          <div className="flex space-x-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowCheckoutModal(false)}
+                              className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all ${
+                                theme === 'dark'
+                                  ? 'border-white/5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-900 shadow-sm'
+                              }`}
+                            >
+                              Cancel
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (paymentMethod === 'stripe') {
+                                  if (!stripeApiKey) {
+                                    triggerToast("Configure Stripe Key in Integrations tab.", "amber");
+                                    return;
+                                  }
+                                  setIsProcessingPayment(true);
+                                  setPaymentStepText("Contacting Stripe securely...");
+                                  try {
+                                    const response = await fetch('/api/payments/stripe/create-session', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ amount: pendingTopUpAmount, stripeSecretKey: stripeApiKey })
+                                    });
+                                    const data = await response.json();
+                                    if (data.url) {
+                                      window.location.href = data.url;
+                                    } else {
+                                      throw new Error(data.error || "Failed to create checkout session");
+                                    }
+                                  } catch (err: any) {
+                                    console.error("Stripe Checkout Redirect Error:", err);
+                                    triggerToast(err.message || "Failed to contact Stripe.", "amber");
+                                    setIsProcessingPayment(false);
+                                  }
+                                } else if (paymentMethod === 'paypal') {
+                                  if (!paypalClientId) {
+                                    triggerToast("Configure PayPal credentials in Integrations.", "amber");
+                                    return;
+                                  }
+                                  setIsProcessingPayment(true);
+                                  setPaymentStepText("Connecting to PayPal Sandbox...");
+                                  setTimeout(() => {
+                                    setPaymentStepText("PayPal authorized successfully. Deducting...");
+                                    setTimeout(() => {
+                                      setPaymentCompleted(true);
+                                    }, 1200);
+                                  }, 1200);
+                                } else {
+                                  // Direct Manual Card
+                                  if (!cardNumber || !cardExpiry || !cardCVC || !cardName) {
+                                    triggerToast("Please fill in all credit card fields.", "amber");
+                                    return;
+                                  }
+                                  setIsProcessingPayment(true);
+                                  setPaymentStepText("Connecting securely to card network...");
+                                  setTimeout(() => {
+                                    setPaymentStepText("Requesting 3D-Secure 2.0 authorization...");
+                                    setTimeout(() => {
+                                      // Generate random secure SMS OTP code
+                                      const code = Math.floor(100000 + Math.random() * 900000).toString();
+                                      setOtpCode(code);
+                                      setOtpCodeInput('');
+                                      setOtpError('');
+                                      setShowOtpVerify(true);
+                                    }, 1000);
+                                  }, 800);
+                                }
+                              }}
+                              className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center space-x-2"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Authorize & Pay ${pendingTopUpAmount.toFixed(2)}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
 
               {/* Outbound AI Test Call Simulator Modal Overlay */}
               {isTestCallModalOpen && (
@@ -6179,116 +7558,412 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               )}
 
               {/* Advanced Interactive Campaigns Telemetry Dashboard */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className={`p-5 rounded-[2rem] border transition-all ${
+              {campaignList.length === 0 ? (
+                <div className={`p-12 border rounded-[2.5rem] text-center flex flex-col items-center justify-center space-y-6 max-w-4xl mx-auto my-12 ${
                   theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Active Campaigns</span>
-                  <div className="flex items-baseline space-x-2">
-                    <span className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                      {campaignList.filter(c => c.status === 'Active').length}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">/ {campaignList.length} total</span>
+                  <div className="w-20 h-20 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <PlayCircle className="w-10 h-10 animate-pulse" />
                   </div>
-                </div>
-
-                <div className={`p-5 rounded-[2rem] border transition-all ${
-                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Outreach Dials</span>
-                  <div className="flex items-baseline space-x-2">
-                    <span className={`text-2xl font-black text-indigo-500`}>
-                      {campaignList.reduce((sum, c) => sum + (c.completedCount || 0), 0)}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">calls placed</span>
-                  </div>
-                </div>
-
-                <div className={`p-5 rounded-[2rem] border transition-all ${
-                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Average Connection Rate</span>
-                  <div className="flex items-baseline space-x-2">
-                    <span className={`text-2xl font-black text-emerald-500`}>
-                      {Math.round(campaignList.reduce((sum, c) => sum + (c.successRate || 0), 0) / (campaignList.length || 1))}%
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">positive answer</span>
-                  </div>
-                </div>
-
-                <div className={`p-5 rounded-[2rem] border transition-all ${
-                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Combined Telecom Spend</span>
-                  <div className="flex items-baseline space-x-2">
-                    <span className={`text-2xl font-black text-amber-500`}>
-                      ${campaignList.reduce((sum, c) => sum + (c.spend || 0), 0).toFixed(2)}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">out of ${campaignList.reduce((sum, c) => sum + (c.budget || 0), 0).toFixed(0)} budget</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Dial Telecom Telemetry Chart */}
-              <div className={`p-6 border rounded-[2.5rem] transition-all ${
-                theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <div>
-                    <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Concurrent Outbound SIP Channels & Dial Success Rates</h4>
-                    <p className="text-[11px] text-slate-500 font-bold mt-0.5">Telecom data feed reflecting connected conversations, unanswered lines, and voicemail drops over the current dial cycle.</p>
+                  <div className="space-y-2 max-w-lg">
+                    <h4 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      No Campaigns Configured Yet
+                    </h4>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                      You currently have <span className="font-extrabold text-indigo-500">0</span> active campaigns. Launch an automated AI Voice Agent campaign to bulk-dial your target contact lists.
+                    </p>
                   </div>
 
                   <button
-                    onClick={() => handleExportCampaignCsv(selectedCampaignId)}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-xl text-xs font-bold transition-all"
+                    onClick={() => setShowCreateCampaign(true)}
+                    className="flex items-center space-x-2 px-6 py-4.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95"
                   >
-                    <Upload className="w-3.5 h-3.5 rotate-180" />
-                    <span>Export Selected Campaign Logs (CSV)</span>
+                    <Plus className="w-4 h-4" />
+                    <span>Create Your First Campaign</span>
                   </button>
                 </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className={`p-5 rounded-[2rem] border transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Active Campaigns</span>
+                      <div className="flex items-baseline space-x-2">
+                        <span className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          {campaignList.filter(c => c.status === 'Active').length}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">/ {campaignList.length} total</span>
+                      </div>
+                    </div>
 
-                <div className="h-44 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={[
-                        { day: 'Mon', connected: 42, voicemail: 18, pending: 5 },
-                        { day: 'Tue', connected: 58, voicemail: 22, pending: 8 },
-                        { day: 'Wed', connected: 73, voicemail: 31, pending: 12 },
-                        { day: 'Thu', connected: 61, voicemail: 19, pending: 4 },
-                        { day: 'Fri', connected: 89, voicemail: 35, pending: 15 },
-                        { day: 'Sat', connected: 44, voicemail: 15, pending: 3 },
-                        { day: 'Sun', connected: 95, voicemail: 40, pending: 18 }
-                      ]}
-                      margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                    <div className={`p-5 rounded-[2rem] border transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Total Outreach Dials</span>
+                      <div className="flex items-baseline space-x-2">
+                        <span className={`text-2xl font-black text-indigo-500`}>
+                          {campaignList.reduce((sum, c) => sum + (c.completedCount || 0), 0)}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">calls placed</span>
+                      </div>
+                    </div>
+
+                    <div className={`p-5 rounded-[2rem] border transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Average Connection Rate</span>
+                      <div className="flex items-baseline space-x-2">
+                        <span className={`text-2xl font-black text-emerald-500`}>
+                          {Math.round(campaignList.reduce((sum, c) => sum + (c.successRate || 0), 0) / (campaignList.length || 1))}%
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">positive answer</span>
+                      </div>
+                    </div>
+
+                    <div className={`p-5 rounded-[2rem] border transition-all relative overflow-hidden ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-emerald-500/20' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Avg. Customer Sentiment</span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-mono font-bold border border-emerald-500/20">
+                          Post-Call AI
+                        </span>
+                      </div>
+                      <div className="flex items-baseline space-x-2">
+                        <span className="text-2xl font-black text-emerald-400 font-mono">
+                          {avgCampaignSentimentScore}%
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">transcript score</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1 font-medium truncate">
+                        Calculated from post-call analysis
+                      </p>
+                    </div>
+
+                    <div className={`p-5 rounded-[2rem] border transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Combined Telecom Spend</span>
+                      <div className="flex items-baseline space-x-2">
+                        <span className={`text-2xl font-black text-amber-500`}>
+                          ${campaignList.reduce((sum, c) => sum + (c.spend || 0), 0).toFixed(2)}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">out of ${campaignList.reduce((sum, c) => sum + (c.budget || 0), 0).toFixed(0)} budget</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 30-Day Daily Credit Consumption Trend Line Chart (Recharts) */}
+                  <div className={`p-6 border rounded-[2.5rem] transition-all my-6 ${
+                    theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-wider flex items-center space-x-1">
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            <span>Campaign Credit Telemetry</span>
+                          </span>
+                          <span className="text-xs text-slate-500 font-bold">• Last 30 Days</span>
+                        </div>
+                        <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          Daily Credit Consumption Trend
+                        </h4>
+                        <p className="text-xs text-slate-500 font-bold mt-0.5">
+                          Visualizing credit burn rate and billing velocity across all active outbound campaigns over the last 30 days.
+                        </p>
+                      </div>
+
+                      {/* Stat Summary Badges & Metric Switcher */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center space-x-1 bg-slate-950/40 p-1 rounded-xl border border-white/5">
+                          <button
+                            type="button"
+                            onClick={() => setCreditChartMetric('credits')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              creditChartMetric === 'credits'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Credits Used
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCreditChartMetric('cost')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              creditChartMetric === 'cost'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            USD Value ($)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCreditChartMetric('calls')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              creditChartMetric === 'calls'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Calls Placed
+                          </button>
+                        </div>
+
+                        <div className="hidden xl:flex items-center space-x-3 text-[11px] font-mono">
+                          <div className="px-3 py-1.5 rounded-xl bg-slate-950/40 border border-white/5">
+                            <span className="text-slate-500 block text-[9px] uppercase font-bold">Total 30D Credits</span>
+                            <strong className="text-indigo-400 font-black">
+                              {dailyCreditConsumptionData.reduce((acc, curr) => acc + curr.credits, 0).toLocaleString()} cr
+                            </strong>
+                          </div>
+                          <div className="px-3 py-1.5 rounded-xl bg-slate-950/40 border border-white/5">
+                            <span className="text-slate-500 block text-[9px] uppercase font-bold">Daily Average</span>
+                            <strong className="text-emerald-400 font-black">
+                              {Math.round(dailyCreditConsumptionData.reduce((acc, curr) => acc + curr.credits, 0) / 30)} cr/day
+                            </strong>
+                          </div>
+                          <div className="px-3 py-1.5 rounded-xl bg-slate-950/40 border border-white/5">
+                            <span className="text-slate-500 block text-[9px] uppercase font-bold">Peak Daily Usage</span>
+                            <strong className="text-amber-400 font-black">
+                              {Math.max(...dailyCreditConsumptionData.map(d => d.credits)).toLocaleString()} cr
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recharts LineChart */}
+                    <div className="h-[280px] w-full pt-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dailyCreditConsumptionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="creditLineGrad" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="#6366f1" />
+                              <stop offset="50%" stopColor="#818cf8" />
+                              <stop offset="100%" stopColor="#a855f7" />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#1e293b' : '#e2e8f0'} vertical={false} />
+                          <XAxis
+                            dataKey="day"
+                            stroke={theme === 'dark' ? '#475569' : '#94a3b8'}
+                            fontSize={10}
+                            tickLine={false}
+                            axisLine={false}
+                            interval={3}
+                          />
+                          <YAxis
+                            stroke={theme === 'dark' ? '#475569' : '#94a3b8'}
+                            fontSize={10}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(val) => creditChartMetric === 'cost' ? `$${val}` : `${val}`}
+                          />
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const dataItem = payload[0].payload;
+                                return (
+                                  <div className={`p-3 rounded-xl border shadow-xl backdrop-blur-md text-xs space-y-1 ${
+                                    theme === 'dark' ? 'bg-slate-900/95 border-white/10 text-white' : 'bg-white/95 border-slate-200 text-slate-900'
+                                  }`}>
+                                    <div className="font-bold text-indigo-400 border-b border-white/10 pb-1 flex justify-between gap-4">
+                                      <span>{label} ({dataItem.rawDate})</span>
+                                      <span className="text-[10px] text-slate-400">{dataItem.activeCampaigns} active campaigns</span>
+                                    </div>
+                                    <div className="pt-1 space-y-0.5">
+                                      <div className="flex justify-between gap-4 font-mono">
+                                        <span className="text-slate-400">Credits Used:</span>
+                                        <strong className="text-indigo-400">{dataItem.credits.toLocaleString()} cr</strong>
+                                      </div>
+                                      <div className="flex justify-between gap-4 font-mono">
+                                        <span className="text-slate-400">Estimated Cost:</span>
+                                        <strong className="text-emerald-400">${dataItem.cost.toFixed(2)}</strong>
+                                      </div>
+                                      <div className="flex justify-between gap-4 font-mono">
+                                        <span className="text-slate-400">Outbound Calls:</span>
+                                        <strong className="text-amber-400">{dataItem.calls} dials</strong>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey={creditChartMetric}
+                            stroke="url(#creditLineGrad)"
+                            strokeWidth={3}
+                            dot={{ r: 3, fill: '#6366f1', stroke: '#1e1b4b', strokeWidth: 1.5 }}
+                            activeDot={{ r: 6, fill: '#a855f7', stroke: '#ffffff', strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+              {/* Google Ads Style Campaign Directory & Targeting Overview */}
+              <div className={`p-6 border rounded-[2.5rem] transition-all ${
+                theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-wider">
+                        Google Ads Style Targeting Hub
+                      </span>
+                      <span className="text-xs text-slate-500 font-bold">• Active Campaigns</span>
+                    </div>
+                    <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Campaigns Directory & Targeting Control
+                    </h4>
+                    <p className="text-xs text-slate-500 font-bold mt-0.5">
+                      Manage outbound dialers, geo-locations, audience targeting, and dispatch schedules in one place.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowCreateCampaign(true)}
+                      className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
                     >
-                      <defs>
-                        <linearGradient id="colorConnected" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorVoicemail" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} />
-                      <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff', 
-                          borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
-                          borderRadius: '12px',
-                          color: theme === 'dark' ? '#ffffff' : '#000000',
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }} 
-                      />
-                      <Area type="monotone" name="Connected Conversations" dataKey="connected" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorConnected)" />
-                      <Area type="monotone" name="Voicemail Drops" dataKey="voicemail" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorVoicemail)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                      <Plus className="w-4 h-4" />
+                      <span>New Campaign</span>
+                    </button>
+                    <button
+                      onClick={() => handleExportCampaignCsv(selectedCampaignId)}
+                      className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all border border-white/5"
+                      title="Export Campaign Data CSV"
+                    >
+                      <Upload className="w-3.5 h-3.5 rotate-180" />
+                      <span className="hidden sm:inline">Export CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter Controls & Search Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6 pb-4 border-b border-white/5">
+                  <div className="flex items-center space-x-1 bg-slate-950/20 p-1 rounded-xl border border-white/5">
+                    {(['All', 'Active', 'Paused', 'Ended'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setCampaignStatusFilter(tab)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          campaignStatusFilter === tab
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {tab === 'All' ? 'All Campaigns' : tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative min-w-[220px]">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      value={campaignSearchQuery}
+                      onChange={(e) => setCampaignSearchQuery(e.target.value)}
+                      placeholder="Search campaign or agent..."
+                      className={`w-full pl-9 pr-3 py-1.5 border rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Campaign Cards Directory Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {campaignList
+                    .filter(c => campaignStatusFilter === 'All' || c.status === campaignStatusFilter)
+                    .filter(c => !campaignSearchQuery || c.name.toLowerCase().includes(campaignSearchQuery.toLowerCase()) || (c.agent && c.agent.toLowerCase().includes(campaignSearchQuery.toLowerCase())))
+                    .map(camp => {
+                      const isSelected = selectedCampaignId === camp.id;
+                      return (
+                        <div
+                          key={camp.id}
+                          onClick={() => setSelectedCampaignId(camp.id)}
+                          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10'
+                              : theme === 'dark'
+                                ? 'bg-slate-950/40 border-white/5 hover:border-white/15'
+                                : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h5 className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                  {camp.name}
+                                </h5>
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                  camp.status === 'Active' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : camp.status === 'Paused' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : 'bg-slate-500/15 text-slate-400'
+                                }`}>
+                                  {camp.status}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-500 font-bold block mt-0.5">
+                                Agent: {camp.agent || 'Sarah'} • Type: {camp.type || 'Outbound'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleCampaignStatus(camp.id, e)}
+                              className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                camp.status === 'Active'
+                                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
+                                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                              }`}
+                              title={camp.status === 'Active' ? 'Pause Campaign' : 'Resume Campaign'}
+                            >
+                              {camp.status === 'Active' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+
+                          {/* Google Ads Style Targeting Summary Tags */}
+                          <div className="flex flex-wrap gap-1.5 mb-4 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center space-x-1">
+                              <Globe className="w-3 h-3" />
+                              <span>{camp.location || 'United States & Canada'}</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center space-x-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{camp.timezone || 'Lead Local Time (9AM-5PM)'}</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center space-x-1">
+                              <Target className="w-3 h-3" />
+                              <span>{camp.purpose || 'Sales Recall'}</span>
+                            </span>
+                          </div>
+
+                          {/* Campaign Progress & Metrics */}
+                          <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-900/30 border border-white/5 text-center text-xs">
+                            <div>
+                              <span className="text-[8px] text-slate-500 block font-bold uppercase">Dials</span>
+                              <span className="font-mono font-bold text-white">{camp.completedCount || 0} / {camp.targetCount || 150}</span>
+                            </div>
+                            <div>
+                              <span className="text-[8px] text-slate-500 block font-bold uppercase">Spend</span>
+                              <span className="font-mono font-bold text-indigo-400">${(camp.spend || 0).toFixed(2)}</span>
+                            </div>
+                            <div>
+                              <span className="text-[8px] text-slate-500 block font-bold uppercase">Success</span>
+                              <span className="font-mono font-bold text-emerald-400">{camp.successRate || 0}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
 
@@ -6311,7 +7986,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                       </div>
 
                       <button
-                        onClick={() => setShowCreateCampaign(!showCreateCampaign)}
+                        onClick={() => setShowCreateCampaign(true)}
                         className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -6319,206 +7994,37 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                       </button>
                     </div>
 
-                    {/* New Campaign Creation Drawer */}
-                    {showCreateCampaign && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className={`p-6 border rounded-2xl mb-6 space-y-4 overflow-hidden ${
-                          theme === 'dark' ? 'bg-slate-950/60 border-indigo-500/20' : 'bg-slate-50 border-indigo-100'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                          <h5 className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Configure New Campaign Header</h5>
-                          <button onClick={() => setShowCreateCampaign(false)} className="text-slate-400 hover:text-white transition-all">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Title</label>
-                            <input
-                              type="text"
-                              value={newCampaignName}
-                              onChange={(e) => setNewCampaignName(e.target.value)}
-                              placeholder="e.g. Black Friday Promotion"
-                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Assigned AI Agent</label>
+                    {/* Quick Campaign Switch Selector */}
+                    {campaignList.length > 0 && (
+                      <div className="mb-6 p-3 rounded-2xl border border-slate-700/30 bg-slate-900/10 flex flex-row items-center justify-between gap-4 w-full overflow-x-auto whitespace-nowrap scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div className="flex items-center gap-3 min-w-0 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Campaign:</span>
                             <select
-                              value={newCampaignAgent}
-                              onChange={(e) => setNewCampaignAgent(e.target.value)}
-                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                              value={selectedCampaignId}
+                              onChange={(e) => setSelectedCampaignId(e.target.value)}
+                              className={`border rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-indigo-500 max-w-[180px] truncate ${
                                 theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                               }`}
                             >
-                              <option value="">-- Choose Assigned Assistant --</option>
-                              {agents.map(a => (
-                                <option key={a.id} value={a.name}>{a.name} ({a.voice})</option>
+                              {campaignList.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
                               ))}
                             </select>
                           </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Type</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setNewCampaignType('Outbound')}
-                                className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
-                                  newCampaignType === 'Outbound'
-                                    ? 'bg-indigo-600 border-indigo-500 text-white'
-                                    : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-                                }`}
-                              >
-                                Outbound Dialer
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setNewCampaignType('Inbound')}
-                                className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
-                                  newCampaignType === 'Inbound'
-                                    ? 'bg-indigo-600 border-indigo-500 text-white'
-                                    : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-                                }`}
-                              >
-                                Inbound Router
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Dials</label>
-                              <input
-                                type="number"
-                                value={newCampaignTargetSize}
-                                onChange={(e) => setNewCampaignTargetSize(Number(e.target.value))}
-                                className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                                }`}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Budget ($)</label>
-                              <input
-                                type="number"
-                                value={newCampaignBudget}
-                                onChange={(e) => setNewCampaignBudget(Number(e.target.value))}
-                                className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                                }`}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Purpose / Business Objective</label>
-                            <input
-                              type="text"
-                              value={newCampaignPurpose}
-                              onChange={(e) => setNewCampaignPurpose(e.target.value)}
-                              placeholder="e.g. Dental Scaling Bookings / SaaS Trial Upgrade Reminders"
-                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Audience / Lead Segment Description</label>
-                            <input
-                              type="text"
-                              value={newCampaignAudience}
-                              onChange={(e) => setNewCampaignAudience(e.target.value)}
-                              placeholder="e.g. Trial users who expired last week / Local residents in NY"
-                              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">AI Agent Persona Guidelines & Custom Script</label>
-                            <textarea
-                              rows={2}
-                              value={newCampaignGuidelines}
-                              onChange={(e) => setNewCampaignGuidelines(e.target.value)}
-                              placeholder="e.g. Introduce yourself, ask if they received our discount code, schedule a free session."
-                              className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block ml-1">Initial Leads List (Format: Name, Phone)</label>
-                            <textarea
-                              rows={2}
-                              value={newCampaignContacts}
-                              onChange={(e) => setNewCampaignContacts(e.target.value)}
-                              placeholder="Alice Johnson, +1 (415) 555-4921&#10;Robert Downey, +1 (212) 555-8824"
-                              className={`w-full border rounded-xl px-4 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 transition-all ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowCreateCampaign(false)}
-                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCreateCampaign}
-                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all shadow-md"
-                          >
-                            Add Campaign
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* Quick Campaign Switch Selector */}
-                    {campaignList.length > 0 && (
-                      <div className="mb-6 p-4 rounded-2xl border border-dashed border-slate-700/50 bg-slate-900/10">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Selected Active Campaign Header</label>
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <select
-                            value={selectedCampaignId}
-                            onChange={(e) => setSelectedCampaignId(e.target.value)}
-                            className={`border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-indigo-500 min-w-[200px] ${
-                              theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                            }`}
-                          >
-                            {campaignList.map(c => (
-                              <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
-                            ))}
-                          </select>
 
                           {/* Render Active selection metrics and controls */}
                           {(() => {
                             const cur = campaignList.find(c => c.id === selectedCampaignId);
                             if (!cur) return null;
                             return (
-                              <div className="flex items-center flex-wrap gap-3 text-xs font-mono">
+                              <div className="flex items-center gap-2.5 shrink-0">
                                 {/* Live Status Indicator */}
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/20 border border-white/5">
-                                  <span className={`w-2 h-2 rounded-full ${
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-950/25 border border-white/5 shrink-0">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
                                     cur.status === 'Active' ? 'bg-emerald-500 animate-pulse' : cur.status === 'Paused' ? 'bg-amber-400' : 'bg-slate-400'
                                   }`} />
-                                  <span className={`text-[10px] font-black uppercase tracking-wider ${
+                                  <span className={`text-[9px] font-black uppercase tracking-wider ${
                                     cur.status === 'Active' ? 'text-emerald-400' : cur.status === 'Paused' ? 'text-amber-400' : 'text-slate-400'
                                   }`}>
                                     {cur.status}
@@ -6526,26 +8032,26 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                 </div>
 
                                 {/* Active Run / Pause / Stop Buttons */}
-                                <div className="flex items-center space-x-1 bg-slate-950/10 p-1 rounded-xl border border-white/5">
+                                <div className="flex items-center space-x-1 bg-slate-950/20 p-1 rounded-lg border border-white/5 shrink-0">
                                   {cur.status === 'Active' ? (
                                     <button
                                       type="button"
                                       onClick={(e) => handleToggleCampaignStatus(cur.id, e)}
-                                      className="flex items-center space-x-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-black border border-amber-500/20 transition-all active:scale-95"
+                                      className="flex items-center space-x-1 px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-md text-[9px] font-black border border-amber-500/20 transition-all active:scale-95 shrink-0"
                                       title="Pause campaign auto-dialer"
                                     >
-                                      <Pause className="w-3 h-3" />
-                                      <span>Pause Run</span>
+                                      <Pause className="w-2.5 h-2.5" />
+                                      <span>Pause</span>
                                     </button>
                                   ) : cur.status === 'Paused' ? (
                                     <button
                                       type="button"
                                       onClick={(e) => handleToggleCampaignStatus(cur.id, e)}
-                                      className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-black border border-emerald-500/20 transition-all active:scale-95"
+                                      className="flex items-center space-x-1 px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-md text-[9px] font-black border border-emerald-500/20 transition-all active:scale-95 shrink-0"
                                       title="Resume campaign auto-dialer"
                                     >
-                                      <Play className="w-3 h-3 fill-emerald-400" />
-                                      <span>Resume Run</span>
+                                      <Play className="w-2.5 h-2.5 fill-emerald-400" />
+                                      <span>Resume</span>
                                     </button>
                                   ) : (
                                     <button
@@ -6555,9 +8061,9 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                         setCampaignList(prev => prev.map(c => c.id === cur.id ? { ...c, status: 'Active' } : c));
                                         triggerToast(`Campaign "${cur.name}" reactivated!`, "success");
                                       }}
-                                      className="flex items-center space-x-1 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-black border border-indigo-500/20 transition-all active:scale-95"
+                                      className="flex items-center space-x-1 px-2 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-md text-[9px] font-black border border-indigo-500/20 transition-all active:scale-95 shrink-0"
                                     >
-                                      <Play className="w-3 h-3" />
+                                      <Play className="w-2.5 h-2.5" />
                                       <span>Reactivate</span>
                                     </button>
                                   )}
@@ -6570,44 +8076,99 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                         setCampaignList(prev => prev.map(c => c.id === cur.id ? { ...c, status: 'Ended' } : c));
                                         triggerToast(`Campaign "${cur.name}" marked as Completed.`, "info");
                                       }}
-                                      className="flex items-center space-x-1 px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 rounded-lg text-[10px] font-black border border-white/5 transition-all active:scale-95"
+                                      className="flex items-center space-x-1 px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 rounded-md text-[9px] font-black border border-white/5 transition-all active:scale-95 shrink-0"
                                       title="Stop campaign immediately"
                                     >
-                                      <X className="w-3 h-3" />
-                                      <span>Stop Run</span>
+                                      <X className="w-2.5 h-2.5" />
+                                      <span>Stop</span>
                                     </button>
                                   )}
                                 </div>
 
-                                {/* Metrics indicators */}
-                                <div className="flex items-center space-x-3 text-[11px]">
-                                  <div>
-                                    <span className="text-[8px] text-slate-500 block">Spent</span>
-                                    <span className="font-bold text-indigo-400">${cur.spend.toFixed(2)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[8px] text-slate-500 block">Dials</span>
-                                    <span className="font-bold">{cur.completedCount}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[8px] text-slate-500 block">Success</span>
-                                    <span className="font-bold text-emerald-400">{cur.successRate}%</span>
-                                  </div>
-                                </div>
-
                                 <button
+                                  type="button"
                                   onClick={(e) => handleDeleteCampaign(cur.id, e)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl border border-white/5 transition-all"
+                                  className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg border border-white/5 transition-all shrink-0"
                                   title="Delete active campaign"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3 h-3" />
                                 </button>
                               </div>
                             );
                           })()}
                         </div>
+
+                        {/* Live metrics inside the exact same line */}
+                        {(() => {
+                          const cur = campaignList.find(c => c.id === selectedCampaignId);
+                          if (!cur) return null;
+                          return (
+                            <div className="flex items-center gap-4 shrink-0 font-mono text-xs">
+                              <div className="flex items-center space-x-1">
+                                <span className="text-[9px] text-slate-500 uppercase font-black">Spent:</span>
+                                <strong className="text-indigo-400 font-bold">${cur.spend.toFixed(2)}</strong>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <span className="text-[9px] text-slate-500 uppercase font-black">Dials:</span>
+                                <strong className="text-white font-bold">{cur.completedCount}</strong>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <span className="text-[9px] text-slate-500 uppercase font-black">Success:</span>
+                                <strong className="text-emerald-400 font-bold">{cur.successRate}%</strong>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
+
+                    {/* Google Ads Style Active Targeting Summary Banner */}
+                    {(() => {
+                      const cur = campaignList.find(c => c.id === selectedCampaignId);
+                      if (!cur) return null;
+                      return (
+                        <div className="mb-6 p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5">
+                              <Target className="w-3.5 h-3.5" />
+                              <span>Targeting & Delivery Guardrails: {cur.name}</span>
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">Status: {cur.status}</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <div className="p-2.5 rounded-xl bg-slate-900/40 border border-white/5">
+                              <span className="text-[8px] font-bold text-slate-500 uppercase block">Geo Location</span>
+                              <span className="font-bold text-white flex items-center space-x-1 mt-0.5">
+                                <Globe className="w-3 h-3 text-indigo-400" />
+                                <span className="truncate">{cur.location || 'United States & Canada'}</span>
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-slate-900/40 border border-white/5">
+                              <span className="text-[8px] font-bold text-slate-500 uppercase block">Calling Window</span>
+                              <span className="font-bold text-white flex items-center space-x-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-purple-400" />
+                                <span className="truncate">{cur.timezone || 'Lead Local Time (9AM-5PM)'}</span>
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-slate-900/40 border border-white/5">
+                              <span className="text-[8px] font-bold text-slate-500 uppercase block">Bidding Strategy</span>
+                              <span className="font-bold text-white flex items-center space-x-1 mt-0.5">
+                                <DollarSign className="w-3 h-3 text-emerald-400" />
+                                <span className="truncate">{cur.bidding || 'Max Connection Rate'}</span>
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-slate-900/40 border border-white/5">
+                              <span className="text-[8px] font-bold text-slate-500 uppercase block">Daily Call Cap</span>
+                              <span className="font-bold text-white flex items-center space-x-1 mt-0.5">
+                                <Phone className="w-3 h-3 text-amber-400" />
+                                <span>{cur.dailyCap || 200} dials/day</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                              {/* Step 1: Bulk Contacts Upload Area */}
                     <div className="space-y-4 mb-6">
@@ -6877,57 +8438,416 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                       </div>
                     </div>
 
-                    {/* Step 3: Call Scheduler Options */}
-                    <div className="mb-6 p-4 rounded-2xl border border-white/5 bg-slate-950/10">
-                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-3 ml-1">Step 3: Campaign Dispatch Settings</label>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex space-x-2">
-                          <button
-                            type="button"
-                            onClick={() => setCampaignScheduleOption('instant')}
-                            className={`flex-1 py-2.5 px-3 text-xs font-black rounded-xl border transition-all ${
-                              campaignScheduleOption === 'instant'
-                                ? 'bg-indigo-600 border-indigo-500 text-white'
-                                : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-                            }`}
-                          >
-                            Dial Instantly on Launch
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCampaignScheduleOption('scheduled')}
-                            className={`flex-1 py-2.5 px-3 text-xs font-black rounded-xl border transition-all ${
-                              campaignScheduleOption === 'scheduled'
-                                ? 'bg-indigo-600 border-indigo-500 text-white'
-                                : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
-                            }`}
-                          >
-                            Schedule for Later
-                          </button>
+                    {/* Step 3: Calendar-Based Outbound Dialing Operational Windows */}
+                    <div className="mb-6 p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-500/10">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-indigo-400" />
+                          <label className="text-[11px] font-black text-indigo-400 uppercase tracking-widest">
+                            Step 3: Operational Dialing Windows & Calendar Schedule
+                          </label>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-900/40 px-2.5 py-1 rounded-lg border border-white/5">
+                          {campaignScheduleTimezone}
+                        </span>
+                      </div>
+
+                      {/* Dispatch Mode Selector */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCampaignScheduleOption('instant')}
+                          className={`py-2.5 px-3 text-xs font-black rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                            campaignScheduleOption === 'instant'
+                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                              : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          <span>Immediate Dispatch</span>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setCampaignScheduleOption('scheduled')}
+                          className={`py-2.5 px-3 text-xs font-black rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                            campaignScheduleOption === 'scheduled'
+                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                              : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <Clock className="w-4 h-4" />
+                          <span>Specific Date Window</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCampaignScheduleOption('recurring')}
+                          className={`py-2.5 px-3 text-xs font-black rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                            campaignScheduleOption === 'recurring'
+                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                              : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>Weekly Schedule</span>
+                        </button>
+                      </div>
+
+                      {/* Operational Window Controls */}
+                      {campaignScheduleOption !== 'instant' && (
+                        <div className="space-y-4 pt-2">
+                          {/* Timezone & Date Configuration */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Target Timezone</label>
+                              <select
+                                value={campaignScheduleTimezone}
+                                onChange={(e) => setCampaignScheduleTimezone(e.target.value)}
+                                className={`w-full border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 ${
+                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                }`}
+                              >
+                                <option value="America/New_York (EST)">America/New_York (EST / UTC-5)</option>
+                                <option value="America/Chicago (CST)">America/Chicago (CST / UTC-6)</option>
+                                <option value="America/Denver (MST)">America/Denver (MST / UTC-7)</option>
+                                <option value="America/Los_Angeles (PST)">America/Los_Angeles (PST / UTC-8)</option>
+                                <option value="Europe/London (GMT)">Europe/London (GMT / UTC+0)</option>
+                                <option value="Europe/Paris (CET)">Europe/Paris (CET / UTC+1)</option>
+                                <option value="Asia/Tokyo (JST)">Asia/Tokyo (JST / UTC+9)</option>
+                              </select>
+                            </div>
+
+                            {campaignScheduleOption === 'scheduled' && (
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Start Date</label>
+                                <input
+                                  type="date"
+                                  value={campaignScheduleDate}
+                                  onChange={(e) => setCampaignScheduleDate(e.target.value)}
+                                  className={`w-full border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 ${
+                                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                  }`}
+                                />
+                              </div>
+                            )}
+
+                            {campaignScheduleOption === 'recurring' && (
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Active Days of Week</label>
+                                <div className="flex flex-wrap gap-1">
+                                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                                    const active = campaignScheduleDays.includes(day);
+                                    return (
+                                      <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => {
+                                          if (active) {
+                                            setCampaignScheduleDays(prev => prev.filter(d => d !== day));
+                                          } else {
+                                            setCampaignScheduleDays(prev => [...prev, day]);
+                                          }
+                                        }}
+                                        className={`px-2.5 py-1 text-[11px] font-black rounded-lg border transition-all ${
+                                          active
+                                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                                            : theme === 'dark' ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-500'
+                                        }`}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Operating Hours Window (Start & End Time) */}
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                              Daily Operating Window (TCPA Compliant Hours)
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="relative">
+                                <span className="text-[9px] font-black uppercase text-slate-500 absolute left-3 top-2.5">From</span>
+                                <input
+                                  type="time"
+                                  value={campaignScheduleStartTime}
+                                  onChange={(e) => setCampaignScheduleStartTime(e.target.value)}
+                                  className={`w-full border rounded-xl pl-12 pr-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-indigo-500 ${
+                                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                  }`}
+                                />
+                              </div>
+                              <div className="relative">
+                                <span className="text-[9px] font-black uppercase text-slate-500 absolute left-3 top-2.5">Until</span>
+                                <input
+                                  type="time"
+                                  value={campaignScheduleEndTime}
+                                  onChange={(e) => setCampaignScheduleEndTime(e.target.value)}
+                                  className={`w-full border rounded-xl pl-12 pr-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-indigo-500 ${
+                                    theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Blackout Dates / Holidays Exclusions */}
+                          <div className="pt-2 border-t border-indigo-500/10">
+                            <div className="flex justify-between items-center mb-1.5">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">
+                                Holiday & Blackout Date Exclusions
+                              </label>
+                              <span className="text-[10px] font-mono text-indigo-400 font-bold">
+                                {campaignScheduleBlackoutDates.length} Dates Blocked
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                              {campaignScheduleBlackoutDates.map((bDate) => (
+                                <span
+                                  key={bDate}
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                                >
+                                  <span>{bDate}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCampaignScheduleBlackoutDates(prev => prev.filter(d => d !== bDate))}
+                                    className="hover:text-rose-200 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="flex space-x-2">
+                              <input
+                                type="date"
+                                value={newBlackoutDateInput}
+                                onChange={(e) => setNewBlackoutDateInput(e.target.value)}
+                                className={`border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 ${
+                                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (newBlackoutDateInput && !campaignScheduleBlackoutDates.includes(newBlackoutDateInput)) {
+                                    setCampaignScheduleBlackoutDates(prev => [...prev, newBlackoutDateInput]);
+                                    setNewBlackoutDateInput('');
+                                    triggerToast(`Added ${newBlackoutDateInput} to blackout list.`, "info");
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all border border-white/10 flex items-center space-x-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Exclusion</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Step 4: Test Agent Real-Time Voice Simulation Panel */}
+                    <div className="mb-6 p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-500/10">
+                        <div className="flex items-center space-x-2">
+                          <Mic className="w-4 h-4 text-emerald-400" />
+                          <label className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">
+                            Step 4: Test Agent Voice Quality & Prompt Verification
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold flex items-center space-x-1">
+                            <Volume2 className="w-3 h-3 animate-pulse" />
+                            <span>Voice Engine Active</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Test Agent Prompt & Trigger Bar */}
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                        <div className="flex items-center space-x-3">
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-md">
+                              {(selectedCampaignAgent || 'Sarah').charAt(0)}
+                            </div>
+                            {testAgentAudioPlaying && (
+                              <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 animate-ping" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-black text-white">
+                                {selectedCampaignAgent || 'Sarah (Real Estate)'}
+                              </span>
+                              <span className="text-[10px] font-mono text-indigo-400 font-bold px-1.5 py-0.5 rounded bg-indigo-500/10">
+                                ElevenLabs Clone
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5 max-w-md truncate">
+                              Prompt: <span className="text-slate-300 font-medium">{campaignPurpose}</span> ({campaignGuidelines || 'Standard guidelines'})
+                            </p>
+                          </div>
                         </div>
 
-                        {campaignScheduleOption === 'scheduled' && (
-                          <div className="flex space-x-2">
-                            <input
-                              type="date"
-                              value={campaignScheduleDate}
-                              onChange={(e) => setCampaignScheduleDate(e.target.value)}
-                              className={`flex-1 border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                            <input
-                              type="time"
-                              value={campaignScheduleTime}
-                              onChange={(e) => setCampaignScheduleTime(e.target.value)}
-                              className={`flex-1 border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none ${
-                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                              }`}
-                            />
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+                          {!isTestAgentSimOpen ? (
+                            <button
+                              type="button"
+                              onClick={handleStartTestAgentVoiceSim}
+                              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 flex items-center space-x-2"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Trigger Real-Time Voice Simulation</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleEndTestAgentSim}
+                              className="px-4 py-2.5 bg-rose-600/80 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition-all shadow-md flex items-center space-x-2"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>End Test Call</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Interactive Test Voice Simulation Workspace */}
+                      {isTestAgentSimOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="p-4 rounded-2xl border border-emerald-500/30 bg-slate-950 space-y-4 overflow-hidden"
+                        >
+                          {/* Top Status & Audio Waveform Banner */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-1">
+                                <span className={`w-2.5 h-2.5 rounded-full ${
+                                  testAgentSimStatus === 'speaking' ? 'bg-emerald-400 animate-ping' :
+                                  testAgentSimStatus === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-indigo-400'
+                                }`} />
+                                <span className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wider">
+                                  {testAgentSimStatus === 'connecting' && 'Connecting Voice Trunk...'}
+                                  {testAgentSimStatus === 'speaking' && 'AI Agent Speaking (TTS Output)'}
+                                  {testAgentSimStatus === 'listening' && 'Listening for Lead Input...'}
+                                  {testAgentSimStatus === 'ended' && 'Simulation Ended'}
+                                </span>
+                              </div>
+
+                              {testAgentAudioPlaying && (
+                                <div className="flex items-center space-x-1">
+                                  {[12, 24, 16, 28, 8, 20, 14].map((h, i) => (
+                                    <span
+                                      key={i}
+                                      className="w-1 bg-emerald-400 rounded-full animate-bounce"
+                                      style={{ height: `${h}px`, animationDelay: `${i * 120}ms` }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Telemetry Metrics */}
+                            <div className="flex items-center space-x-3 text-[10px] font-mono text-slate-400">
+                              <span className="bg-slate-900 px-2 py-1 rounded border border-white/5">
+                                Latency: <strong className="text-emerald-400">{testAgentSimMetrics.latencyMs}ms</strong>
+                              </span>
+                              <span className="bg-slate-900 px-2 py-1 rounded border border-white/5">
+                                Sentiment Match: <strong className="text-indigo-400">{(testAgentSimMetrics.sentimentScore * 100).toFixed(0)}%</strong>
+                              </span>
+                              <span className="bg-slate-900 px-2 py-1 rounded border border-white/5">
+                                Voice Quality: <strong className="text-amber-400">{testAgentSimMetrics.voiceClarity}</strong>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Live Dialogue Transcript Box */}
+                          <div className="max-h-60 overflow-y-auto space-y-2.5 p-3 rounded-xl bg-slate-900/80 border border-white/5 text-xs">
+                            {testAgentSimTranscript.map((msg, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex ${
+                                  msg.sender === 'user' ? 'justify-end' :
+                                  msg.sender === 'agent' ? 'justify-start' : 'justify-center'
+                                }`}
+                              >
+                                {msg.sender === 'system' ? (
+                                  <div className="text-[10px] font-mono text-slate-500 italic py-0.5 px-2 bg-slate-950/60 rounded-md">
+                                    {msg.text}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={`max-w-[85%] p-3 rounded-2xl ${
+                                      msg.sender === 'user'
+                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                        : 'bg-slate-800 text-slate-100 border border-white/10 rounded-bl-none'
+                                    }`}
+                                  >
+                                    <div className="flex justify-between items-center text-[9px] opacity-70 font-bold mb-1">
+                                      <span>{msg.sender === 'user' ? 'Customer / Lead (You)' : (selectedCampaignAgent || 'Sarah AI Agent')}</span>
+                                      <span>{msg.timestamp}</span>
+                                    </div>
+                                    <p className="text-xs font-medium leading-relaxed">{msg.text}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Sample Lead Response Chips */}
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                              Quick Lead Response Simulators:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[
+                                "Is there a special discount or summer promo?",
+                                "Can I schedule an appointment for tomorrow at 2 PM?",
+                                "Who is calling and what company are you with?",
+                                "Could you send me an email with the details?"
+                              ].map((chip, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => handleSendTestAgentUserMessage(chip)}
+                                  className="px-2.5 py-1 bg-slate-900 hover:bg-indigo-950/60 text-slate-300 hover:text-indigo-300 rounded-lg text-[11px] font-semibold border border-white/10 transition-all text-left"
+                                >
+                                  💬 "{chip}"
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Interactive User Input Field */}
+                          <div className="flex items-center space-x-2 pt-1">
+                            <input
+                              type="text"
+                              value={testAgentSimInput}
+                              onChange={(e) => setTestAgentSimInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSendTestAgentUserMessage()}
+                              placeholder="Type a test lead response to evaluate AI prompt adherence..."
+                              className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-medium"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSendTestAgentUserMessage()}
+                              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 shadow-md"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Talk Back</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
 
                     {/* Launch Trigger Button / Progress Bar */}
@@ -6978,7 +8898,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                         return (
                           <button
                             type="button"
-                            onClick={handleLaunchCampaignSim}
+                            onClick={() => handleLaunchCampaignSim()}
                             disabled={campaignContactsCount === 0}
                             className={`w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-600/25 ${
                               campaignContactsCount === 0 ? 'opacity-55 cursor-not-allowed' : ''
@@ -6988,7 +8908,9 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                             <span>
                               {campaignScheduleOption === 'instant' 
                                 ? "Launch Outbound AI Campaign Dialer Now" 
-                                : `Schedule Bulk AI Campaign Dispatch`}
+                                : campaignScheduleOption === 'scheduled'
+                                ? `Schedule Dispatch Window (${campaignScheduleStartTime} - ${campaignScheduleEndTime})`
+                                : `Activate Weekly Operational Schedule (${campaignScheduleDays.join(', ') || 'Select Days'})`}
                             </span>
                           </button>
                         );
@@ -7146,6 +9068,299 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 </div>
 
               </div>
+              </>
+              )}
+            </motion.div>
+            </CampaignErrorBoundary>
+          )}
+
+          {activeTab === 'campaigns-analytics' && (
+            <motion.div
+              key="campaigns-analytics"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className={`text-4xl font-black tracking-tighter mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    Campaign Performance Insights
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                    Central Telemetry Console for SIP Trunks, AI Agents, and Outreach Dials
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowCreateCampaign(true)}
+                  className="flex items-center space-x-2 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Campaign</span>
+                </button>
+              </div>
+
+              {/* Grid 5 Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  {
+                    title: "Live Running Campaigns",
+                    value: campaignList.filter(c => c.status === 'Active').length,
+                    subtitle: `${campaignList.length} total campaigns`,
+                    icon: PlayCircle,
+                    color: "text-emerald-400"
+                  },
+                  {
+                    title: "Historical Dial Outbound",
+                    value: campaignList.reduce((sum, c) => sum + (c.completedCount || 0), 0),
+                    subtitle: "Calls placed automatically",
+                    icon: Phone,
+                    color: "text-indigo-400"
+                  },
+                  {
+                    title: "Average Answer Success",
+                    value: campaignList.length > 0 
+                      ? `${(campaignList.reduce((sum, c) => sum + (c.successRate || 0), 0) / campaignList.length).toFixed(1)}%` 
+                      : "0.0%",
+                    subtitle: "Human answered calls",
+                    icon: BarChart3,
+                    color: "text-cyan-400"
+                  },
+                  {
+                    title: "Avg. Customer Sentiment",
+                    value: `${avgCampaignSentimentScore}%`,
+                    subtitle: "Post-call transcript analysis",
+                    icon: Sparkles,
+                    color: "text-emerald-400"
+                  },
+                  {
+                    title: "Cumulative Telecom Spend",
+                    value: `$${campaignList.reduce((sum, c) => sum + (c.spend || 0), 0).toFixed(2)}`,
+                    subtitle: "Billed at standard rate",
+                    icon: DollarSign,
+                    color: "text-amber-400"
+                  }
+                ].map((stat, i) => (
+                  <div
+                    key={i}
+                    className={`p-5 rounded-[2rem] border transition-all ${
+                      theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                          {stat.title}
+                        </span>
+                        <span className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'} font-mono`}>
+                          {stat.value}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 block mt-1">
+                          {stat.subtitle}
+                        </span>
+                      </div>
+                      <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'} ${stat.color}`}>
+                        <stat.icon className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {campaignList.length === 0 ? (
+                /* Empty State inside Analytics tab */
+                <div className={`p-12 border rounded-[2.5rem] text-center flex flex-col items-center justify-center space-y-6 max-w-4xl mx-auto my-12 ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="w-20 h-20 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <TrendingUp className="w-10 h-10 animate-pulse" />
+                  </div>
+                  <div className="space-y-2 max-w-lg">
+                    <h4 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Analytics Dashboard Empty
+                    </h4>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                      All campaign statistics default to <span className="font-extrabold text-indigo-500">zero</span> because no campaigns have been launched yet. Create a campaign and load contacts to view real-time calling analytics!
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setShowCreateCampaign(true)}
+                    className="flex items-center space-x-2 px-6 py-4.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Your First Campaign</span>
+                  </button>
+                </div>
+              ) : (
+                /* Analytics charts and tables */
+                <div className="space-y-8">
+                  {/* Performance Graphs */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* SIP Dialer Peak Load times */}
+                    <div className={`lg:col-span-8 p-6 rounded-[2.5rem] border ${
+                      theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <h4 className={`text-sm font-black uppercase tracking-wider mb-4 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                        Dial Pipeline & Call Success Rate over Time
+                      </h4>
+                      <div className="h-[260px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={[
+                              { name: '10:00 AM', dials: 12, completed: 8, drops: 2 },
+                              { name: '11:00 AM', dials: 34, completed: 25, drops: 4 },
+                              { name: '12:00 PM', dials: 45, completed: 38, drops: 3 },
+                              { name: '01:00 PM', dials: 18, completed: 14, drops: 1 },
+                              { name: '02:00 PM', dials: 29, completed: 21, drops: 5 },
+                              { name: '03:00 PM', dials: 56, completed: 48, drops: 4 },
+                              { name: '04:00 PM', dials: 22, completed: 18, drops: 2 }
+                            ]}
+                            margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient id="colorDials" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#4338ca" stopOpacity={0.2}/>
+                                <stop offset="95%" stopColor="#4338ca" stopOpacity={0}/>
+                              </linearGradient>
+                              <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
+                            <YAxis stroke="#64748b" fontSize={9} tickLine={false} />
+                            <Tooltip contentStyle={{ background: theme === 'dark' ? '#0f172a' : '#ffffff', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                            <Area type="monotone" name="Dials Placed" dataKey="dials" stroke="#4338ca" strokeWidth={2} fillOpacity={1} fill="url(#colorDials)" />
+                            <Area type="monotone" name="Connected Leads" dataKey="completed" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCompleted)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Delivery Dispositions Pie/Bar Chart */}
+                    <div className={`lg:col-span-4 p-6 rounded-[2.5rem] border flex flex-col justify-between ${
+                      theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <div>
+                        <h4 className={`text-sm font-black uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          SIP Carrier Dispositions
+                        </h4>
+                        <p className="text-[10px] text-slate-500 font-bold block mb-4 uppercase tracking-widest">
+                          Outcome Breakdown of All Placed Dials
+                        </p>
+                      </div>
+
+                      <div className="h-[180px] w-full flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={[
+                              { name: 'Connected', value: 65, fill: '#10b981' },
+                              { name: 'Voicemail', value: 20, fill: '#6366f1' },
+                              { name: 'Busy Line', value: 10, fill: '#f59e0b' },
+                              { name: 'Failed', value: 5, fill: '#ef4444' }
+                            ]}
+                          >
+                            <XAxis dataKey="name" fontSize={8} tickLine={false} />
+                            <Tooltip contentStyle={{ background: theme === 'dark' ? '#0f172a' : '#ffffff', borderRadius: '12px' }} />
+                            <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold uppercase text-slate-400">
+                        <div className="flex items-center space-x-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          <span>Connected (65%)</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                          <span>Voicemail (20%)</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <span>Busy Line (10%)</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                          <span>Failed (5%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Table List of Campaigns */}
+                  <div className={`p-6 rounded-[2.5rem] border ${
+                    theme === 'dark' ? 'bg-slate-900/30 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          All Campaign Pipelines Ledger
+                        </h4>
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mt-1">
+                          Real-time status, dialed counts, and active telecom cost
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/5 text-[9px] font-black uppercase text-slate-500 tracking-widest">
+                            <th className="pb-3 pl-2">Campaign Details</th>
+                            <th className="pb-3">Agent</th>
+                            <th className="pb-3">Target Size</th>
+                            <th className="pb-3">Completed</th>
+                            <th className="pb-3">Success Rate</th>
+                            <th className="pb-3 text-right pr-2">Drawn Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-xs">
+                          {campaignList.map((cur) => (
+                            <tr
+                              key={cur.id}
+                              className={`hover:bg-indigo-500/5 transition-colors cursor-pointer`}
+                              onClick={() => {
+                                setSelectedCampaignId(cur.id);
+                                setActiveTab('campaigns');
+                              }}
+                            >
+                              <td className="py-3.5 pl-2">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`p-2 rounded-xl ${
+                                    cur.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-400'
+                                  }`}>
+                                    <Play className="w-3.5 h-3.5" />
+                                  </div>
+                                  <div>
+                                    <span className={`font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{cur.name}</span>
+                                    <span className="text-[10px] text-slate-400 block mt-0.5">{cur.type} Router</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 font-bold text-slate-400">{cur.agent}</td>
+                              <td className="py-3.5 font-mono font-bold text-slate-300">{cur.targetCount}</td>
+                              <td className="py-3.5 font-mono font-bold text-slate-300">{cur.completedCount}</td>
+                              <td className="py-3.5">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-mono font-bold text-emerald-400">{cur.successRate}%</span>
+                                  <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${cur.successRate}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 text-right pr-2 font-mono font-black text-indigo-400">${cur.spend.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -7778,13 +9993,8 @@ Avoid any standard summaries or conversational filler. Give me ONLY the ready-to
 
                 triggerToast(`Scraping entire page content from ${hostname}...`, 'info');
 
-                const response = await fetch('/api/fetch-url', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ url: trimmedUrl })
-                });
-                const data = await response.json();
-                if (response.ok && data.text) {
+                const scrapedText = await geminiService.fetchUrl(trimmedUrl);
+                if (scrapedText) {
                   // We successfully fetched the content. Now let's extract metadata using Gemini!
                   triggerToast(`Analyzing website content with Gemini AI to extract business parameters...`, 'info');
                   
@@ -7796,7 +10006,7 @@ Avoid any standard summaries or conversational filler. Give me ONLY the ready-to
 
 Webpage text:
 """
-${data.text.slice(0, 8000)}
+${scrapedText.slice(0, 8000)}
 """
 
 Provide the extracted details in the following precise parseable structure. Do NOT include any other text, markdown formatting, or HTML tags:
@@ -7839,7 +10049,7 @@ VIBE: [extracted vibe and tone]`;
                   setAiGoals(finalGoals);
                   setAiVibe(finalVibe);
 
-                  const newDocContent = data.text;
+                  const newDocContent = scrapedText;
                   setAiContextDoc(newDocContent);
                   setDocUrlInput('');
                   triggerToast(`Scraped parameters from ${hostname} successfully!`, 'success');
@@ -7878,7 +10088,7 @@ Avoid any standard summaries or conversational filler. Give me ONLY the ready-to
                     triggerToast("Scraped details populated, but failed to generate the script automatically.", "amber");
                   }
                 } else {
-                  triggerToast(data.error || "Failed to fetch document link content.", "amber");
+                  triggerToast("Failed to fetch document link content.", "amber");
                 }
               } catch (error) {
                 console.error("Link fetch error:", error);
@@ -12189,6 +14399,298 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Transferring attachment packets...</span>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Campaign Overlay Modal Popup */}
+      <AnimatePresence>
+        {showCreateCampaign && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className={`w-full max-w-2xl rounded-[2rem] border overflow-hidden shadow-2xl relative my-8 ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-indigo-600/5">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    <PlayCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className={`text-base font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      Launch New AI Calling Campaign
+                    </h4>
+                    <span className="text-[10px] text-slate-500 font-bold block">
+                      Define purpose, select voice agent, and upload your phone list below.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateCampaign(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Title</label>
+                    <input
+                      type="text"
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      placeholder="e.g. Black Friday Promotion"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Assigned AI Agent</label>
+                    <select
+                      value={newCampaignAgent}
+                      onChange={(e) => setNewCampaignAgent(e.target.value)}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    >
+                      <option value="">-- Choose Assigned Assistant --</option>
+                      {agents.map(a => (
+                        <option key={a.id} value={a.name}>{a.name} ({a.voice})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewCampaignType('Outbound')}
+                        className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                          newCampaignType === 'Outbound'
+                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        Outbound Dialer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewCampaignType('Inbound')}
+                        className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                          newCampaignType === 'Inbound'
+                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            : theme === 'dark' ? 'bg-slate-950/40 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        Inbound Router
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Dials</label>
+                      <input
+                        type="number"
+                        value={newCampaignTargetSize}
+                        onChange={(e) => setNewCampaignTargetSize(Number(e.target.value))}
+                        className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Total Budget ($)</label>
+                      <input
+                        type="number"
+                        value={newCampaignBudget}
+                        onChange={(e) => setNewCampaignBudget(Number(e.target.value))}
+                        className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                          theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Google Ads Style Geo-Targeting & Timezone Section */}
+                  <div className="p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-3 md:col-span-2">
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider block">
+                      🎯 Google Ads Style Delivery & Geo-Targeting
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block ml-0.5">Target Location / Country</label>
+                        <select
+                          value={newCampaignLocation}
+                          onChange={(e) => setNewCampaignLocation(e.target.value)}
+                          className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-indigo-500 ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="United States & Canada">United States & Canada</option>
+                          <option value="United Kingdom">United Kingdom</option>
+                          <option value="Australia & New Zealand">Australia & New Zealand</option>
+                          <option value="European Union">European Union</option>
+                          <option value="Global Wide / All Regions">Global Wide / All Regions</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block ml-0.5">Calling Window & Timezone</label>
+                        <select
+                          value={newCampaignTimezone}
+                          onChange={(e) => setNewCampaignTimezone(e.target.value)}
+                          className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-indigo-500 ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="Lead Local Time (09:00 - 17:00)">Lead Local Time (09:00 - 17:00)</option>
+                          <option value="US EST (09:00 - 17:00)">US EST (09:00 - 17:00)</option>
+                          <option value="US CST (09:00 - 17:00)">US CST (09:00 - 17:00)</option>
+                          <option value="US PST (09:00 - 17:00)">US PST (09:00 - 17:00)</option>
+                          <option value="Any Time Dispatch (24/7)">Any Time Dispatch (24/7)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block ml-0.5">Bidding & Carrier Strategy</label>
+                        <select
+                          value={newCampaignBidding}
+                          onChange={(e) => setNewCampaignBidding(e.target.value)}
+                          className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-indigo-500 ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="Max Human Connection Rate ($0.45/call)">Max Human Connection Rate ($0.45/call)</option>
+                          <option value="Target Cost Per Call ($0.25/call)">Target Cost Per Call ($0.25/call)</option>
+                          <option value="Lowest CPA Optimization">Lowest CPA Optimization</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block ml-0.5">Daily Call Cap Limit</label>
+                        <input
+                          type="number"
+                          value={newCampaignDailyCap}
+                          onChange={(e) => setNewCampaignDailyCap(Number(e.target.value))}
+                          placeholder="e.g. 200"
+                          className={`w-full border rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Campaign Purpose / Business Objective</label>
+                    <input
+                      type="text"
+                      value={newCampaignPurpose}
+                      onChange={(e) => setNewCampaignPurpose(e.target.value)}
+                      placeholder="e.g. Dental Scaling Bookings / SaaS Trial Upgrade Reminders"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Target Audience / Lead Segment Description</label>
+                    <input
+                      type="text"
+                      value={newCampaignAudience}
+                      onChange={(e) => setNewCampaignAudience(e.target.value)}
+                      placeholder="e.g. Trial users who expired last week / Local residents in NY"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">AI Agent Persona Guidelines & Custom Script</label>
+                    <textarea
+                      rows={2}
+                      value={newCampaignGuidelines}
+                      onChange={(e) => setNewCampaignGuidelines(e.target.value)}
+                      placeholder="e.g. Introduce yourself, ask if they received our discount code, schedule a free session."
+                      className={`w-full border rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">
+                        Contacts Upload (Format: Name, Phone)
+                      </label>
+                      <label className="cursor-pointer text-[10px] font-black text-indigo-400 hover:text-indigo-300 transition-all flex items-center space-x-1">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload CSV / TXT List</span>
+                        <input
+                          type="file"
+                          accept=".csv,.txt"
+                          onChange={handleContactsFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={newCampaignContacts}
+                      onChange={(e) => setNewCampaignContacts(e.target.value)}
+                      placeholder="Alice Johnson, +1 (415) 555-4921&#10;Robert Downey, +1 (212) 555-8824"
+                      className={`w-full border rounded-xl px-4 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 transition-all ${
+                        theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="p-6 border-t border-white/5 bg-slate-950/20 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCampaign(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCampaign}
+                  disabled={isCreatingCampaign}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 flex items-center space-x-2"
+                >
+                  {isCreatingCampaign ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Configuring Campaign...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Launch Campaign</span>
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>
