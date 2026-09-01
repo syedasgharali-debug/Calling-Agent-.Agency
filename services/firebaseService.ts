@@ -4,6 +4,8 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged, 
   User as FirebaseUser,
   signInWithEmailAndPassword,
@@ -130,6 +132,15 @@ export const loginWithGoogle = async () => {
     return await syncUserProfile(result.user);
   } catch (error) {
     console.error('Google Sign-In Error:', error);
+    throw error;
+  }
+};
+
+export const loginWithGoogleRedirect = async () => {
+  try {
+    await signInWithRedirect(auth, googleProvider);
+  } catch (error) {
+    console.error('Google Redirect Sign-In Error:', error);
     throw error;
   }
 };
