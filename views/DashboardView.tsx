@@ -3939,27 +3939,27 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
             <button
               type="button"
               onClick={() => scrollSidebarNav('up')}
-              className={`p-1 rounded-lg transition-all ${
-                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+              className={`p-1.5 rounded-lg transition-all ${
+                theme === 'dark' ? 'bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
+              } border border-indigo-500/10 flex items-center justify-center`}
               title="Scroll Up"
             >
-              <ChevronUp className="w-3.5 h-3.5" />
+              <ChevronUp className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => scrollSidebarNav('down')}
-              className={`p-1 rounded-lg transition-all ${
-                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+              className={`p-1.5 rounded-lg transition-all ${
+                theme === 'dark' ? 'bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
+              } border border-indigo-500/10 flex items-center justify-center`}
               title="Scroll Down"
             >
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <nav ref={sidebarNavRef} className="flex-1 space-y-1 overflow-y-auto pr-2 max-h-[calc(100vh-320px)] custom-sidebar-scroll">
+        <nav ref={sidebarNavRef} className="flex-1 space-y-1 overflow-y-auto pr-2 max-h-[calc(100vh-220px)] custom-sidebar-scroll">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             ...(isAdmin && !isImpersonating ? [
@@ -4036,16 +4036,16 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <item.icon className={`w-5 h-5 ${
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <item.icon className={`w-5 h-5 shrink-0 ${
                       isParentActive 
                         ? 'text-white' 
                         : theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
                     }`} />
-                    <span>{item.label}</span>
+                    <span className="whitespace-nowrap truncate">{item.label}</span>
                   </div>
                   {hasChildren && (
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isParentActive ? 'rotate-180 text-white' : 'text-slate-400'}`} />
+                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isParentActive ? 'rotate-180 text-white' : 'text-slate-400'}`} />
                   )}
                 </button>
                 {hasChildren && isParentActive && (
@@ -4070,8 +4070,8 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-indigo-400 animate-pulse' : 'bg-slate-400'}`} />
-                          <span>{child.label}</span>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-indigo-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span className="whitespace-nowrap">{child.label}</span>
                         </button>
                       );
                     })}

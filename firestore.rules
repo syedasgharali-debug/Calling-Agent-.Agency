@@ -48,18 +48,19 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
-      allow list: if isAdmin() || true;
+      allow list: if isAdmin();
       allow create: if (isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_')) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) || isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
-      allow delete: if isAdmin() || userId.startsWith('fallback_') || userId.startsWith('manual_');
+      allow delete: if isAdmin();
     }
 
     // Calls collection
     match /calls/{callId} {
-      allow get, list: if true;
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid) || resource.data.userId.startsWith('fallback_') || resource.data.userId.startsWith('manual_');
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if (isSignedIn() && isValidId(callId) && isValidCallLog(request.resource.data) && request.resource.data.userId == request.auth.uid) || 
                     ((request.resource.data.userId.startsWith('fallback_') || request.resource.data.userId.startsWith('manual_')) && isValidCallLog(request.resource.data));
-      allow update, delete: if isAdmin() || resource.data.userId.startsWith('fallback_') || resource.data.userId.startsWith('manual_');
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid) || resource.data.userId.startsWith('fallback_') || resource.data.userId.startsWith('manual_');
     }
   }
 }

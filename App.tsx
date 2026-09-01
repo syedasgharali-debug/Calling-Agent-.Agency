@@ -331,6 +331,53 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
     };
   }, []);
 
+  // 20-minute inactivity session timeout
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_LIMIT = 20 * 60 * 1000; // 20 minutes in milliseconds
+    let timeoutId: any;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log("Inactivity limit reached. Logging out...");
+        handleLogout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    const activityEvents = [
+      'mousedown',
+      'mousemove',
+      'keypress',
+      'scroll',
+      'touchstart',
+      'click'
+    ];
+
+    let lastActivityTime = Date.now();
+    const handleUserActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityTime > 1000) { // Throttle resets to once per second
+        lastActivityTime = now;
+        resetTimer();
+      }
+    };
+
+    resetTimer();
+
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleUserActivity);
+      });
+    };
+  }, [user]);
+
   const navigate = (view: View) => {
     window.location.hash = view;
     if (view === 'blog') {
