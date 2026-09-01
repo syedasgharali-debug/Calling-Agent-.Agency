@@ -1,4 +1,6 @@
 import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
 import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
 import path from "path";
@@ -153,6 +155,14 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Payments Configuration Check
+  app.get("/api/payments/config", (req, res) => {
+    res.json({
+      hasSystemStripe: !!process.env.STRIPE_SECRET_KEY,
+      hasSystemPaypal: !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET)
+    });
+  });
+
   // Stripe Checkout
   app.post("/api/payments/stripe/create-session", async (req, res) => {
     const { amount, currency, stripeSecretKey } = req.body;
@@ -191,7 +201,11 @@ async function startServer() {
     
     if (!cid || !sec) return res.status(400).json({ error: "PayPal credentials missing" });
     
-    const environment = new paypal.core.SandboxEnvironment(cid, sec);
+    // Dynamically choose between Live or Sandbox Environment based on credentials
+    const isLive = cid.startsWith('AX');
+    const environment = isLive
+      ? new paypal.core.LiveEnvironment(cid, sec)
+      : new paypal.core.SandboxEnvironment(cid, sec);
     const client = new paypal.core.PayPalHttpClient(environment);
     
     const request = new paypal.orders.OrdersCreateRequest();

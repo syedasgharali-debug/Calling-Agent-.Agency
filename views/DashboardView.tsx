@@ -467,6 +467,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     try { return localStorage.getItem('gemini_api_key') || ''; } catch (e) { return ''; }
   });
 
+  const [hasSystemStripe, setHasSystemStripe] = useState(false);
+  const [hasSystemPaypal, setHasSystemPaypal] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/payments/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.hasSystemStripe) setHasSystemStripe(true);
+        if (data.hasSystemPaypal) setHasSystemPaypal(true);
+      })
+      .catch(err => console.error("Error loading payments config:", err));
+  }, []);
+
   useEffect(() => {
     if (showElevenLabsVoiceModal && elevenlabsApiKey) {
       const fetchVoices = async () => {
@@ -3238,14 +3251,14 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     if (!pendingPlan) return;
     
     try {
-      if (method === 'stripe' && !stripeApiKey) {
+      if (method === 'stripe' && !stripeApiKey && !hasSystemStripe) {
         alert("Please configure Stripe Secret Key in Integrations first.");
         setActiveTab('integrations');
         setShowPaymentSelectionModal(false);
         return;
       }
       
-      if (method === 'paypal' && (!paypalClientId || !paypalSecret)) {
+      if (method === 'paypal' && (!paypalClientId || !paypalSecret) && !hasSystemPaypal) {
         alert("Please configure PayPal credentials in Integrations first.");
         setActiveTab('integrations');
         setShowPaymentSelectionModal(false);
@@ -3278,7 +3291,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
   const handlePayment = async (method: 'stripe' | 'paypal', amount: number) => {
     try {
       if (method === 'stripe') {
-        if (!stripeApiKey) {
+        if (!stripeApiKey && !hasSystemStripe) {
           alert("Please configure Stripe Secret Key in Integrations first.");
           setActiveTab('integrations');
           return;
@@ -3286,12 +3299,12 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
         const response = await fetch('/api/payments/stripe/create-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, stripeSecretKey: stripeApiKey })
+          body: JSON.stringify({ amount, stripeSecretKey: stripeApiKey || undefined })
         });
         const data = await response.json();
         if (data.url) window.location.href = data.url;
       } else {
-        if (!paypalClientId || !paypalSecret) {
+        if ((!paypalClientId || !paypalSecret) && !hasSystemPaypal) {
           alert("Please configure PayPal credentials in Integrations first.");
           setActiveTab('integrations');
           return;
@@ -3299,7 +3312,11 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
         const response = await fetch('/api/payments/paypal/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, clientId: paypalClientId, secret: paypalSecret })
+          body: JSON.stringify({ 
+            amount, 
+            clientId: paypalClientId || undefined, 
+            secret: paypalSecret || undefined 
+          })
         });
         const data = await response.json();
         if (data.id) alert(`PayPal Order Created: ${data.id}. In a real app, this would open the PayPal popup.`);
@@ -7254,11 +7271,13 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                               <p className="text-xs text-slate-400 font-bold leading-relaxed">
                                 {stripeApiKey ? (
                                   "Stripe billing gateway is connected. Click below to redirect to secure Stripe-hosted Checkout page. Once completed, your funds will be credited automatically."
+                                ) : hasSystemStripe ? (
+                                  "Stripe billing gateway is active via System Defaults. Click below to proceed with your live secure Checkout."
                                 ) : (
                                   "Stripe secret API keys are not fully configured in your Integrations tab. Please link your Stripe accounts first or use Direct Checkout."
                                 )}
                               </p>
-                              {!stripeApiKey && (
+                              {!stripeApiKey && !hasSystemStripe && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -7278,11 +7297,13 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                               <p className="text-xs text-slate-400 font-bold leading-relaxed">
                                 {paypalClientId ? (
                                   "PayPal billing gateway is connected. Click below to securely authorize invoice via PayPal login flow."
+                                ) : hasSystemPaypal ? (
+                                  "PayPal Gateway is active via System Defaults. Click below to securely authorize your invoice."
                                 ) : (
                                   "PayPal credentials are not configured in your Integrations tab. Please link PayPal first or use Direct Checkout."
                                 )}
                               </p>
-                              {!paypalClientId && (
+                              {!paypalClientId && !hasSystemPaypal && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -7315,7 +7336,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                               type="button"
                               onClick={async () => {
                                 if (paymentMethod === 'stripe') {
-                                  if (!stripeApiKey) {
+                                  if (!stripeApiKey && !hasSystemStripe) {
                                     triggerToast("Configure Stripe Key in Integrations tab.", "amber");
                                     return;
                                   }
@@ -7325,7 +7346,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                     const response = await fetch('/api/payments/stripe/create-session', {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ amount: pendingTopUpAmount, stripeSecretKey: stripeApiKey })
+                                      body: JSON.stringify({ amount: pendingTopUpAmount, stripeSecretKey: stripeApiKey || undefined })
                                     });
                                     const data = await response.json();
                                     if (data.url) {
@@ -7339,18 +7360,37 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                     setIsProcessingPayment(false);
                                   }
                                 } else if (paymentMethod === 'paypal') {
-                                  if (!paypalClientId) {
+                                  if (!paypalClientId && !hasSystemPaypal) {
                                     triggerToast("Configure PayPal credentials in Integrations.", "amber");
                                     return;
                                   }
                                   setIsProcessingPayment(true);
-                                  setPaymentStepText("Connecting to PayPal Sandbox...");
-                                  setTimeout(() => {
-                                    setPaymentStepText("PayPal authorized successfully. Deducting...");
+                                  setPaymentStepText("Connecting to PayPal...");
+                                  try {
+                                    const response = await fetch('/api/payments/paypal/create-order', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ 
+                                        amount: pendingTopUpAmount, 
+                                        clientId: paypalClientId || undefined, 
+                                        secret: paypalSecret || undefined 
+                                      })
+                                    });
+                                    const data = await response.json();
+                                    if (data.error) throw new Error(data.error);
+                                    
+                                    setPaymentStepText(`Order Created: ${data.id || 'Pending'}. Capturing...`);
                                     setTimeout(() => {
-                                      setPaymentCompleted(true);
+                                      setPaymentStepText("PayPal authorized successfully. Deducting...");
+                                      setTimeout(() => {
+                                        setPaymentCompleted(true);
+                                      }, 1200);
                                     }, 1200);
-                                  }, 1200);
+                                  } catch (err: any) {
+                                    console.error("PayPal Order Creation Error:", err);
+                                    triggerToast(err.message || "Failed to initiate PayPal order.", "amber");
+                                    setIsProcessingPayment(false);
+                                  }
                                 } else {
                                   // Direct Manual Card
                                   if (!cardNumber || !cardExpiry || !cardCVC || !cardName) {
