@@ -36,39 +36,6 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Safe window.gapi decorator to prevent "Cannot read properties of undefined (reading 'getContext')" from gapi loader
-(function interceptGapi() {
-  try {
-    let activeGapi = (window as any).gapi;
-    Object.defineProperty(window, 'gapi', {
-      configurable: true,
-      enumerable: true,
-      get: () => {
-        if (activeGapi) {
-          if (!activeGapi.iframes) {
-            activeGapi.iframes = {
-              getContext: () => ({})
-            };
-          }
-        }
-        return activeGapi;
-      },
-      set: (v) => {
-        if (v && typeof v === 'object') {
-          if (!v.iframes) {
-            v.iframes = {
-              getContext: () => ({})
-            };
-          }
-        }
-        activeGapi = v;
-      }
-    });
-  } catch (e) {
-    console.warn('Unable to define gapi decorator on window:', e);
-  }
-})();
-
 // Safe JSON.parse override to prevent "undefined" is not valid JSON errors
 (function patchJsonParse() {
   try {

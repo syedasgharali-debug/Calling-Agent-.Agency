@@ -38,41 +38,6 @@
           }
         });
 
-        // Safe window.gapi decorator to prevent "Cannot read properties of undefined (reading 'getContext')" from gapi loader
-        try {
-          var activeGapi = window.gapi;
-          Object.defineProperty(window, 'gapi', {
-            configurable: true,
-            enumerable: true,
-            get: function() {
-              if (activeGapi) {
-                if (!activeGapi.iframes) {
-                  activeGapi.iframes = {
-                    getContext: function() {
-                      return {};
-                    }
-                  };
-                }
-              }
-              return activeGapi;
-            },
-            set: function(v) {
-              if (v && typeof v === 'object') {
-                if (!v.iframes) {
-                  v.iframes = {
-                    getContext: function() {
-                      return {};
-                    }
-                  };
-                }
-              }
-              activeGapi = v;
-            }
-          });
-        } catch (e) {
-          console.warn('Early gapi patch failed:', e);
-        }
-
         // Patch JSON.parse early
         try {
           var originalParse = JSON.parse;
