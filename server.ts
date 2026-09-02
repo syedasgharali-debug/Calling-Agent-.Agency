@@ -210,6 +210,9 @@ async function startServer() {
     
     const request = new paypal.orders.OrdersCreateRequest();
     request.prefer("return=representation");
+    
+    const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+    
     request.requestBody({
       intent: 'CAPTURE',
       purchase_units: [{
@@ -217,12 +220,17 @@ async function startServer() {
           currency_code: 'USD',
           value: amount.toString()
         }
-      }]
+      }],
+      application_context: {
+        return_url: `${origin}/dashboard?payment=success&amount=${amount}&gateway=paypal`,
+        cancel_url: `${origin}/dashboard?payment=cancel`
+      }
     });
     
     try {
       const order = await client.execute(request);
-      res.json({ id: order.result.id });
+      const approveLink = order.result.links.find((link: any) => link.rel === 'approve');
+      res.json({ id: order.result.id, url: approveLink ? approveLink.href : `https://www.paypal.com/checkoutnow?token=${order.result.id}` });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

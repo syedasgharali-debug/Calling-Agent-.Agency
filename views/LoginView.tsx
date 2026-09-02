@@ -69,18 +69,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const isIframe = window.self !== window.top;
 
-  const handleGoogleLoginUnified = async () => {
+  const handleGoogleLoginUnified = async (forceRedirect: boolean = false) => {
     setLoading(true);
     setError('');
     
-    // Automatically use redirect mode inside iframe environments
-    if (isIframe) {
+    // Automatically use redirect mode inside iframe environments or if explicitly requested
+    if (isIframe || forceRedirect) {
       try {
         await loginWithGoogleRedirect();
       } catch (err: any) {
         let errMsg = err.message || 'Google authentication failed';
-        if (err.code === 'auth/unauthorized-domain') {
-          errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+        if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
+          errMsg = 'auth/unauthorized-domain';
         }
         setError(errMsg);
         setLoading(false);
@@ -100,15 +100,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           await loginWithGoogleRedirect();
         } catch (redirectErr: any) {
           let errMsg = redirectErr.message || 'Google authentication failed';
-          if (redirectErr.code === 'auth/unauthorized-domain') {
-            errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+          if (redirectErr.code === 'auth/unauthorized-domain' || (redirectErr.message && redirectErr.message.includes('unauthorized-domain'))) {
+            errMsg = 'auth/unauthorized-domain';
           }
           setError(errMsg);
         }
       } else {
         let errMsg = err.message || 'Google authentication failed';
-        if (err.code === 'auth/unauthorized-domain') {
-          errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+        if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('unauthorized-domain'))) {
+          errMsg = 'auth/unauthorized-domain';
         }
         setError(errMsg);
       }
@@ -130,7 +130,26 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold text-center">{error}</div>}
+          {error && (
+            <div className="p-4 bg-red-500/15 border border-red-500/30 rounded-2xl text-red-400 text-xs font-medium space-y-2">
+              {error === 'auth/unauthorized-domain' ? (
+                <div className="text-left space-y-2">
+                  <p className="font-bold text-red-300 text-sm">⚠️ Authorized Domain Setup Required</p>
+                  <p className="text-slate-300">Your live domain <code className="bg-slate-950 px-1 py-0.5 rounded text-indigo-400 font-mono font-bold">{window.location.hostname}</code> needs to be whitelisted in your Firebase Console.</p>
+                  <div className="bg-slate-950 p-3 rounded-xl border border-white/5 space-y-1 text-[11px] text-slate-400 font-mono">
+                    <p className="text-slate-200 font-bold mb-1">How to fix this in 60 seconds:</p>
+                    <p>1. Go to <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline hover:text-indigo-300">Firebase Console</a></p>
+                    <p>2. Open project: <span className="text-emerald-400">gen-lang-client-0915498446</span></p>
+                    <p>3. Click <span className="text-slate-300">Authentication</span> → <span className="text-slate-300">Settings</span> tab</p>
+                    <p>4. Under <span className="text-slate-300">Authorized domains</span>, click <span className="text-slate-300">Add domain</span></p>
+                    <p>5. Enter: <span className="text-indigo-300 font-bold">{window.location.hostname}</span> and save</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center font-bold">{error}</p>
+              )}
+            </div>
+          )}
           
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
@@ -177,7 +196,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <div>
             <button 
               type="button"
-              onClick={handleGoogleLoginUnified}
+              onClick={() => handleGoogleLoginUnified(false)}
               disabled={loading}
               className="w-full py-4 bg-white text-slate-950 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-white/10 transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50 border border-slate-200"
             >
@@ -203,6 +222,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
               <span className="text-slate-900 font-bold">Continue with Google</span>
             </button>
+            <div className="text-center mt-2">
+              <button
+                type="button"
+                onClick={() => handleGoogleLoginUnified(true)}
+                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+              >
+                Popup blocked? Sign in with Direct Redirect Mode →
+              </button>
+            </div>
           </div>
         </form>
 

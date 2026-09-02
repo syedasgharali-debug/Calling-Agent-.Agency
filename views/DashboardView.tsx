@@ -3305,7 +3305,11 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           })
         });
         const data = await response.json();
-        if (data.id) alert(`PayPal Order Created: ${data.id}. In a real app, this would open the PayPal popup.`);
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.id) {
+          window.location.href = `https://www.paypal.com/checkoutnow?token=${data.id}`;
+        }
       }
     } catch (error) {
       console.error("Payment error:", error);
@@ -7372,13 +7376,14 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                                     const data = await response.json();
                                     if (data.error) throw new Error(data.error);
                                     
-                                    setPaymentStepText(`Order Created: ${data.id || 'Pending'}. Capturing...`);
-                                    setTimeout(() => {
-                                      setPaymentStepText("PayPal authorized successfully. Deducting...");
-                                      setTimeout(() => {
-                                        setPaymentCompleted(true);
-                                      }, 1200);
-                                    }, 1200);
+                                    setPaymentStepText("Redirecting to PayPal secure checkout...");
+                                    if (data.url) {
+                                      window.location.href = data.url;
+                                    } else if (data.id) {
+                                      window.location.href = `https://www.paypal.com/checkoutnow?token=${data.id}`;
+                                    } else {
+                                      throw new Error("Failed to retrieve PayPal redirect link.");
+                                    }
                                   } catch (err: any) {
                                     console.error("PayPal Order Creation Error:", err);
                                     triggerToast(err.message || "Failed to initiate PayPal order.", "amber");
