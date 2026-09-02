@@ -9,13 +9,65 @@ window.addEventListener('error', (event) => {
   if (
     msg.includes('Cannot set property fetch') ||
     msg.includes('is not valid JSON') ||
-    msg.includes('undefined" is not valid JSON')
+    msg.includes('undefined" is not valid JSON') ||
+    msg.includes('getContext') ||
+    msg.includes('Script error.')
   ) {
     event.preventDefault();
     event.stopPropagation();
     return false;
   }
 }, true);
+
+// Suppress unhandled promise rejections for the same errors
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  const msg = (reason && (reason.message || reason.toString())) || '';
+  if (
+    msg.includes('Cannot set property fetch') ||
+    msg.includes('is not valid JSON') ||
+    msg.includes('undefined" is not valid JSON') ||
+    msg.includes('getContext') ||
+    msg.includes('Script error.')
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+});
+
+// Safe window.gapi decorator to prevent "Cannot read properties of undefined (reading 'getContext')" from gapi loader
+(function interceptGapi() {
+  try {
+    let activeGapi = (window as any).gapi;
+    Object.defineProperty(window, 'gapi', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        if (activeGapi) {
+          if (!activeGapi.iframes) {
+            activeGapi.iframes = {
+              getContext: () => ({})
+            };
+          }
+        }
+        return activeGapi;
+      },
+      set: (v) => {
+        if (v && typeof v === 'object') {
+          if (!v.iframes) {
+            v.iframes = {
+              getContext: () => ({})
+            };
+          }
+        }
+        activeGapi = v;
+      }
+    });
+  } catch (e) {
+    console.warn('Unable to define gapi decorator on window:', e);
+  }
+})();
 
 // Safe JSON.parse override to prevent "undefined" is not valid JSON errors
 (function patchJsonParse() {

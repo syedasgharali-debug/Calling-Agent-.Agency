@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole } from '../App';
-import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, registerWithEmail } from '../services/firebaseService';
+import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, registerWithEmail, handleRedirectResult } from '../services/firebaseService';
 
 interface LoginViewProps {
   onLogin: (email: string, role: UserRole, fallbackUser?: any) => void;
@@ -13,6 +13,28 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        setLoading(true);
+        const profile = await handleRedirectResult();
+        if (profile) {
+          onLogin(profile.email, profile.role as UserRole, profile);
+        }
+      } catch (err: any) {
+        console.error("Google redirect result processor failed:", err);
+        let errMsg = err.message || 'Google redirect login failed';
+        if (err.code === 'auth/unauthorized-domain') {
+          errMsg = 'This domain is not authorized in your Firebase Console. Please add ' + window.location.hostname + ' to the Firebase Authorized Domains list.';
+        }
+        setError(errMsg);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkRedirectResult();
+  }, [onLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,68 +67,60 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const isIframe = window.self !== window.top;
+
+  const handleGoogleLoginUnified = async () => {
     setLoading(true);
     setError('');
     
-    // Set a safety timeout to reset the loading state if the popup gets blocked or stuck in an iframe
-    const timeoutId = setTimeout(() => {
-      setLoading(false);
-      setError('Google Sign-In is taking longer than expected. If popups are blocked by your browser, please try the "Continue with Google (Redirect)" method below which bypasses popup blockers.');
-    }, 15000);
+    // Automatically use redirect mode inside iframe environments
+    if (isIframe) {
+      try {
+        await loginWithGoogleRedirect();
+      } catch (err: any) {
+        let errMsg = err.message || 'Google authentication failed';
+        if (err.code === 'auth/unauthorized-domain') {
+          errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+        }
+        setError(errMsg);
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       const profile = await loginWithGoogle();
-      clearTimeout(timeoutId);
       if (profile) {
         onLogin(profile.email, profile.role as UserRole, profile);
-      } else {
-        setError('Could not retrieve user profile from database.');
       }
     } catch (err: any) {
-      clearTimeout(timeoutId);
-      console.error("Google login failed:", err);
-      let errMsg = err.message || 'Google login failed';
-      if (err.code === 'auth/popup-blocked') {
-        errMsg = 'The Google login popup was blocked by your browser. Please allow popups or use the Redirect option below.';
-      } else if (err.code === 'auth/unauthorized-domain') {
-        errMsg = 'This domain is not authorized in your Firebase Console. Please add "callingagent.agency" and your Vercel domains to the Firebase Authorized Domains list.';
+      console.warn("Google popup failed, falling back to redirect:", err);
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        try {
+          await loginWithGoogleRedirect();
+        } catch (redirectErr: any) {
+          let errMsg = redirectErr.message || 'Google authentication failed';
+          if (redirectErr.code === 'auth/unauthorized-domain') {
+            errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+          }
+          setError(errMsg);
+        }
+      } else {
+        let errMsg = err.message || 'Google authentication failed';
+        if (err.code === 'auth/unauthorized-domain') {
+          errMsg = 'Please authorize ' + window.location.hostname + ' in your Firebase console.';
+        }
+        setError(errMsg);
       }
-      setError(errMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleRedirectLogin = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      await loginWithGoogleRedirect();
-    } catch (err: any) {
-      console.error("Google redirect login failed:", err);
-      let errMsg = err.message || 'Google redirect login failed';
-      if (err.code === 'auth/unauthorized-domain') {
-        errMsg = 'This domain is not authorized in your Firebase Console. Please add "callingagent.agency" and your Vercel domains to the Firebase Authorized Domains list.';
-      }
-      setError(errMsg);
-      setLoading(false);
-    }
-  };
-
-  const isIframe = window.self !== window.top;
-
   return (
     <div className="pt-40 pb-32 px-6 flex items-center justify-center">
       <div className="w-full max-w-md bg-slate-900 border border-white/5 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
-        
-        {isIframe && (
-          <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs text-indigo-300 font-medium">
-            <span className="font-black block text-indigo-400 mb-1">🔒 Sandbox Preview Mode</span>
-            Google login popups may be blocked inside the editor iframe. For a seamless experience, click <strong className="text-white">"Open in New Tab"</strong> at the top-right, or log in on your main domain: <a href="https://callingagent.agency" target="_blank" rel="noopener noreferrer" className="underline font-bold text-white hover:text-indigo-200">callingagent.agency</a>.
-          </div>
-        )}
         
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black text-white mb-2 tracking-tighter">
@@ -117,6 +131,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold text-center">{error}</div>}
+          
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
             <input 
@@ -159,10 +174,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div>
             <button 
               type="button"
-              onClick={handleGoogleLogin}
+              onClick={handleGoogleLoginUnified}
               disabled={loading}
               className="w-full py-4 bg-white text-slate-950 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-white/10 transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50 border border-slate-200"
             >
@@ -186,40 +201,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   />
                 </svg>
               </div>
-              <span>Continue with Google (Popup)</span>
+              <span className="text-slate-900 font-bold">Continue with Google</span>
             </button>
-
-            <button 
-              type="button"
-              onClick={handleGoogleRedirectLogin}
-              disabled={loading}
-              className="w-full py-3.5 bg-slate-950 text-slate-300 rounded-xl font-medium text-xs hover:bg-slate-900 transition-all active:scale-95 flex items-center justify-center space-x-2.5 disabled:opacity-50 border border-white/5"
-            >
-              <div className="w-4 h-4 flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-full h-full">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#94a3b8"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#94a3b8"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                    fill="#94a3b8"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#94a3b8"
-                  />
-                </svg>
-              </div>
-              <span>Continue with Google (Redirect)</span>
-            </button>
-            <p className="text-[10px] text-center text-slate-500 font-medium">
-              Redirect mode is recommended if popups are blocked on your device.
-            </p>
           </div>
         </form>
 

@@ -145,6 +145,19 @@ export const loginWithGoogleRedirect = async () => {
   }
 };
 
+export const handleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      return await syncUserProfile(result.user);
+    }
+    return null;
+  } catch (error) {
+    console.error('Google Redirect Result Error:', error);
+    throw error;
+  }
+};
+
 export const loginWithEmailFallback = async (email: string, pass: string) => {
   const normalizedEmail = email.toLowerCase().trim();
   const docId = `fallback_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;

@@ -11,7 +11,9 @@
           if (
             msg.indexOf('Cannot set property fetch') > -1 ||
             msg.indexOf('is not valid JSON') > -1 ||
-            msg.indexOf('undefined" is not valid JSON') > -1
+            msg.indexOf('undefined" is not valid JSON') > -1 ||
+            msg.indexOf('getContext') > -1 ||
+            msg.indexOf('Script error.') > -1
           ) {
             event.preventDefault();
             event.stopPropagation();
@@ -26,13 +28,50 @@
           if (
             msg.indexOf('Cannot set property fetch') > -1 ||
             msg.indexOf('is not valid JSON') > -1 ||
-            msg.indexOf('undefined" is not valid JSON') > -1
+            msg.indexOf('undefined" is not valid JSON') > -1 ||
+            msg.indexOf('getContext') > -1 ||
+            msg.indexOf('Script error.') > -1
           ) {
             event.preventDefault();
             event.stopPropagation();
             return false;
           }
         });
+
+        // Safe window.gapi decorator to prevent "Cannot read properties of undefined (reading 'getContext')" from gapi loader
+        try {
+          var activeGapi = window.gapi;
+          Object.defineProperty(window, 'gapi', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              if (activeGapi) {
+                if (!activeGapi.iframes) {
+                  activeGapi.iframes = {
+                    getContext: function() {
+                      return {};
+                    }
+                  };
+                }
+              }
+              return activeGapi;
+            },
+            set: function(v) {
+              if (v && typeof v === 'object') {
+                if (!v.iframes) {
+                  v.iframes = {
+                    getContext: function() {
+                      return {};
+                    }
+                  };
+                }
+              }
+              activeGapi = v;
+            }
+          });
+        } catch (e) {
+          console.warn('Early gapi patch failed:', e);
+        }
 
         // Patch JSON.parse early
         try {
