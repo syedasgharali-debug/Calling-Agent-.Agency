@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UserRole, Plan, Coupon, Blog } from '../App';
+import { PaymentGateways } from '../components/PaymentGateways';
 import { 
   Mic, 
   Users, 
@@ -818,12 +819,8 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [campaignContactsRaw, setCampaignContactsRaw] = useState<string>(
     "John Doe, +1 (415) 555-0192\nJane Smith, +1 (212) 555-0481\nMichael Scott, +1 (305) 555-0921\nDavid Brent, +1 (312) 555-1022\nFiona Gallagher, +1 (213) 555-1150\nSherlock Holmes, +1 (617) 555-3341\nBruce Wayne, +1 (312) 555-8888\nClark Kent, +1 (212) 555-9011"
   );
-  const [campaignContactsCount, setCampaignContactsCount] = useState<number>(8);
-  const [liveDialLogs, setLiveDialLogs] = useState<any[]>([
-    { name: "John Doe", phone: "+1 (415) 555-0192", status: "Connected", duration: "1m 15s", sentiment: "Positive", transcript: "Agent Sarah: Hello, John! I see you signed up for our real estate alerts.\nCustomer John: Oh yes! I am looking for a 3-bedroom apartment in San Francisco.\nAgent Sarah: Perfect, I can link that right up!" },
-    { name: "Jane Smith", phone: "+1 (212) 555-0481", status: "Connected", duration: "45s", sentiment: "Neutral", transcript: "Agent Sarah: Hi Jane, calling from the helpdesk regarding your ticket.\nCustomer Jane: Oh, thank you. I solved it already but thanks for following up.\nAgent Sarah: Understood, have a wonderful day!" },
-    { name: "Michael Scott", phone: "+1 (305) 555-0921", status: "Busy/Voicemail", duration: "0s", sentiment: "None", transcript: "[System Log] Machine answered. Connection terminated based on VM settings." }
-  ]);
+  const [campaignContactsCount, setCampaignContactsCount] = useState<number>(0);
+  const [liveDialLogs, setLiveDialLogs] = useState<any[]>([]);
 
   const [creditChartMetric, setCreditChartMetric] = useState<'credits' | 'cost' | 'calls'>('credits');
 
@@ -1172,87 +1169,13 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [selectedRegion, setSelectedRegion] = useState('US');
   const [provisioningAgentId, setProvisioningAgentId] = useState('');
 
-  const [calls, setCalls] = useState<Call[]>(() => {
-    try {
-      const saved = localStorage.getItem('dashboard-calls');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [
-      {
-        id: 'call_1',
-        caller: '+1 (415) 555-2671',
-        agent: 'Sarah (Real Estate)',
-        duration: '2m 14s',
-        outcome: 'Tour Booked',
-        sentiment: 'Positive',
-        timestamp: '10 mins ago',
-        transcript: "Sarah (Real Estate): Hello! Thanks for calling Sarah Real Estate Desk. Are you looking to see the Saturday afternoon listing?\nCustomer: Yes, I would love to book a slot for the 2 PM tour if it's still available.\nSarah (Real Estate): Perfect! I have scheduled you for the 2 PM showing. We will send the access code via SMS shortly before."
-      },
-      {
-        id: 'call_2',
-        caller: '+1 (212) 555-8930',
-        agent: 'Chloe (SaaS Billing)',
-        duration: '4m 32s',
-        outcome: 'Discount Applied',
-        sentiment: 'Positive',
-        timestamp: '1 hour ago',
-        transcript: "Customer: Hi, I'm calling about my subscription fee. It's a bit high this month.\nChloe (SaaS Billing): I understand completely. I checked your account and I can apply a retention loyalty discount of 50% for the next 3 months.\nCustomer: Oh, that is extremely helpful. Thank you so much!"
-      },
-      {
-        id: 'call_3',
-        caller: '+1 (312) 555-1209',
-        agent: 'David (Medical Clinic)',
-        duration: '1m 45s',
-        outcome: 'Appointment Scheduled',
-        sentiment: 'Neutral',
-        timestamp: '2 hours ago',
-        transcript: "David (Medical Clinic): Welcome to the clinic booking agent. What can we do for you today?\nCustomer: I need to schedule an annual physical exam.\nDavid (Medical Clinic): Excellent. I have an opening tomorrow at 10:15 AM with Dr. Mercer. Does that suit your schedule?\nCustomer: Yes, that is perfect. Please reserve that slot."
-      }
-    ];
-  });
+  const [calls, setCalls] = useState<Call[]>([]);
 
   useEffect(() => {
     localStorage.setItem('dashboard-calls', JSON.stringify(calls));
   }, [calls]);
 
-  const [allUsers, setAllUsers] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('dashboard-users-seed');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [
-      {
-        id: 'user_ent_1',
-        email: 'enterprise-client@callingagent.com',
-        name: 'Enterprise Client Corp',
-        role: 'customer',
-        plan: 'Enterprise',
-        balance: 150.00,
-        credits: 5000,
-        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 * 5 },
-        lastLogin: { seconds: Math.floor(Date.now() / 1000) },
-        status: 'online'
-      },
-      {
-        id: 'user_cust_1',
-        email: 'starter-john@gmail.com',
-        name: 'John Doe',
-        role: 'customer',
-        plan: 'Starter',
-        balance: 15.00,
-        credits: 200,
-        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 * 2 },
-        lastLogin: { seconds: Math.floor(Date.now() / 1000) - 3600 },
-        status: 'offline'
-      }
-    ];
-  });
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   useEffect(() => {
     localStorage.setItem('dashboard-users-seed', JSON.stringify(allUsers));
@@ -1328,18 +1251,7 @@ If a client is highly demanding or looking for properties not publicly listed:
     localStorage.setItem('dashboard-campaigns', JSON.stringify(campaignList));
   }, [campaignList]);
 
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem('dashboard-campaigns');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) {
-          return parsed[0].id;
-        }
-      }
-    } catch (e) {}
-    return '';
-  });
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [selectedCampaignAgent, setSelectedCampaignAgent] = useState<string>('');
 
   const [activeLoadedCampaignId, setActiveLoadedCampaignId] = useState<string>('');
@@ -1459,12 +1371,26 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [selectedAdminMetric, setSelectedAdminMetric] = useState<'revenue' | 'users' | 'usage'>('revenue');
   const [selectedUserMetric, setSelectedUserMetric] = useState<'minutes' | 'latency' | 'spend'>('minutes');
 
-  // Realistic Chart Data Generation
+  // Helper to parse duration string (e.g., "2m 14s", "45s") into seconds
+  const parseDurationToSeconds = (durationStr: string): number => {
+    if (!durationStr) return 0;
+    const mMatch = durationStr.match(/(\d+)\s*m/);
+    const sMatch = durationStr.match(/(\d+)\s*s/);
+    const m = mMatch ? parseInt(mMatch[1], 10) : 0;
+    const s = sMatch ? parseInt(sMatch[1], 10) : 0;
+    if (!mMatch && !sMatch) {
+      const fallback = parseInt(durationStr, 10);
+      return isNaN(fallback) ? 0 : fallback;
+    }
+    return m * 60 + s;
+  };
+
+  // Zeroed Chart Data
   const chartData = useMemo(() => {
     const data = [];
     for (let i = 0; i < 24; i++) {
       data.push({
-        time: `${i}:00`,
+        time: `${i.toString().padStart(2, '0')}:00`,
         calls: 0,
         latency: 0,
         revenue: 0,
@@ -1477,11 +1403,14 @@ If a client is highly demanding or looking for properties not publicly listed:
     return data;
   }, []);
 
-  const sentimentData = [
-    { name: 'Positive', value: 0, color: '#10b981' },
-    { name: 'Neutral', value: 0, color: '#6366f1' },
-    { name: 'Negative', value: 0, color: '#f43f5e' },
-  ];
+  // Zeroed Sentiment Data
+  const sentimentData = useMemo(() => {
+    return [
+      { name: 'Positive', value: 0, color: '#10b981' },
+      { name: 'Neutral', value: 0, color: '#6366f1' },
+      { name: 'Negative', value: 0, color: '#f43f5e' },
+    ];
+  }, []);
 
   useEffect(() => {
     // Setup WebSocket Relay for real phone calls
@@ -2206,6 +2135,97 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     triggerToast("Campaign deleted successfully.", "success");
   };
 
+  // Helper to select a unique system voice based on gender, name, and accent
+  const getBestSpeechSynthesisVoice = (gender: string, name: string, accent?: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+    try {
+      const speechVoices = window.speechSynthesis.getVoices();
+      if (speechVoices.length === 0) return null;
+
+      // Filter to English voices to maintain language compatibility
+      const englishVoices = speechVoices.filter(v => v.lang.startsWith('en'));
+      const candidateVoices = englishVoices.length > 0 ? englishVoices : speechVoices;
+
+      const isMale = (gender || '').toLowerCase() === 'male';
+
+      // Separate into Female and Male voices using clear acoustic identifiers
+      const femaleKeywords = ['zira', 'hazel', 'susan', 'samantha', 'karen', 'tessa', 'veena', 'moira', 'fiona', 'female', 'girl', 'woman', 'emma', 'rachel', 'clara', 'sofia', 'elli', 'gigi', 'mimi', 'serena', 'glinda', 'freya', 'matilda', 'jessica', 'victoria', 'eva', 'kyoko'];
+      const maleKeywords = ['david', 'george', 'mark', 'richard', 'ravi', 'male', 'boy', 'man', 'drew', 'clyde', 'paul', 'michael', 'antoni', 'giovanni', 'harry', 'charlie', 'liam', 'conor', 'james', 'joseph', 'daniel', 'peter'];
+
+      const femaleVoices = candidateVoices.filter(v => {
+        const nameLower = v.name.toLowerCase();
+        return femaleKeywords.some(kw => nameLower.includes(kw)) || (!maleKeywords.some(kw => nameLower.includes(kw)) && v.name.toLowerCase().includes('female'));
+      });
+
+      const maleVoices = candidateVoices.filter(v => {
+        const nameLower = v.name.toLowerCase();
+        return maleKeywords.some(kw => nameLower.includes(kw)) || (!femaleKeywords.some(kw => nameLower.includes(kw)) && v.name.toLowerCase().includes('male'));
+      });
+
+      let targetList = isMale 
+        ? (maleVoices.length > 0 ? maleVoices : candidateVoices)
+        : (femaleVoices.length > 0 ? femaleVoices : candidateVoices);
+
+      // Match accent preference if provided
+      if (accent) {
+        const cleanAccent = accent.toLowerCase();
+        const accentVoices = targetList.filter(v => {
+          if (cleanAccent.includes('british') || cleanAccent.includes('uk')) return v.lang.includes('GB') || v.lang.includes('en-GB');
+          if (cleanAccent.includes('australian') || cleanAccent.includes('au')) return v.lang.includes('AU') || v.lang.includes('en-AU');
+          if (cleanAccent.includes('irish') || cleanAccent.includes('ie')) return v.lang.includes('IE') || v.lang.includes('en-IE');
+          if (cleanAccent.includes('indian') || cleanAccent.includes('in')) return v.lang.includes('IN') || v.lang.includes('en-IN');
+          return false;
+        });
+        if (accentVoices.length > 0) {
+          targetList = accentVoices;
+        }
+      }
+
+      // Check for exact name match
+      if (name) {
+        const exactMatch = targetList.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
+        if (exactMatch) return exactMatch;
+      }
+
+      // To guarantee different agents get DIFFERENT physical system voices,
+      // we use a hash index based on their name or ID
+      const hash = Array.from(name || 'default').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return targetList[hash % targetList.length];
+    } catch (e) {
+      console.error("Error matching speech voice:", e);
+    }
+    return null;
+  };
+
+  // Maps an agent's name/ID to their corresponding physical system voice parameters
+  const getAgentVoiceAndParameters = (agentNameOrId: string) => {
+    const cleanQuery = (agentNameOrId || '').toLowerCase().trim();
+    
+    // Look up the agent in our list of default or custom user agents
+    const matchingAgent = agents.find(a => 
+      a.id.toLowerCase() === cleanQuery || 
+      a.name.toLowerCase().includes(cleanQuery) || 
+      cleanQuery.includes(a.name.toLowerCase()) ||
+      a.id.toLowerCase().includes(cleanQuery) ||
+      cleanQuery.includes(a.id.toLowerCase())
+    ) || agents[0]; // fallback to first agent (Sarah) if none matches
+
+    const gender = matchingAgent ? matchingAgent.gender : 'Female';
+    const voiceName = matchingAgent ? matchingAgent.voice : 'Emma';
+    const pitch = matchingAgent && matchingAgent.pitch !== undefined ? matchingAgent.pitch : (gender === 'Male' ? 0.95 : 1.2);
+    const speed = matchingAgent && matchingAgent.speed !== undefined ? matchingAgent.speed : 1.0;
+
+    const matchedVoice = getBestSpeechSynthesisVoice(gender, voiceName);
+
+    return {
+      voice: matchedVoice,
+      pitch,
+      speed,
+      gender,
+      name: matchingAgent ? matchingAgent.name : agentNameOrId
+    };
+  };
+
   // Test Agent Panel Voice Simulation Handlers
   const handleStartTestAgentVoiceSim = () => {
     setIsTestAgentSimOpen(true);
@@ -2230,12 +2250,17 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
         { sender: 'agent', text: openingText, timestamp: timeNow }
       ]);
 
-      // Speak using Web Speech API
+      // Speak using Web Speech API with correct differentiated voice parameters
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(openingText);
-        utterance.pitch = agentName.toLowerCase().includes('marcus') || agentName.toLowerCase().includes('david') ? 0.95 : 1.25;
-        utterance.rate = 1.0;
+        
+        const voiceParams = getAgentVoiceAndParameters(agentName);
+        if (voiceParams.voice) {
+          utterance.voice = voiceParams.voice;
+        }
+        utterance.pitch = voiceParams.pitch;
+        utterance.rate = voiceParams.speed;
         
         utterance.onstart = () => setTestAgentAudioPlaying(true);
         utterance.onend = () => {
@@ -2298,8 +2323,13 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(replyText);
-        utterance.pitch = agentName.toLowerCase().includes('marcus') || agentName.toLowerCase().includes('david') ? 0.95 : 1.25;
-        utterance.rate = 1.0;
+        
+        const voiceParams = getAgentVoiceAndParameters(agentName);
+        if (voiceParams.voice) {
+          utterance.voice = voiceParams.voice;
+        }
+        utterance.pitch = voiceParams.pitch;
+        utterance.rate = voiceParams.speed;
         
         utterance.onstart = () => setTestAgentAudioPlaying(true);
         utterance.onend = () => {
@@ -2648,22 +2678,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     }
     
     try {
-      const speechVoices = window.speechSynthesis.getVoices();
-      let matchedVoice = null;
-      if (voice.accent === 'British') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('GB') || v.lang.includes('en-GB'));
-      } else if (voice.accent === 'Australian') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('AU') || v.lang.includes('en-AU'));
-      } else if (voice.accent === 'Irish') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('IE') || v.lang.includes('en-IE'));
-      } else if (voice.accent === 'Indian') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('IN') || v.lang.includes('en-IN'));
-      } else if (voice.gender === 'Female') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha')));
-      } else {
-        matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david')));
-      }
-      
+      const matchedVoice = getBestSpeechSynthesisVoice(voice.gender, voice.name, voice.accent);
       if (matchedVoice) {
         utterance.voice = matchedVoice;
       }
@@ -2799,22 +2814,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     };
     
     try {
-      const speechVoices = window.speechSynthesis.getVoices();
-      let matchedVoice = null;
-      if (voice.accent === 'British') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('GB') || v.lang.includes('en-GB'));
-      } else if (voice.accent === 'Australian') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('AU') || v.lang.includes('en-AU'));
-      } else if (voice.accent === 'Irish') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('IE') || v.lang.includes('en-IE'));
-      } else if (voice.accent === 'Indian') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('IN') || v.lang.includes('en-IN'));
-      } else if (voice.gender === 'Female') {
-        matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha')));
-      } else {
-        matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david')));
-      }
-      
+      const matchedVoice = getBestSpeechSynthesisVoice(voice.gender, voice.name, voice.accent);
       if (matchedVoice) {
         utterance.voice = matchedVoice;
       }
@@ -2892,22 +2892,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           };
           
           try {
-            const speechVoices = window.speechSynthesis.getVoices();
-            let matchedVoice = null;
-            if (voice.accent === 'British') {
-              matchedVoice = speechVoices.find(v => v.lang.includes('GB') || v.lang.includes('en-GB'));
-            } else if (voice.accent === 'Australian') {
-              matchedVoice = speechVoices.find(v => v.lang.includes('AU') || v.lang.includes('en-AU'));
-            } else if (voice.accent === 'Irish') {
-              matchedVoice = speechVoices.find(v => v.lang.includes('IE') || v.lang.includes('en-IE'));
-            } else if (voice.accent === 'Indian') {
-              matchedVoice = speechVoices.find(v => v.lang.includes('IN') || v.lang.includes('en-IN'));
-            } else if (voice.gender === 'Female') {
-              matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha')));
-            } else {
-              matchedVoice = speechVoices.find(v => v.lang.includes('en') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david')));
-            }
-            
+            const matchedVoice = getBestSpeechSynthesisVoice(voice.gender, voice.name, voice.accent);
             if (matchedVoice) {
               utterance.voice = matchedVoice;
             }
@@ -3194,14 +3179,22 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
 
     // Check credentials
     if (agent.provider === 'Vapi' && !vapiApiKey) {
-      alert("Please configure Vapi API Key in Integrations first.");
-      setActiveTab('integrations');
+      if (isAdmin) {
+        alert("Please configure Vapi API Key in API Configuration first.");
+        setActiveTab('integrations');
+      } else {
+        alert("Platform configuration issue. Please contact system support.");
+      }
       setShowOutboundModal(false);
       return;
     }
     if ((!agent.provider || agent.provider === 'CallingAgent') && (!twilioSid || !twilioToken || !twilioNumber)) {
-      alert("Please configure Twilio credentials in Integrations first.");
-      setActiveTab('integrations');
+      if (isAdmin) {
+        alert("Please configure Twilio credentials in API Configuration first.");
+        setActiveTab('integrations');
+      } else {
+        alert("Outbound calling service is temporarily undergoing scheduled maintenance. Please contact support.");
+      }
       setShowOutboundModal(false);
       return;
     }
@@ -3247,39 +3240,24 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     setShowPaymentSelectionModal(true);
   };
 
-  const confirmPlanUpgrade = async (method: 'stripe' | 'paypal') => {
+  const confirmPlanUpgrade = async (method: 'stripe' | 'paypal', receipt?: any) => {
     if (!pendingPlan) return;
     
     try {
-      if (method === 'stripe' && !stripeApiKey && !hasSystemStripe) {
-        alert("Please configure Stripe Secret Key in Integrations first.");
-        setActiveTab('integrations');
-        setShowPaymentSelectionModal(false);
-        return;
-      }
-      
-      if (method === 'paypal' && (!paypalClientId || !paypalSecret) && !hasSystemPaypal) {
-        alert("Please configure PayPal credentials in Integrations first.");
-        setActiveTab('integrations');
-        setShowPaymentSelectionModal(false);
-        return;
-      }
-
-      // In a real app, we'd redirect to Stripe Checkout or PayPal portal here
-      // For now, we simulate success
+      // Direct integration/sandbox callback success
       setCurrentPlan(pendingPlan);
       onUpdateUser({ plan: pendingPlan.name });
       
-      // Add to invoices
+      // Add transaction record to invoices log
       setInvoices(prev => [{
-        id: `inv_${Date.now()}`,
+        id: receipt?.transactionId || `inv_${Date.now()}`,
         user: user.email,
         amount: isBillingYearly ? pendingPlan.yearlyPrice : pendingPlan.price,
         status: 'Paid',
-        date: new Date().toISOString().split('T')[0]
+        date: receipt?.date || new Date().toISOString().split('T')[0]
       }, ...prev]);
 
-      alert(`Successfully upgraded to ${pendingPlan.name} plan via ${method === 'stripe' ? 'Stripe' : 'PayPal'}!`);
+      alert(`Successfully upgraded to ${pendingPlan.name} plan via ${method === 'stripe' ? 'Stripe Sandbox' : 'PayPal Sandbox'}!`);
       setShowPaymentSelectionModal(false);
       setPendingPlan(null);
     } catch (error) {
@@ -3292,8 +3270,12 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     try {
       if (method === 'stripe') {
         if (!stripeApiKey && !hasSystemStripe) {
-          alert("Please configure Stripe Secret Key in Integrations first.");
-          setActiveTab('integrations');
+          if (isAdmin) {
+            alert("Please configure Stripe Secret Key in API Configuration first.");
+            setActiveTab('integrations');
+          } else {
+            alert("Stripe payment processing is currently unavailable. Please contact support.");
+          }
           return;
         }
         const response = await fetch('/api/payments/stripe/create-session', {
@@ -3305,8 +3287,12 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
         if (data.url) window.location.href = data.url;
       } else {
         if ((!paypalClientId || !paypalSecret) && !hasSystemPaypal) {
-          alert("Please configure PayPal credentials in Integrations first.");
-          setActiveTab('integrations');
+          if (isAdmin) {
+            alert("Please configure PayPal credentials in API Configuration first.");
+            setActiveTab('integrations');
+          } else {
+            alert("PayPal payment processing is currently unavailable. Please contact support.");
+          }
           return;
         }
         const response = await fetch('/api/payments/paypal/create-order', {
@@ -3480,8 +3466,12 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     
     if (agent.provider === 'Vapi') {
       if (!vapiApiKey) {
-        alert('Please connect your Vapi API Key in the Integrations tab first.');
-        setActiveTab('integrations');
+        if (isAdmin) {
+          alert('Please connect your Vapi API Key in the API Configuration tab first.');
+          setActiveTab('integrations');
+        } else {
+          alert('Voice orchestration is currently offline for scheduled maintenance. Please try again later.');
+        }
         return;
       }
       if (!agent.vapiAssistantId) {
@@ -3895,12 +3885,23 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     );
   };
 
-  const stats = [
-    { id: 'minutes', label: 'Total Minutes', value: '0', change: '0%', icon: Phone, color: 'text-indigo-400' },
-    { id: 'completion', label: 'Completion Rate', value: '0.0%', change: '0%', icon: CheckCircle2, color: 'text-emerald-400' },
-    { id: 'latency', label: 'Avg Latency', value: '0ms', change: '0%', icon: TrendingUp, color: 'text-purple-400' },
-    { id: 'spend', label: 'Spend (MTD)', value: '$0.00', change: '0%', icon: CreditCard, color: 'text-blue-400' },
-  ];
+  const stats = useMemo(() => {
+    return [
+      { id: 'minutes', label: 'Total Minutes', value: '0 mins', change: '0%', icon: Phone, color: 'text-indigo-400' },
+      { id: 'completion', label: 'Completion Rate', value: '0.0%', change: '0%', icon: CheckCircle2, color: 'text-emerald-400' },
+      { id: 'latency', label: 'Avg Latency', value: '0ms', change: '0%', icon: TrendingUp, color: 'text-purple-400' },
+      { id: 'spend', label: 'Spend (MTD)', value: '$0.00', change: '0%', icon: CreditCard, color: 'text-blue-400' },
+    ];
+  }, []);
+
+  const adminStats = useMemo(() => {
+    return [
+      { id: 'revenue', label: 'Total Revenue', value: '$0.00', change: '0%', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+      { id: 'users', label: 'Active Users', value: '0', change: '0%', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+      { id: 'usage', label: 'Platform Usage', value: '0 mins', change: '0%', icon: Mic, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+      { id: 'tickets', label: 'Open Tickets', value: tickets.filter(t => t.status === 'Open').length.toString(), change: '0%', icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    ];
+  }, [tickets]);
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
@@ -4013,9 +4014,6 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 ]
               },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
-              { id: 'integrations', label: 'Integrations', icon: Key },
-              { id: 'numbers', label: 'Phone Numbers', icon: Phone },
-              { id: 'provision', label: 'Provision', icon: Plus },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 'logs', label: 'Call Logs', icon: History },
               { id: 'billing', label: 'Billing', icon: CreditCard },
@@ -4370,12 +4368,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 // Admin Overview
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[
-                      { id: 'revenue', label: 'Total Revenue', value: '$0.00', change: '0%', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                      { id: 'users', label: 'Active Users', value: '0', change: '0%', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                      { id: 'usage', label: 'Platform Usage', value: '0 mins', change: '0%', icon: Mic, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                      { id: 'tickets', label: 'Open Tickets', value: tickets.filter(t => t.status === 'Open').length.toString(), change: '0%', icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    ].map((stat, i) => (
+                    {adminStats.map((stat, i) => (
                       <button 
                         key={i} 
                         onClick={() => {
@@ -5040,7 +5033,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
             </motion.div>
           )}
 
-          {activeTab === 'integrations' && (
+          {activeTab === 'integrations' && isAdmin && (
             <motion.div 
               key="integrations"
               initial={{ opacity: 0, y: 20 }}
@@ -13249,7 +13242,7 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
             >
               <div className="flex justify-between items-start mb-8">
                 <div>
-                  <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Pay to Continue</h3>
+                  <h3 className={`text-3xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Checkout Gateway</h3>
                   <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Upgrade to {pendingPlan.name} Plan</p>
                 </div>
                 <button 
@@ -13275,50 +13268,26 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                     {isBillingYearly ? '/ Year' : '/ Month'}
                   </span>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-2 text-[8px] font-black uppercase tracking-widest">
-                  {pendingPlan.features.slice(0, 3).map((f: string, i: number) => (
-                    <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-slate-500">{f}</span>
-                  ))}
-                </div>
               </div>
 
-              <div className="space-y-4">
-                <button 
-                  onClick={() => confirmPlanUpgrade('stripe')}
-                  className="w-full group relative flex items-center justify-between p-6 bg-[#635BFF] hover:bg-[#5851E0] rounded-[2rem] text-white transition-all shadow-xl shadow-indigo-600/20"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                      <CreditCard className="w-6 h-6" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-black uppercase tracking-widest">Pay with Stripe</p>
-                      <p className="text-[10px] opacity-70">Credit Card, Apple Pay, Google Pay</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </button>
+              {/* Secure Payment Gateways Component */}
+              <PaymentGateways
+                theme={theme}
+                amount={isBillingYearly ? pendingPlan.yearlyPrice : pendingPlan.price}
+                itemName={`${pendingPlan.name} Plan Upgrade`}
+                onSuccess={(method, receipt) => confirmPlanUpgrade(method, receipt)}
+                onClose={() => setShowPaymentSelectionModal(false)}
+                stripeApiKey={stripeApiKey}
+                paypalClientId={paypalClientId}
+                paypalSecret={paypalSecret}
+                hasSystemStripe={hasSystemStripe}
+                hasSystemPaypal={hasSystemPaypal}
+                isAdmin={isAdmin}
+              />
 
-                <button 
-                  onClick={() => confirmPlanUpgrade('paypal')}
-                  className="w-full group relative flex items-center justify-between p-6 bg-[#0070BA] hover:bg-[#005EA6] rounded-[2rem] text-white transition-all shadow-xl shadow-blue-600/20"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                      <DollarSign className="w-6 h-6" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-black uppercase tracking-widest">Pay with PayPal</p>
-                      <p className="text-[10px] opacity-70">PayPal Balance, Direct Bank Transfer</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </button>
-              </div>
-
-              <div className="mt-10 text-center">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                  Secure encrypted checkout via industry standards.
+              <div className="mt-8 text-center border-t border-dashed border-slate-200 dark:border-white/5 pt-4">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                  Secure 256-Bit Encrypted Payments Channel
                 </p>
               </div>
             </motion.div>
@@ -13669,14 +13638,29 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                         <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">1</div>
                         <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Configure your first AI agent in the <span className="text-indigo-400 font-bold underline cursor-pointer" onClick={() => { setActiveTab('agents'); dismissWelcome(); }}>Agents</span> tab.</p>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">2</div>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Set up your <span className="text-emerald-400 font-bold underline cursor-pointer" onClick={() => { setActiveTab('integrations'); dismissWelcome(); }}>API Configuration</span> (Twilio) to enable live features.</p>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">3</div>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Provision a number and start receiving autonomous customer calls.</p>
-                      </div>
+                      {isAdmin ? (
+                        <>
+                          <div className="flex items-center space-x-4">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">2</div>
+                            <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Set up your <span className="text-indigo-400 font-bold underline cursor-pointer" onClick={() => { setActiveTab('integrations'); dismissWelcome(); }}>API Configuration</span> (Twilio) to enable live features.</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">3</div>
+                            <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Provision a number and start receiving autonomous customer calls.</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-4">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">2</div>
+                            <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Request or assign a dedicated outreach phone number via billing support.</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">3</div>
+                            <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Launch outbound campaigns and analyze interactive customer analytics.</p>
+                          </div>
+                        </>
+                      )}
                    </div>
                 </div>
 
