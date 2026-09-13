@@ -92,33 +92,43 @@ const App: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([
     { 
       name: 'Starter', 
-      price: 65, 
-      yearlyPrice: 624, 
+      price: 49, 
+      yearlyPrice: 470, 
       mins: 100, 
       agents: 2, 
       numbers: 1,
-      features: ['100 Included Mins', '$0.65/min Overage', '2 AI Agents', '1 Phone Number', 'Standard Support'],
+      features: ['100 Included Mins', '$0.45/min Overage', '2 Active AI Agents', '1 Phone Number', 'Bring Your Own Key (BYOK) Optional', 'Standard Support'],
       color: 'from-blue-600 to-indigo-600'
     },
     { 
-      name: 'Pro', 
-      price: 325, 
-      yearlyPrice: 3120, 
+      name: 'Growth', 
+      price: 199, 
+      yearlyPrice: 1910, 
       mins: 500, 
-      agents: 10, 
-      numbers: 5,
-      features: ['500 Included Mins', '$0.65/min Overage', '10 AI Agents', '5 Phone Numbers', 'Priority Support', 'Advanced Analytics'],
+      agents: 8, 
+      numbers: 3,
+      features: ['500 Included Mins', '$0.35/min Overage', '8 Active AI Agents', '3 Phone Numbers', 'CRM Integrations (HubSpot/Salesforce)', 'Advanced Sentiment Analytics', 'Priority Email Support'],
+      color: 'from-cyan-500 to-blue-600'
+    },
+    { 
+      name: 'Scale', 
+      price: 499, 
+      yearlyPrice: 4790, 
+      mins: 1500, 
+      agents: 25, 
+      numbers: 10,
+      features: ['1,500 Included Mins', '$0.25/min Overage', '25 Active AI Agents', '10 Phone Numbers', 'Direct SIP Trunking & BYO Carrier', 'Custom Voice Cloning (2 Clones)', 'Dedicated Slack & WhatsApp Channels', 'SLA-backed 99.9% Uptime'],
       color: 'from-indigo-600 to-purple-600',
       recommended: true
     },
     { 
-      name: 'Enterprise', 
-      price: 1625, 
-      yearlyPrice: 15600, 
-      mins: 2500, 
-      agents: 50, 
-      numbers: 20,
-      features: ['2,500 Included Mins', '$0.65/min Overage', 'Bring Your Own Key (BYOK)', 'Dedicated Account Manager', 'Full API Access', 'White-labeling'],
+      name: 'Enterprise Pro', 
+      price: 1299, 
+      yearlyPrice: 12470, 
+      mins: 5000, 
+      agents: 9999, 
+      numbers: 50,
+      features: ['5,000 Included Mins', '$0.15/min Overage', 'Unlimited AI Agents', 'Custom Dedicated Numbers & CNAM', 'Dynamic Enterprise Customization', 'Dedicated Account Manager & SLA', 'Custom LLM Fine-Tuning', 'White-labeling & Subdomains'],
       color: 'from-purple-600 to-pink-600'
     }
   ]);

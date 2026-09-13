@@ -3231,7 +3231,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
   const handlePlanUpgrade = async (plan: any) => {
     if (plan.name === currentPlan.name) return;
 
-    if (plan.name === 'Enterprise') {
+    if (plan.name.includes('Enterprise')) {
       setShowEnterpriseModal(true);
       return;
     }
@@ -5804,7 +5804,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                       <div className="space-y-4">
                         <button 
                           onClick={() => {
-                            if (plan.name === 'Enterprise') {
+                            if (plan.name.includes('Enterprise')) {
                               setShowEnterpriseModal(true);
                             } else {
                               handlePlanUpgrade(plan);
@@ -5818,7 +5818,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                         >
                           {plan.name === currentPlan.name 
                             ? 'Current Plan' 
-                            : plan.name === 'Enterprise' 
+                            : plan.name.includes('Enterprise') 
                               ? 'Configure Custom Plan' 
                               : `Purchase ${plan.name} Plan`}
                         </button>
@@ -7608,17 +7608,64 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                       No Campaigns Configured Yet
                     </h4>
                     <p className="text-xs text-slate-500 font-bold leading-relaxed">
-                      You currently have <span className="font-extrabold text-indigo-500">0</span> active campaigns. Launch an automated AI Voice Agent campaign to bulk-dial your target contact lists.
+                      You currently have <span className="font-extrabold text-indigo-500">0</span> active campaigns. Create a custom campaign or launch an instant Sandbox Demo Campaign with 5 high-fidelity leads to try out the system!
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => setShowCreateCampaign(true)}
-                    className="flex items-center space-x-2 px-6 py-4.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Create Your First Campaign</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+                    <button
+                      onClick={() => setShowCreateCampaign(true)}
+                      className="flex items-center space-x-2 px-6 py-4.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg active:scale-95 w-full sm:w-auto"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Configure Custom Campaign</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        const demoContacts = "Alice Johnson, +1 (415) 555-4921\nRobert Downey, +1 (212) 555-8824\nTony Stark, +1 (310) 555-9000\nPepper Potts, +1 (310) 555-9011\nSteve Rogers, +1 (718) 555-1941";
+                        const demoCamp = {
+                          id: `camp_${Date.now()}`,
+                          name: "Premium Dental Outreach",
+                          type: "Outbound",
+                          status: 'Active',
+                          agent: agents[0] ? agents[0].name : "Sarah (Real Estate)",
+                          targetCount: 150,
+                          completedCount: 0,
+                          successRate: 0,
+                          budget: 250,
+                          spend: 0,
+                          createdAt: new Date().toISOString().split('T')[0],
+                          purpose: 'Dental Hygiene & Teeth Cleaning Recalls',
+                          audience: 'Incomplete Booking Dental Leads',
+                          guidelines: 'Inquire if they would like to claim their free dental scaling voucher this month, schedule booking.',
+                          contactsRaw: demoContacts,
+                          location: 'United States & Canada',
+                          timezone: 'Lead Local Time (09:00 - 17:00)',
+                          bidding: 'Max Human Connection Rate ($0.45/call)',
+                          dailyCap: 200,
+                        };
+                        setCampaignList([demoCamp]);
+                        setSelectedCampaignId(demoCamp.id);
+                        setCampaignPurpose(demoCamp.purpose);
+                        setCampaignGuidelines(demoCamp.guidelines);
+                        setCampaignContactsRaw(demoContacts);
+                        setCampaignContactsCount(5);
+                        setSelectedCampaignAgent(demoCamp.agent);
+                        setCampaignAudience(demoCamp.audience);
+                        
+                        triggerToast('Demo Sandbox Campaign successfully established with 5 high-fidelity leads!', 'success');
+                        
+                        setTimeout(() => {
+                          handleLaunchCampaignSim(demoContacts, demoCamp.purpose, demoCamp.agent, demoCamp.id);
+                        }, 600);
+                      }}
+                      className="flex items-center space-x-2 px-6 py-4.5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl text-xs font-black transition-all shadow-md active:scale-95 w-full sm:w-auto border border-white/5"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                      <span>Launch Sandbox Demo Campaign</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
