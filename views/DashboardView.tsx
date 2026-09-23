@@ -164,6 +164,7 @@ interface Call {
   duration: string;
   outcome: string;
   sentiment: 'Positive' | 'Neutral' | 'Negative';
+  sentimentScore?: number;
   timestamp: string;
   transcript?: string;
   sentimentAnalysis?: string;
@@ -1169,7 +1170,76 @@ If a client is highly demanding or looking for properties not publicly listed:
   const [selectedRegion, setSelectedRegion] = useState('US');
   const [provisioningAgentId, setProvisioningAgentId] = useState('');
 
-  const [calls, setCalls] = useState<Call[]>([]);
+  const [calls, setCalls] = useState<Call[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-calls');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'call_1',
+        caller: '+1 (415) 555-0144 (Alice Johnson)',
+        agent: 'Sarah (Real Estate)',
+        duration: '2m 14s',
+        outcome: 'Scheduled Viewing',
+        sentiment: 'Positive',
+        sentimentScore: 94,
+        timestamp: '10 mins ago',
+        transcript: 'Agent: Hello Alice! This is Sarah from CallingAgent. I saw you showed interest in the 2BR apartment on Oak St.\nCustomer: Yes! I was wondering if it is still available for a tour this Sunday?\nAgent: Yes, it is! Would 2:00 PM work for you?\nCustomer: Perfect! That works beautifully. See you then!',
+        sentimentAnalysis: 'Highly positive call. Lead confirmed viewing appointment and was extremely responsive.'
+      },
+      {
+        id: 'call_2',
+        caller: '+1 (212) 555-0188 (Robert Downey)',
+        agent: 'Marcus (Tech Support)',
+        duration: '4m 32s',
+        outcome: 'Billing Handled',
+        sentiment: 'Neutral',
+        sentimentScore: 78,
+        timestamp: '1 hour ago',
+        transcript: 'Agent: Thank you for calling Tech Support, this is Marcus. How can I help you today?\nCustomer: Hi, I noticed a double charge on my invoice this month. Can we get this resolved?\nAgent: Absolutely, let me check your subscription. Yes, I see the duplicate transaction. I have processed a refund for the second charge.\nCustomer: Okay, thank you. When will it reflect?\nAgent: It should reflect in your account within 2-3 business days.\nCustomer: Sounds good. Thanks for the quick support.',
+        sentimentAnalysis: 'Neutral and solution-oriented. Issue resolved successfully with high satisfaction.'
+      },
+      {
+        id: 'call_3',
+        caller: '+1 (305) 555-0122 (Elena Rostova)',
+        agent: 'Sarah (Real Estate)',
+        duration: '1m 05s',
+        outcome: 'Not Interested',
+        sentiment: 'Negative',
+        sentimentScore: 28,
+        timestamp: '3 hours ago',
+        transcript: 'Agent: Hello Elena! This is Sarah. Just checking if you were still looking for listings in Miami?\nCustomer: No, I bought a house last week. Please remove me from your calling list.\nAgent: No problem at all Elena, I will update our records immediately. Have a wonderful day!',
+        sentimentAnalysis: 'Lead expressed frustration with cold outreach and requested removal. Marked as DNC.'
+      },
+      {
+        id: 'call_4',
+        caller: '+1 (312) 555-0199 (Steve Rogers)',
+        agent: 'Sarah (Real Estate)',
+        duration: '3m 15s',
+        outcome: 'Follow-up Sent',
+        sentiment: 'Positive',
+        sentimentScore: 89,
+        timestamp: 'Yesterday at 4:15 PM',
+        transcript: 'Agent: Hello Steve! I wanted to follow up on the price reduction for the lakefront property.\nCustomer: Oh, wonderful! What is the new listing price?\nAgent: It has been adjusted down by $25,000 to $425,000. \nCustomer: Oh, that is a significant adjustment. Can you email me the updated disclosure documents?\nAgent: Sent! You should receive them in your inbox now.\nCustomer: Excellent, I will review them tonight and get back to you.',
+        sentimentAnalysis: 'Prospective buyer showed strong interest in the new pricing adjustment. Follow-up email successfully dispatched.'
+      },
+      {
+        id: 'call_5',
+        caller: '+1 (702) 555-0177 (Sophia Martinez)',
+        agent: 'David (Inbound Sales)',
+        duration: '1m 58s',
+        outcome: 'Lead Qualified',
+        sentiment: 'Positive',
+        sentimentScore: 85,
+        timestamp: 'Yesterday at 11:30 AM',
+        transcript: 'Agent: CallingAgent inbound sales, David speaking!\nCustomer: Hi! I saw your pricing plans online. Do you offer volume discounts for high call centers?\nAgent: Yes, we do! Our Enterprise tiers scale down to $0.05 per minute. How many agents are you planning to deploy?\nCustomer: We run about 50 lines simultaneously.\nAgent: That absolutely qualifies for our custom volume discount. Let me forward you to our account director.',
+        sentimentAnalysis: 'High-value enterprise lead qualified. Forwarded to executive sales pipeline.'
+      }
+    ];
+  });
 
   useEffect(() => {
     localStorage.setItem('dashboard-calls', JSON.stringify(calls));
@@ -1649,6 +1719,7 @@ If a client is highly demanding or looking for properties not publicly listed:
           duration: '0m 21s',
           outcome: type === 'outbound' ? 'Tour Booked' : 'Billing Handled',
           sentiment: 'Positive',
+          sentimentScore: Math.floor(Math.random() * 10) + 90,
           timestamp: 'Just now',
           transcript: dialogues.map(t => `${t.sender === 'agent' ? 'Agent' : 'Customer'}: ${t.text}`).join('\n')
         };
@@ -1812,6 +1883,26 @@ If a client is highly demanding or looking for properties not publicly listed:
         }
         return updated;
       });
+
+      // Also push to the global Dashboard Call history if connected
+      if (isConnected) {
+        const globalCall: Call = {
+          id: `camp_call_${Date.now()}_${stepIndex}`,
+          caller: `${currentContact.name} (${currentContact.phone})`,
+          agent: activeAgent || 'Sarah (Real Estate)',
+          duration: durationStr,
+          outcome: chosenSentiment === 'Positive' || chosenSentiment === 'Interested' ? 'Lead Qualified' : 'Follow-up Scheduled',
+          sentiment: chosenSentiment === 'Positive' || chosenSentiment === 'Interested' ? 'Positive' : 
+                     chosenSentiment === 'Negative' ? 'Negative' : 'Neutral',
+          sentimentScore: chosenSentiment === 'Positive' || chosenSentiment === 'Interested' ? Math.floor(Math.random() * 15) + 85 : 
+                          chosenSentiment === 'Negative' ? Math.floor(Math.random() * 15) + 20 : 
+                          Math.floor(Math.random() * 15) + 65,
+          timestamp: 'Just now',
+          transcript: transcriptText,
+          sentimentAnalysis: `Automated campaign dial connected successfully. The prospect was marked as [${chosenSentiment}] based on real-time neural transcription sync.`
+        };
+        setCalls(prev => [globalCall, ...prev]);
+      }
 
       stepIndex++;
       setCampProgress(Math.floor((stepIndex / parsedContacts.length) * 100));
@@ -4193,7 +4284,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
           </div>
           <div className="flex items-center space-x-4">
             {/* Elegant Segmented Role Control */}
-            {activeTab !== 'tutorials' && (
+            {activeTab !== 'tutorials' && isAdmin && (
               <div className={`hidden sm:flex items-center p-1.5 rounded-2xl border transition-all ${
                 theme === 'dark' 
                   ? 'bg-slate-900 border-white/5' 
@@ -4277,7 +4368,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                           : 'bg-white border-slate-200 text-slate-700'
                       }`}
                     >
-                      {activeTab !== 'tutorials' && (
+                      {activeTab !== 'tutorials' && isAdmin && (
                         <>
                           <div className="px-3 py-2 border-b border-slate-100 dark:border-white/5 mb-2.5">
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Access Control</p>
@@ -4645,74 +4736,111 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
 
                 {renderLiveAgentsPanel()}
 
-                {/* Recent Activity Table */}
-                <div className={`border rounded-[2.5rem] overflow-hidden transition-all ${
+                {/* Recent Calls Table */}
+                <div id="recent-calls-section" className={`border rounded-[2.5rem] overflow-hidden transition-all ${
                   theme === 'dark' ? 'bg-slate-900/30 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
                 }`}>
                   <div className={`p-8 border-b flex justify-between items-center ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
                     <div>
-                      <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Recent Conversations</h3>
-                      <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Latest interactions across all agents</p>
+                      <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Recent Calls</h3>
+                      <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Detailed analytics of the latest voice interactions</p>
                     </div>
-                    <button className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                      theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
-                    }`}>
+                    <button 
+                      onClick={() => {
+                        const csvContent = "data:text/csv;charset=utf-8," 
+                          + "Caller,Agent,Timestamp,Duration,Sentiment Score,Outcome\n"
+                          + calls.map(c => `"${c.caller}","${c.agent}","${c.timestamp}","${c.duration}","${c.sentimentScore || (c.sentiment === 'Positive' ? 90 : c.sentiment === 'Negative' ? 30 : 70)}%","${c.outcome}"`).join("\n");
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", `calling_agent_recent_calls_${Date.now()}.csv`);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        triggerToast("Exported CSV report of recent calls successfully!", "success");
+                      }}
+                      className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                        theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+                      }`}
+                    >
                       Export CSV
                     </button>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm min-w-[800px]">
+                    <table className="w-full text-left text-sm min-w-[900px]">
                       <thead className={`text-[10px] font-black uppercase tracking-widest text-slate-500 ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
                         <tr>
-                          <th className="px-8 py-5">Caller ID</th>
+                          <th className="px-8 py-5">Contact / Caller</th>
                           <th className="px-8 py-5">Agent</th>
+                          <th className="px-8 py-5">Timestamp</th>
                           <th className="px-8 py-5">Duration</th>
-                          <th className="px-8 py-5">Sentiment</th>
-                          <th className="px-8 py-5 text-right">Outcome</th>
+                          <th className="px-8 py-5">Sentiment Score</th>
+                          <th className="px-8 py-5 text-right">Outcome Status</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
-                        {calls.map((call) => (
-                          <tr 
-                            key={call.id} 
-                            onClick={() => {
-                              setSelectedCall(call);
-                              setShowCallDetailsModal(true);
-                            }}
-                            className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
-                          >
-                            <td className="px-8 py-6">
-                              <div className="flex flex-col">
-                                <span className={`font-bold font-mono ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{call.caller}</span>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase">{call.timestamp}</span>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{call.agent}</span>
-                              </div>
-                            </td>
-                            <td className={`px-8 py-6 font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{call.duration}</td>
-                            <td className="px-8 py-6">
-                              <span className={`flex items-center text-[10px] font-black uppercase ${
-                                call.sentiment === 'Positive' ? 'text-emerald-400' : 
-                                call.sentiment === 'Negative' ? 'text-rose-400' : 'text-indigo-400'
-                              }`}>
-                                <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                                  call.sentiment === 'Positive' ? 'bg-emerald-400' : 
-                                  call.sentiment === 'Negative' ? 'bg-rose-400' : 'bg-indigo-400'
-                                }`}></div>
-                                {call.sentiment}
-                              </span>
-                            </td>
-                            <td className="px-8 py-6 text-right">
-                              <span className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-wider border border-indigo-500/20">
-                                {call.outcome}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {calls.map((call) => {
+                          const score = call.sentimentScore || (call.sentiment === 'Positive' ? 90 : call.sentiment === 'Negative' ? 30 : 70);
+                          return (
+                            <tr 
+                              key={call.id} 
+                              onClick={() => {
+                                setSelectedCall(call);
+                                setShowCallDetailsModal(true);
+                              }}
+                              className={`group transition-colors cursor-pointer ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="px-8 py-6">
+                                <div className="flex flex-col">
+                                  <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{call.caller}</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                  <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{call.agent}</span>
+                                </div>
+                              </td>
+                              <td className={`px-8 py-6 font-medium text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {call.timestamp}
+                              </td>
+                              <td className={`px-8 py-6 font-mono text-xs font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                                {call.duration}
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center space-x-3">
+                                  <span className={`flex items-center text-[11px] font-extrabold tracking-tight ${
+                                    score >= 80 ? 'text-emerald-400' : 
+                                    score >= 50 ? 'text-amber-400' : 'text-rose-400'
+                                  }`}>
+                                    {score}%
+                                  </span>
+                                  {/* Progress mini bar */}
+                                  <div className="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden hidden sm:block">
+                                    <div 
+                                      className={`h-full rounded-full ${
+                                        score >= 80 ? 'bg-emerald-500' : 
+                                        score >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                                      }`}
+                                      style={{ width: `${score}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6 text-right">
+                                <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                                  call.outcome.includes('Scheduled') || call.outcome.includes('Booked') || call.outcome.includes('Qualified')
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : call.outcome.includes('Not Interested') || call.outcome.includes('Declined')
+                                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                    : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                }`}>
+                                  {call.outcome}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -12230,18 +12358,19 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                     {selectedCall.transcript ? (
                       <div className="space-y-6">
                         {selectedCall.transcript.split('\n').map((line, i) => {
-                          const isAgent = line.startsWith('Agent:');
+                          const isAgent = line.toLowerCase().includes('agent');
+                          const cleanLine = line.replace(/^(Agent|Customer|Caller)(\s+[^:]+)?:?\s*/i, '').replace(/^"|"$/g, '');
                           return (
                             <div key={i} className={`flex flex-col ${isAgent ? 'items-start' : 'items-end'}`}>
                               <span className={`text-[10px] font-black uppercase mb-1 ${isAgent ? 'text-indigo-400' : 'text-emerald-400'}`}>
-                                {isAgent ? 'Agent' : 'Caller'}
+                                {isAgent ? 'Agent' : 'Customer'}
                               </span>
                               <div className={`max-w-[85%] px-6 py-3 rounded-[1.5rem] ${
                                 isAgent 
                                   ? theme === 'dark' ? 'bg-indigo-500/10 text-slate-200 border border-indigo-500/20' : 'bg-indigo-50 text-slate-700 border border-indigo-100'
                                   : theme === 'dark' ? 'bg-slate-800 text-slate-400 border border-white/5' : 'bg-white text-slate-600 border border-slate-200'
                               }`}>
-                                {line.replace(/^(Agent|Caller): /, '')}
+                                {cleanLine}
                               </div>
                             </div>
                           );

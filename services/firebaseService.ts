@@ -65,8 +65,6 @@ export const syncUserProfile = async (firebaseUser: FirebaseUser) => {
     if (!userDoc.exists()) {
       // First time login
       const role = (
-        firebaseUser.email === 'syedasgharkazmii@gmail.com' || 
-        firebaseUser.email === 'syedasghakazmii@gmail.com' || 
         firebaseUser.email === 'essadhiif@gmail.com'
       ) ? 'admin' : 'customer';
       profileData = {

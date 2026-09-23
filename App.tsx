@@ -277,44 +277,83 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const profile = await syncUserProfile(firebaseUser);
-        if (profile) {
-          const u = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            name: (profile as any).name || firebaseUser.displayName || '',
-            profilePic: (profile as any).profilePic || firebaseUser.photoURL || '',
-            role: profile.role as UserRole,
-            balance: (profile as any).balance !== undefined ? (profile as any).balance : 5.00,
-            credits: (profile as any).credits !== undefined ? (profile as any).credits : 100,
-            plan: (profile as any).plan || 'Free',
-            agents: (profile as any).agents || null,
-            clonedVoices: (profile as any).clonedVoices || [],
-            notifyLowCreditEmail: (profile as any).notifyLowCreditEmail !== undefined ? (profile as any).notifyLowCreditEmail : true,
-            notifyLowCreditSMS: (profile as any).notifyLowCreditSMS !== undefined ? (profile as any).notifyLowCreditSMS : false,
-            notifyCallFailuresEmail: (profile as any).notifyCallFailuresEmail !== undefined ? (profile as any).notifyCallFailuresEmail : true,
-            notifyCallFailuresSMS: (profile as any).notifyCallFailuresSMS !== undefined ? (profile as any).notifyCallFailuresSMS : true,
-            notificationPhoneNumber: (profile as any).notificationPhoneNumber || '',
-            notificationEmail: (profile as any).notificationEmail || firebaseUser.email || '',
-            lowCreditThreshold: (profile as any).lowCreditThreshold || '20',
-          };
-          setUser(u);
-          localStorage.setItem('fallback_user_session', JSON.stringify(u));
-          
-          // Redirect to dashboard if the user is currently on the login screen
-          const currentHash = window.location.hash.replace('#', '');
-          if (currentHash === 'login' || currentHash === '') {
-            navigate('dashboard');
+      try {
+        if (firebaseUser) {
+          const profile = await syncUserProfile(firebaseUser).catch(err => {
+            console.warn("Non-blocking error syncing user profile on auth state change:", err);
+            return null;
+          });
+          if (profile) {
+            const u = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: (profile as any).name || firebaseUser.displayName || '',
+              profilePic: (profile as any).profilePic || firebaseUser.photoURL || '',
+              role: profile.role as UserRole,
+              balance: (profile as any).balance !== undefined ? (profile as any).balance : 5.00,
+              credits: (profile as any).credits !== undefined ? (profile as any).credits : 100,
+              plan: (profile as any).plan || 'Free',
+              agents: (profile as any).agents || null,
+              clonedVoices: (profile as any).clonedVoices || [],
+              notifyLowCreditEmail: (profile as any).notifyLowCreditEmail !== undefined ? (profile as any).notifyLowCreditEmail : true,
+              notifyLowCreditSMS: (profile as any).notifyLowCreditSMS !== undefined ? (profile as any).notifyLowCreditSMS : false,
+              notifyCallFailuresEmail: (profile as any).notifyCallFailuresEmail !== undefined ? (profile as any).notifyCallFailuresEmail : true,
+              notifyCallFailuresSMS: (profile as any).notifyCallFailuresSMS !== undefined ? (profile as any).notifyCallFailuresSMS : true,
+              notificationPhoneNumber: (profile as any).notificationPhoneNumber || '',
+              notificationEmail: (profile as any).notificationEmail || firebaseUser.email || '',
+              lowCreditThreshold: (profile as any).lowCreditThreshold || '20',
+            };
+            setUser(u);
+            localStorage.setItem('fallback_user_session', JSON.stringify(u));
+            
+            // Redirect to dashboard if the user is currently on the login screen
+            const currentHash = window.location.hash.replace('#', '');
+            if (currentHash === 'login' || currentHash === '') {
+              navigate('dashboard');
+            }
+          } else {
+            // Fallback user session when profile sync fails but firebaseUser exists
+            const fallbackObj = localStorage.getItem('fallback_user_session');
+            if (fallbackObj) {
+              try {
+                setUser(JSON.parse(fallbackObj));
+              } catch (e) {
+                console.error("Could not parse fallback session on sync error:", e);
+              }
+            } else {
+              const guestUser = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || '',
+                name: firebaseUser.displayName || 'Demo User',
+                profilePic: firebaseUser.photoURL || '',
+                role: 'customer' as UserRole,
+                balance: 5.00,
+                credits: 100,
+                plan: 'Free',
+                agents: null,
+                clonedVoices: [],
+                notifyLowCreditEmail: true,
+                notifyLowCreditSMS: false,
+                notifyCallFailuresEmail: true,
+                notifyCallFailuresSMS: true,
+                notificationPhoneNumber: '',
+                notificationEmail: firebaseUser.email || '',
+                lowCreditThreshold: '20',
+              };
+              setUser(guestUser);
+            }
+          }
+        } else {
+          // Only clear user state if we do not have a fallback session active in local storage
+          if (!localStorage.getItem('fallback_user_session')) {
+            setUser(null);
           }
         }
-      } else {
-        // Only clear user state if we do not have a fallback session active in local storage
-        if (!localStorage.getItem('fallback_user_session')) {
-          setUser(null);
-        }
+      } catch (err) {
+        console.error("Critical error inside onAuthStateChanged handler:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     const handleHash = () => {
@@ -545,7 +584,7 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
         return user ? (
           <DashboardView 
             user={impersonatedUser || user} 
-            isAdmin={user.role === 'admin'}
+            isAdmin={user.role === 'admin' && user.email === 'essadhiif@gmail.com'}
             isImpersonating={!!impersonatedUser}
             onLogout={handleLogout} 
             onUpdateUser={handleUpdateUser}
