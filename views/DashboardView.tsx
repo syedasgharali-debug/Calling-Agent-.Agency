@@ -4087,6 +4087,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 ]
               },
               { id: 'integrations', label: 'API Configuration', icon: Key },
+              { id: 'numbers', label: 'Call Tester', icon: Phone },
               { id: 'users', label: 'User Management', icon: ShieldCheck },
               { id: 'admin-plans', label: 'Subscription Plans', icon: Layout },
               { id: 'admin-coupons', label: 'Coupons', icon: Tag },
@@ -4109,6 +4110,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 ]
               },
               { id: 'voice-cloning', label: 'Voice Cloning', icon: Mic },
+              { id: 'numbers', label: 'Call Tester', icon: Phone },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 'logs', label: 'Call Logs', icon: History },
               { id: 'billing', label: 'Billing', icon: CreditCard },
@@ -10090,24 +10092,26 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 const vibeText = aiVibe.trim() || "Professional, helpful, and polite.";
                 
                 let userPrompt = `Generate an elite, highly detailed, and creative system prompt voice script for an AI receptionist/agent.
-Business Name: "${aiBusinessName}"
-Industry/Niche: "${aiNiche}"
-Core Goals of the Call: "${goalsText}"
-Voice Vibe/Tone & Conversational style: "${vibeText}"
-Script Length: "${aiLength}"`;
+CRITICAL: YOU MUST CUSTOMIZE THIS SCRIPT COMPLETELY FOR THE BUSINESS. DO NOT USE GENERIC PLACEHOLDERS.
+- Business Name: "${aiBusinessName}"
+- Industry/Niche: "${aiNiche}"
+- Core Goals: "${goalsText}"
+- Tone/Style: "${vibeText}"
+
+Inject the provided business name ("${aiBusinessName}") and niche context ("${aiNiche}") naturally throughout the script. Do not output "[Business Name]" or generic placeholders.`;
 
                 if (aiContextDoc.trim()) {
-                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT & CUSTOM SCRIPTS]: Use the following uploaded file details/instructions as reference guidelines or starter layout for your output:\n"${aiContextDoc.trim()}"`;
+                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT]: Use these specific details to override/inform the script logic:\n"${aiContextDoc.trim()}"`;
                 }
 
-                userPrompt += `\n\nWrite a production-ready, calibrated, and incredibly detailed script with distinct headings:
-1. [IDENTITY & VOICE PROTOCOL] - Define the agent's name, voice vibe, and customer interaction manners.
-2. [CORE WORKFLOW & CUSTOMER ROUTING] - Multi-step logic on how to triage and process inquiries step-by-step.
-3. [SCENARIO-BASED CUSTOMER INTAKE & TRIAGE] - Detailed action plans for customer support, high frustration, and emergencies.
-4. [FAQ, FEES & BUSINESS POLICIES] - Realistic operation hours, service parameters, or standard policy instructions.
-5. [CONVERSATIONAL CLOSING] - Elegant closing line to lock in the lead or schedule action.
+                userPrompt += `\n\nWrite a production-ready, highly detailed script with these sections:
+1. [IDENTITY & VOICE PROTOCOL] - Agent identity, tone, and specific ${aiBusinessName} brand mannerisms.
+2. [CORE WORKFLOW] - Step-by-step logic to triage/process ${aiNiche} inquiries.
+3. [SCENARIO-BASED INTAKE] - Specific scenarios tailored to ${aiNiche}.
+4. [FAQ, FEES & POLICIES] - Realistic operation hours, service parameters, or standard policy instructions for ${aiBusinessName}.
+5. [CONVERSATIONAL CLOSING] - Elegant closing action to lock in the lead.
 
-Avoid any standard summaries or conversational filler. Give me ONLY the ready-to-use system prompt text itself. Ensure it is extensive, professional, and has absolutely zero brackets/placeholders like "[Insert Name Here]" — fill everything in completely based on the parameters.`;
+CRITICAL: Output ONLY the script content. Ensure it is extensive, professional, and entirely tailored to ${aiBusinessName}.`;
 
                 const generatedText = await geminiService.getAgentResponse(
                   userPrompt, 
