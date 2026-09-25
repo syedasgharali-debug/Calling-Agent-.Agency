@@ -9,13 +9,23 @@ import Stripe from 'stripe';
 import paypal from '@paypal/checkout-server-sdk';
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Check if we are in an ESM environment where import.meta.url exists
+const isESM = typeof import.meta !== 'undefined' && import.meta.url;
+
+const __filename = isESM ? fileURLToPath(import.meta.url) : path.resolve('server.ts');
+const __dirname = isESM ? path.dirname(__filename) : path.resolve();
 
 // Dynamic initialization of GoogleGenAI
 function getAI(customApiKey?: string) {
   const apiKey = customApiKey || process.env.GEMINI_API_KEY;
-  return new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+  return new GoogleGenAI({ 
+    apiKey: apiKey || 'dummy-key',
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
 }
 
 // Simulated responses database for CallingAgent voice scenarios
@@ -144,8 +154,14 @@ function encodeMuLaw(payload: string): string {
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ server });
-  const PORT = 3000;
+  let wss;
+  try {
+    wss = new WebSocketServer({ server });
+    console.log("WebSocket server initialized.");
+  } catch (e) {
+    console.error("WebSocket server initialization failed, proceeding without it:", e);
+  }
+  const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -623,7 +639,7 @@ async function startServer() {
       const ai = getAI(resolvedApiKey);
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           ...(history || []),
           { role: 'user', parts: [{ text: message }] }
@@ -698,7 +714,7 @@ async function startServer() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -728,7 +744,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (req, res) => {
+    app.get("/*", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }

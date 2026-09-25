@@ -10086,45 +10086,52 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 triggerToast("Please enter a Business Name and Niche/Industry", "amber");
                 return;
               }
+              
+              if (!geminiApiKey) {
+                triggerToast("Please configure your Gemini API Key in the Integrations tab to enable AI script generation.", "error");
+                return;
+              }
+
               setIsGeneratingAiScript(true);
               try {
-                const goalsText = aiGoals.trim() || "Qualify leads and answer general customer FAQs.";
-                const vibeText = aiVibe.trim() || "Professional, helpful, and polite.";
+                const activeTemplate = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId) || BUSINESS_TEMPLATES[0];
                 
-                let userPrompt = `Generate an elite, highly detailed, and creative system prompt voice script for an AI receptionist/agent.
-CRITICAL: YOU MUST CUSTOMIZE THIS SCRIPT COMPLETELY FOR THE BUSINESS. DO NOT USE GENERIC PLACEHOLDERS.
+                // 1. Populate basic template
+                let finalScript = activeTemplate.baseScript
+                  .replace(/{businessName}/g, aiBusinessName)
+                  .replace(/{niche}/g, aiNiche);
+                
+                // 2. Enhance with extra context/goals if provided
+                if (aiGoals.trim() || aiVibe.trim() || aiContextDoc.trim()) {
+                  triggerToast("Refining script with your specific business context...", "info");
+                  
+                  const enhancementPrompt = `You are the Principal AI Voice Architect. Refine the following template script to better align with these business details:
 - Business Name: "${aiBusinessName}"
 - Industry/Niche: "${aiNiche}"
-- Core Goals: "${goalsText}"
-- Tone/Style: "${vibeText}"
+- Goals: "${aiGoals}"
+- Vibe/Tone: "${aiVibe}"
+- Additional Context: "${aiContextDoc}"
 
-Inject the provided business name ("${aiBusinessName}") and niche context ("${aiNiche}") naturally throughout the script. Do not output "[Business Name]" or generic placeholders.`;
+Base Script:
+"""
+${finalScript}
+"""
 
-                if (aiContextDoc.trim()) {
-                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT]: Use these specific details to override/inform the script logic:\n"${aiContextDoc.trim()}"`;
+Ensure the script strictly keeps the section headings, tone, and professional structure of the base template. Output ONLY the refined script.`;
+
+                  const refinedScript = await geminiService.getAgentResponse(
+                    enhancementPrompt,
+                    [],
+                    "You are an expert AI script refiner. Return ONLY the final script."
+                  );
+                  
+                  if (refinedScript) {
+                    finalScript = refinedScript;
+                  }
                 }
 
-                userPrompt += `\n\nWrite a production-ready, highly detailed script with these sections:
-1. [IDENTITY & VOICE PROTOCOL] - Agent identity, tone, and specific ${aiBusinessName} brand mannerisms.
-2. [CORE WORKFLOW] - Step-by-step logic to triage/process ${aiNiche} inquiries.
-3. [SCENARIO-BASED INTAKE] - Specific scenarios tailored to ${aiNiche}.
-4. [FAQ, FEES & POLICIES] - Realistic operation hours, service parameters, or standard policy instructions for ${aiBusinessName}.
-5. [CONVERSATIONAL CLOSING] - Elegant closing action to lock in the lead.
-
-CRITICAL: Output ONLY the script content. Ensure it is extensive, professional, and entirely tailored to ${aiBusinessName}.`;
-
-                const generatedText = await geminiService.getAgentResponse(
-                  userPrompt, 
-                  [], 
-                  "You are the Principal AI Voice Architect at CallingAgent.agency, specialized in generating elite conversational system prompt scripts."
-                );
-                
-                if (generatedText) {
-                  setAiGeneratedScript(generatedText);
-                  triggerToast("Creative AI script drafted successfully!", "success");
-                } else {
-                  triggerToast("Failed to generate a script. Please check your credentials.", "amber");
-                }
+                setAiGeneratedScript(finalScript);
+                triggerToast("Template script tailored successfully!", "success");
               } catch (error) {
                 console.error("AI Script generation error:", error);
                 triggerToast("Failed to generate script. Please try again.", "amber");
@@ -10200,6 +10207,12 @@ CRITICAL: Output ONLY the script content. Ensure it is extensive, professional, 
                 triggerToast("Please enter a valid website or FAQ URL.", "amber");
                 return;
               }
+
+              if (!geminiApiKey) {
+                triggerToast("Please configure your Gemini API Key in the Integrations tab to enable AI script generation.", "error");
+                return;
+              }
+
               setIsFetchingDocUrl(true);
               try {
                 const trimmedUrl = docUrlInput.trim();
@@ -10275,22 +10288,24 @@ VIBE: [extracted vibe and tone]`;
                   triggerToast(`Drafting extensive custom Voice Script prompt...`, 'info');
 
                   let userPrompt = `Generate an elite, highly detailed, and creative system prompt voice script for an AI receptionist/agent.
-Business Name: "${finalName}"
-Industry/Niche: "${finalNiche}"
-Core Goals of the Call: "${finalGoals}"
-Voice Vibe/Tone & Conversational style: "${finalVibe}"
-Script Length: "lengthy"`;
+CRITICAL: YOU MUST CUSTOMIZE THIS SCRIPT COMPLETELY FOR THE BUSINESS. DO NOT USE GENERIC PLACEHOLDERS.
+- Business Name: "${finalName}"
+- Industry/Niche: "${finalNiche}"
+- Core Goals: "${finalGoals}"
+- Tone/Style: "${finalVibe}"
 
-                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT & CUSTOM SCRIPTS]: Use the following fetched webpage content as a source of truth for services, pricing, hours, or FAQs to weave into the voice script:\n"${newDocContent.slice(0, 4000)}"`;
+Inject the provided business name ("${finalName}") and niche context ("${finalNiche}") naturally throughout the script. Do not output "[Business Name]" or generic placeholders.`;
 
-                  userPrompt += `\n\nWrite a production-ready, calibrated, and incredibly detailed script with distinct headings:
-1. [IDENTITY & VOICE PROTOCOL] - Define the agent's name, voice vibe, and customer interaction manners.
-2. [CORE WORKFLOW & CUSTOMER ROUTING] - Multi-step logic on how to triage and process inquiries step-by-step.
-3. [SCENARIO-BASED CUSTOMER INTAKE & TRIAGE] - Detailed action plans for customer support, high frustration, and emergencies.
-4. [FAQ, FEES & BUSINESS POLICIES] - Realistic operation hours, service parameters, or standard policy instructions.
-5. [CONVERSATIONAL CLOSING] - Elegant closing line to lock in the lead or schedule action.
+                  userPrompt += `\n\n[CRITICAL REFERENCE CONTEXT]: Use the following fetched webpage content as a source of truth for services, pricing, hours, or FAQs to weave into the voice script:\n"${newDocContent.slice(0, 4000)}"`;
 
-Avoid any standard summaries or conversational filler. Give me ONLY the ready-to-use system prompt text itself. Ensure it is extensive, professional, and has absolutely zero brackets/placeholders like "[Insert Name Here]" — fill everything in completely based on the parameters. Ensure the script is very long, exhaustive, and detailed so that it is production-ready.`;
+                  userPrompt += `\n\nWrite a production-ready, highly detailed script with these sections:
+1. [IDENTITY & VOICE PROTOCOL] - Agent identity, tone, and specific ${finalName} brand mannerisms.
+2. [CORE WORKFLOW] - Step-by-step logic to triage/process ${finalNiche} inquiries.
+3. [SCENARIO-BASED INTAKE] - Specific scenarios tailored to ${finalNiche}.
+4. [FAQ, FEES & POLICIES] - Realistic operation hours, service parameters, or standard policy instructions for ${finalName}.
+5. [CONVERSATIONAL CLOSING] - Elegant closing action to lock in the lead.
+
+CRITICAL: Output ONLY the script content. Ensure it is extensive, professional, and entirely tailored to ${finalName}.`;
 
                   const generatedText = await geminiService.getAgentResponse(
                     userPrompt, 
