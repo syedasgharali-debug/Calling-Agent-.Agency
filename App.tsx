@@ -91,44 +91,44 @@ const App: React.FC = () => {
 
   const [plans, setPlans] = useState<Plan[]>([
     { 
-      name: 'Starter', 
-      price: 49, 
-      yearlyPrice: 470, 
-      mins: 100, 
+      name: 'Basic', 
+      price: 99, 
+      yearlyPrice: 950, 
+      mins: 500, 
       agents: 2, 
       numbers: 1,
-      features: ['100 Included Mins', '$0.45/min Overage', '2 Active AI Agents', '1 Phone Number', 'Bring Your Own Key (BYOK) Optional', 'Standard Support'],
-      color: 'from-blue-600 to-indigo-600'
-    },
-    { 
-      name: 'Growth', 
-      price: 199, 
-      yearlyPrice: 1910, 
-      mins: 500, 
-      agents: 8, 
-      numbers: 3,
-      features: ['500 Included Mins', '$0.35/min Overage', '8 Active AI Agents', '3 Phone Numbers', 'CRM Integrations (HubSpot/Salesforce)', 'Advanced Sentiment Analytics', 'Priority Email Support'],
-      color: 'from-cyan-500 to-blue-600'
-    },
-    { 
-      name: 'Scale', 
-      price: 499, 
-      yearlyPrice: 4790, 
-      mins: 1500, 
-      agents: 25, 
-      numbers: 10,
-      features: ['1,500 Included Mins', '$0.25/min Overage', '25 Active AI Agents', '10 Phone Numbers', 'Direct SIP Trunking & BYO Carrier', 'Custom Voice Cloning (2 Clones)', 'Dedicated Slack & WhatsApp Channels', 'SLA-backed 99.9% Uptime'],
-      color: 'from-indigo-600 to-purple-600',
+      features: ['500 Included Mins', '2 Active AI Agents', '1 Phone Number', 'Call Recording', 'Standard Support'],
+      color: 'from-blue-600 to-indigo-600',
       recommended: true
     },
     { 
-      name: 'Enterprise Pro', 
-      price: 1299, 
-      yearlyPrice: 12470, 
-      mins: 5000, 
-      agents: 9999, 
+      name: 'Pro', 
+      price: 249, 
+      yearlyPrice: 2390, 
+      mins: 2500, 
+      agents: 8, 
+      numbers: 3,
+      features: ['2,500 Included Mins', '8 Active AI Agents', '3 Phone Numbers', 'Advanced Analytics', 'Priority Support'],
+      color: 'from-cyan-500 to-blue-600'
+    },
+    { 
+      name: 'Business', 
+      price: 499, 
+      yearlyPrice: 4790, 
+      mins: 6000, 
+      agents: 20, 
+      numbers: 10,
+      features: ['6,000 Included Mins', '20 Active AI Agents', '10 Phone Numbers', 'API Access', 'Dedicated Account Manager'],
+      color: 'from-indigo-600 to-purple-600'
+    },
+    { 
+      name: 'Enterprise', 
+      price: 999, 
+      yearlyPrice: 9500, 
+      mins: 15000, 
+      agents: 50, 
       numbers: 50,
-      features: ['5,000 Included Mins', '$0.15/min Overage', 'Unlimited AI Agents', 'Custom Dedicated Numbers & CNAM', 'Dynamic Enterprise Customization', 'Dedicated Account Manager & SLA', 'Custom LLM Fine-Tuning', 'White-labeling & Subdomains'],
+      features: ['15,000 Included Mins', '50 Active AI Agents', '50 Phone Numbers', 'Full API + White Label', '24/7 Dedicated SLA'],
       color: 'from-purple-600 to-pink-600'
     }
   ]);

@@ -55,34 +55,52 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
   // Stack Comparison Data
   const comparisonRows = [
     {
-      layer: "LLM / Voice Logic",
-      standardApi: "OpenAI GPT-4o API (Avg. $0.03/min input/output token delay)",
-      callingAgent: "Direct LLM pipelines with sub-100ms caching (Included)",
-      byokSupport: "Yes, plug in your own OpenAI/Anthropic/Gemini keys"
+      layer: "Monthly Minutes",
+      standardApi: "Pay-as-you-go",
+      callingAgent: "500 - 15,000+ Mins",
+      byokSupport: "Unlimited (BYOK)"
     },
     {
-      layer: "Speech-to-Text (STT)",
-      standardApi: "Deepgram Nova-2 ($0.013/min + custom streaming VAD labor)",
-      callingAgent: "Native micro-VAD with sub-second text packetizer (Included)",
-      byokSupport: "Yes, plug in your own Deepgram or Groq keys"
+      layer: "Active AI Agent Slots",
+      standardApi: "Per Agent/Instance Fee",
+      callingAgent: "2 - 50+ Agents",
+      byokSupport: "Unlimited"
     },
     {
-      layer: "Text-to-Speech (TTS)",
-      standardApi: "ElevenLabs / Cartesia ($0.15 to $0.24/min neural stream)",
-      callingAgent: "Fully optimized low-latency ultra-realistic models (Included)",
-      byokSupport: "Yes, plug in your own ElevenLabs/Play.ht keys"
+      layer: "Included Phone Numbers",
+      standardApi: "Manual Provisioning",
+      callingAgent: "1 - 50 Numbers",
+      byokSupport: "Unlimited"
     },
     {
-      layer: "Telephony Carrier",
-      standardApi: "Twilio/Plivo ($0.013/min inbound + $0.021/min outbound + number)",
-      callingAgent: "Dedicated global SIP trunks + custom webhooks (Included)",
-      byokSupport: "Yes, connect your own Twilio, Telnyx, or Plivo keys"
+      layer: "Voice Latency",
+      standardApi: "Variable (>300ms)",
+      callingAgent: "Ultra-low (<150ms)",
+      byokSupport: "Ultra-low (<150ms)"
     },
     {
-      layer: "System Orchestrator",
-      standardApi: "Vapi/Retell ($0.05 to $0.10/min baseline platform markup)",
-      callingAgent: "Fully unified CallingAgent engine (Zero platform markups)",
-      byokSupport: "Completely customizable parameters per agent"
+      layer: "Voice Engine",
+      standardApi: "Standard TTS",
+      callingAgent: "Neural Streaming TTS",
+      byokSupport: "Neural Streaming TTS"
+    },
+    {
+      layer: "Support Level",
+      standardApi: "Community/Email Only",
+      callingAgent: "Standard to Priority",
+      byokSupport: "24/7 Dedicated"
+    },
+    {
+      layer: "Integrations & API",
+      standardApi: "Restricted",
+      callingAgent: "CRM, SQL, Webhooks",
+      byokSupport: "Full API & Custom"
+    },
+    {
+      layer: "Compliance & Security",
+      standardApi: "Basic",
+      callingAgent: "Enterprise Grade",
+      byokSupport: "Enterprise Grade + BYOK"
     }
   ];
 

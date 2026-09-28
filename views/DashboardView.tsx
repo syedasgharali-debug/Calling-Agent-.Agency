@@ -465,6 +465,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [elevenlabsApiKey, setElevenlabsApiKey] = useState(() => {
     try { return localStorage.getItem('elevenlabs_api_key') || ''; } catch (e) { return ''; }
   });
+  const [telnyxApiKey, setTelnyxApiKey] = useState(() => {
+    try { return localStorage.getItem('telnyx_api_key') || ''; } catch (e) { return ''; }
+  });
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
     try { return localStorage.getItem('gemini_api_key') || ''; } catch (e) { return ''; }
   });
@@ -1078,7 +1081,23 @@ If a client is highly demanding or looking for properties not publicly listed:
         logic: 'Fraud & Dispute Desk',
         prompt: 'Locks compromised debit cards, initiates dispute tickets, and issues virtual cards.',
         provider: 'CallingAgent'
-      }
+      },
+      { id: 'agent_a1', name: 'Agent 5', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 5', provider: 'CallingAgent' },
+      { id: 'agent_a2', name: 'Agent 6', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 6', provider: 'CallingAgent' },
+      { id: 'agent_a3', name: 'Agent 7', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 7', provider: 'CallingAgent' },
+      { id: 'agent_a4', name: 'Agent 8', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 8', provider: 'CallingAgent' },
+      { id: 'agent_a5', name: 'Agent 9', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 9', provider: 'CallingAgent' },
+      { id: 'agent_a6', name: 'Agent 10', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 10', provider: 'CallingAgent' },
+      { id: 'agent_a7', name: 'Agent 11', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 11', provider: 'CallingAgent' },
+      { id: 'agent_a8', name: 'Agent 12', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 12', provider: 'CallingAgent' },
+      { id: 'agent_a9', name: 'Agent 13', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 13', provider: 'CallingAgent' },
+      { id: 'agent_a10', name: 'Agent 14', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 14', provider: 'CallingAgent' },
+      { id: 'agent_a11', name: 'Agent 15', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 15', provider: 'CallingAgent' },
+      { id: 'agent_a12', name: 'Agent 16', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 16', provider: 'CallingAgent' },
+      { id: 'agent_a13', name: 'Agent 17', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 17', provider: 'CallingAgent' },
+      { id: 'agent_a14', name: 'Agent 18', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 18', provider: 'CallingAgent' },
+      { id: 'agent_a15', name: 'Agent 19', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 19', provider: 'CallingAgent' },
+      { id: 'agent_a16', name: 'Agent 20', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 20', provider: 'CallingAgent' }
     ];
   });
 
@@ -5308,6 +5327,54 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                     </div>
                   </div>
                 </div>
+                
+                {/* Telnyx Integration */}
+                <div className={`p-10 rounded-[2.5rem] space-y-6 relative overflow-hidden group border transition-all ${
+                  theme === 'dark' ? 'bg-slate-900/40 border-white/5 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'
+                }`}>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-900 flex items-center justify-center p-3 shadow-lg">
+                        <Globe className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h4 className={`text-2xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Telnyx</h4>
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Telephony API</p>
+                      </div>
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${telnyxApiKey ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : theme === 'dark' ? 'bg-slate-800 text-slate-500 border-white/5' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                      {telnyxApiKey ? 'Connected' : 'Not Connected'}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4 relative z-10">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Telnyx API Key</label>
+                      <div className="flex space-x-2">
+                        <input 
+                          type="password" 
+                          value={telnyxApiKey}
+                          onChange={(e) => setTelnyxApiKey(e.target.value)}
+                          className={`flex-1 rounded-2xl px-6 py-4 focus:outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-400 border ${
+                            theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`} 
+                          placeholder="KEY..." 
+                        />
+                        <button 
+                          onClick={() => handleSaveConfig('telnyx_api_key', telnyxApiKey)}
+                          className={`px-6 py-4 rounded-2xl font-black text-xs transition-all shadow-lg ${
+                            saveFeedback['telnyx_api_key'] 
+                              ? 'bg-emerald-600 text-white shadow-emerald-600/20' 
+                              : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-600/20'
+                          }`}
+                        >
+                          {saveFeedback['telnyx_api_key'] ? 'Saved!' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Stripe Integration */}
                 <div className={`p-10 rounded-[2.5rem] space-y-6 relative overflow-hidden group border transition-all ${
@@ -6670,6 +6737,14 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               <div className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-all ${
                 theme === 'dark' ? 'bg-slate-900/60 border-white/5' : 'bg-slate-100/80 border-slate-200'
               }`}>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleStartCampaignTestCall("Admin Test User", "+12025550100")}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95"
+                  >
+                    Test Outbound Call
+                  </button>
+                )}
                 <div className="flex items-center space-x-3.5">
                   <div className="relative flex items-center justify-center">
                     <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
