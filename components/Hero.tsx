@@ -103,7 +103,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               onClick={() => onNavigate('pricing')}
               className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 group cursor-pointer"
             >
-              <span>Claim Sandbox Access</span>
+              <span>Start Free Trial</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
             <button 
