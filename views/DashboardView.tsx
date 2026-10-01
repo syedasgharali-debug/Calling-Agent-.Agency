@@ -685,6 +685,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [aiGoals, setAiGoals] = useState<string>('Qualify leads, book property viewings, handle common objections about pricing.');
   const [aiVibe, setAiVibe] = useState<string>('Professional, energetic, and highly persuasive');
   const [aiLength, setAiLength] = useState<string>('lengthy'); // 'brief' | 'detailed' | 'lengthy'
+  const [aiSelectedVoice, setAiSelectedVoice] = useState<string>('Aoede');
+  const [aiSelectedNumber, setAiSelectedNumber] = useState<string>('');
   const [aiGeneratedScript, setAiGeneratedScript] = useState<string>(`[IDENTITY & VOICE PROTOCOL]
 You are Aria, the Senior AI Client Relations & Advisory Host at Luxe Heights Realty. Your tone is refined, energetic, polished, and extremely welcoming. Speak with poise and absolute confidence.
 
@@ -1041,7 +1043,12 @@ If a client is highly demanding or looking for properties not publicly listed:
       { id: 'agent_telecom_v2', name: 'Oscar (Telecom)', voice: 'Zephyr', gender: 'Male', status: 'Active', calls: 0, logic: 'Tech Support', prompt: 'Troubleshoots network issues, manages service plan upgrades, and handles technical tickets.', provider: 'CallingAgent' },
       { id: 'agent_media_v2', name: 'Zoe (Entertainment)', voice: 'Aoede', gender: 'Female', status: 'Active', calls: 0, logic: 'Media Subscription', prompt: 'Manages subscription billing, resolves access issues, and handles content inquiries.', provider: 'CallingAgent' },
       { id: 'agent_nonprofit_v2', name: 'Paul (Non-Profit)', voice: 'Charon', gender: 'Male', status: 'Active', calls: 0, logic: 'Donation Management', prompt: 'Coordinates donation campaigns, manages volunteer registrations, and event inquiries.', provider: 'CallingAgent' },
-      { id: 'agent_manufacturing_v2', name: 'Rachel (Manufacturing)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 0, logic: 'Supply Chain', prompt: 'Manages manufacturing orders, tracks inventory status, and assists with supply inquiries.', provider: 'CallingAgent' }
+      { id: 'agent_manufacturing_v2', name: 'Rachel (Manufacturing)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 0, logic: 'Supply Chain', prompt: 'Manages manufacturing orders, tracks inventory status, and assists with supply inquiries.', provider: 'CallingAgent' },
+      { id: 'agent_tax_consulting_v2', name: 'Grace (Tax Consulting)', voice: 'Charon', gender: 'Female', status: 'Active', calls: 45, logic: 'Tax Advisory', prompt: 'Assists clients with tax planning, schedule consulting sessions, and answers basic accounting questions.', provider: 'CallingAgent' },
+      { id: 'agent_gym_reception_v2', name: 'Logan (Gym Reception)', voice: 'Zephyr', gender: 'Male', status: 'Active', calls: 72, logic: 'Fitness Booking', prompt: 'Manages gym memberships, books personal trainers, and updates class schedules.', provider: 'CallingAgent' },
+      { id: 'agent_luxury_estates_v2', name: 'Camila (Luxury Estates)', voice: 'Aoede', gender: 'Female', status: 'Active', calls: 95, logic: 'Elite Sales', prompt: 'Guides high-net-worth clients through premium listings, schedules private viewings, and answers luxury asset FAQs.', provider: 'CallingAgent' },
+      { id: 'agent_salon_booking_v2', name: 'Zoe (Salon Booking)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 58, logic: 'Beauty Scheduling', prompt: 'Schedules hair and spa appointments, confirms staff availability, and manages booking reminders.', provider: 'CallingAgent' },
+      { id: 'agent_dental_intake_v2', name: 'Dr. Emily (Dental Intake)', voice: 'Puck', gender: 'Female', status: 'Active', calls: 112, logic: 'Dental Support', prompt: 'Handles new patient registrations, schedules dental exams, and provides pre-appointment instructions.', provider: 'CallingAgent' }
     ] as Agent[];
 
     let storedAgents: Agent[] = [];
@@ -1065,7 +1072,7 @@ If a client is highly demanding or looking for properties not publicly listed:
     if (storedAgents.length > 0) {
       // Merge existing with defaults, forcefully overwriting key configuration fields for matching IDs
       const defaultAgentsMap = new Map(defaultAgents.map(a => [a.id, a]));
-      return storedAgents.map(sa => {
+      const updatedAgents = storedAgents.map(sa => {
         if (defaultAgentsMap.has(sa.id)) {
           const defaults = defaultAgentsMap.get(sa.id)!;
           return { 
@@ -1079,11 +1086,9 @@ If a client is highly demanding or looking for properties not publicly listed:
         }
         return sa;
       });
-    }
-    
-    // For logged-in users, default to a pristine empty slate of agents so they can create their own!
-    if (user) {
-      return [];
+      const existingIds = new Set(updatedAgents.map((a: Agent) => a.id));
+      const missingAgents = defaultAgents.filter(da => !existingIds.has(da.id));
+      return [...updatedAgents, ...missingAgents];
     }
     
     return defaultAgents;
@@ -1193,7 +1198,29 @@ If a client is highly demanding or looking for properties not publicly listed:
     return () => clearInterval(interval);
   }, [agents]);
 
-  const [numbers, setNumbers] = useState<Number[]>([]);
+  const [numbers, setNumbers] = useState<Number[]>(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-numbers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return [
+      { id: 'num_1', phoneNumber: '+1 (202) 555-0144', name: 'US Eastern Carrier Trunk', agentId: 'agent_sarah_v2', provider: 'Twilio', type: 'Local', status: 'Active' },
+      { id: 'num_2', phoneNumber: '+1 (310) 555-0192', name: 'US Pacific Sales Direct', agentId: 'agent_chloe_v2', provider: 'Twilio', type: 'Local', status: 'Active' },
+      { id: 'num_3', phoneNumber: '+1 (415) 555-0168', name: 'US Western Direct SIP Link', agentId: 'agent_david_v2', provider: 'CallingAgent', type: 'Toll-Free', status: 'Active' },
+      { id: 'num_4', phoneNumber: '+44 (20) 7946-0198', name: 'UK London Gateway Routing', agentId: 'agent_john_v2', provider: 'Twilio', type: 'Local', status: 'Active' }
+    ] as any[];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dashboard-numbers', JSON.stringify(numbers));
+    } catch (e) {}
+  }, [numbers]);
 
   const [provisionTab, setProvisionTab] = useState<'sandbox' | 'buy' | 'custom'>('sandbox');
   const [selectedRegion, setSelectedRegion] = useState('US');
@@ -10252,55 +10279,53 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                 triggerToast("Please enter a Business Name and Niche/Industry", "amber");
                 return;
               }
-              
-              if (!geminiApiKey) {
-                triggerToast("Please configure your Gemini API Key in the Integrations tab to enable AI script generation.", "error");
-                return;
-              }
 
               setIsGeneratingAiScript(true);
               try {
                 const activeTemplate = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId) || BUSINESS_TEMPLATES[0];
                 
-                // 1. Populate basic template
+                // 1. Instantly compile locally
                 let finalScript = activeTemplate.baseScript
                   .replace(/{businessName}/g, aiBusinessName)
                   .replace(/{niche}/g, aiNiche);
-                
-                // 2. Enhance with extra context/goals if provided
-                if (aiGoals.trim() || aiVibe.trim() || aiContextDoc.trim()) {
-                  triggerToast("Refining script with your specific business context...", "info");
-                  
-                  const enhancementPrompt = `You are the Principal AI Voice Architect. Refine the following template script to better align with these business details:
-- Business Name: "${aiBusinessName}"
-- Industry/Niche: "${aiNiche}"
-- Goals: "${aiGoals}"
-- Vibe/Tone: "${aiVibe}"
-- Additional Context: "${aiContextDoc}"
 
-Base Script:
+                // 2. Perform a fast, premium one-shot AI tailoring to inject goals and vibe seamlessly
+                triggerToast("Weaving your business goals and custom tone into the template...", "info");
+                
+                const enhancementPrompt = `You are the Principal AI Voice Architect at CallingAgent.agency. Refine the following template script to match these business specifications:
+- Business Name: "${aiBusinessName}"
+- Niche/Industry: "${aiNiche}"
+- Core Assistant Goals: "${aiGoals || activeTemplate.description}"
+- Vibe & Tone: "${aiVibe || 'Professional and helpful'}"
+
+Base Template Script:
 """
 ${finalScript}
 """
 
-Ensure the script strictly keeps the section headings, tone, and professional structure of the base template. Output ONLY the refined script.`;
+Instructions:
+Replace any remaining generic guidelines with details matching the goals and vibe specified. Ensure the structural bracket headings ([IDENTITY & VOICE PROTOCOL], [CORE WORKFLOW], [FAQ, FEES & POLICIES], etc.) remain intact. Return ONLY the final completed script with no intro/outro or markdown wrapper.`;
 
-                  const refinedScript = await geminiService.getAgentResponse(
-                    enhancementPrompt,
-                    [],
-                    "You are an expert AI script refiner. Return ONLY the final script."
-                  );
-                  
-                  if (refinedScript) {
-                    finalScript = refinedScript;
-                  }
+                const refined = await geminiService.getAgentResponse(
+                  enhancementPrompt,
+                  [],
+                  "You are an expert conversational script compiler. Return ONLY the complete voice prompt text."
+                );
+
+                if (refined && refined.length > 100) {
+                  finalScript = refined;
                 }
 
                 setAiGeneratedScript(finalScript);
-                triggerToast("Template script tailored successfully!", "success");
+                triggerToast("Premium script tailored and loaded to the IDE successfully!", "success");
               } catch (error) {
                 console.error("AI Script generation error:", error);
-                triggerToast("Failed to generate script. Please try again.", "amber");
+                triggerToast("Failed to refine script. Populating local template instead.", "amber");
+                const activeTemplate = BUSINESS_TEMPLATES.find(t => t.id === selectedTemplateId) || BUSINESS_TEMPLATES[0];
+                const localFill = activeTemplate.baseScript
+                  .replace(/{businessName}/g, aiBusinessName)
+                  .replace(/{niche}/g, aiNiche);
+                setAiGeneratedScript(localFill);
               } finally {
                 setIsGeneratingAiScript(false);
               }
@@ -10308,21 +10333,43 @@ Ensure the script strictly keeps the section headings, tone, and professional st
 
             const handleDeployGeneratedScript = () => {
               const finalPrompt = aiGeneratedScript || `[IDENTITY] You are the assistant for ${aiBusinessName}.`;
-              setNewAgent({
+              
+              const deployedAgent: Agent = {
+                id: `agent_${Date.now()}`,
                 name: `${aiBusinessName} AI Agent`,
-                voice: 'Kore',
-                gender: 'Female',
-                pitch: 1.0,
-                speed: 1.0,
-                logic: 'CallingAgent Orchestrator',
+                voice: aiSelectedVoice,
+                gender: aiSelectedVoice === 'Puck' || aiSelectedVoice === 'Fenrir' || aiSelectedVoice === 'Charon' ? 'Male' : 'Female',
+                status: 'Active',
+                calls: 0,
+                logic: aiNiche || 'CallingAgent Orchestrator',
                 prompt: finalPrompt,
                 provider: 'CallingAgent',
                 vapiAssistantId: ''
+              };
+
+              // Add to agents array
+              setAgents(prev => {
+                const updated = [deployedAgent, ...prev];
+                try {
+                  const userKey = user && (user as any).uid ? `dashboard-agents-v2-${(user as any).uid}` : 'dashboard-agents-v2';
+                  localStorage.setItem(userKey, JSON.stringify(updated));
+                } catch (e) {}
+                return updated;
               });
-              setEditingAgentId(null);
+
+              // Bind to selected phone number if specified
+              if (aiSelectedNumber) {
+                setNumbers(prev => {
+                  const updated = prev.map((n: any) => n.phoneNumber === aiSelectedNumber ? { ...n, agentId: deployedAgent.id } : n);
+                  try {
+                    localStorage.setItem('dashboard-numbers', JSON.stringify(updated));
+                  } catch (e) {}
+                  return updated;
+                });
+              }
+
               setActiveTab('agents');
-              setShowCreateModal(true);
-              triggerToast(`Custom script applied! Customizing agent for ${aiBusinessName}.`, 'success');
+              triggerToast(`Agent for "${aiBusinessName}" deployed successfully with voice ${aiSelectedVoice}!`, 'success');
             };
 
             const handleLoadAgentScript = (agentId: string) => {
@@ -10371,11 +10418,6 @@ Ensure the script strictly keeps the section headings, tone, and professional st
             const handleFetchDocUrl = async () => {
               if (!docUrlInput.trim()) {
                 triggerToast("Please enter a valid website or FAQ URL.", "amber");
-                return;
-              }
-
-              if (!geminiApiKey) {
-                triggerToast("Please configure your Gemini API Key in the Integrations tab to enable AI script generation.", "error");
                 return;
               }
 
@@ -10738,6 +10780,41 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                                 {v}
                               </button>
                             ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div className="space-y-0.5">
+                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Select Voice</label>
+                            <select
+                              value={aiSelectedVoice}
+                              onChange={(e) => setAiSelectedVoice(e.target.value)}
+                              className={`w-full border rounded-xl px-2.5 py-1.5 text-[11px] font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            >
+                              <option value="Aoede">Aoede (Sarah/Chloe - Elegant)</option>
+                              <option value="Fenrir">Fenrir (David - Reassuring)</option>
+                              <option value="Puck">Puck (Marco - Friendly)</option>
+                              <option value="Kore">Kore (Kore - Clear & Direct)</option>
+                              <option value="Charon">Charon (John - Confident)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block ml-1">Assign Phone Line</label>
+                            <select
+                              value={aiSelectedNumber}
+                              onChange={(e) => setAiSelectedNumber(e.target.value)}
+                              className={`w-full border rounded-xl px-2.5 py-1.5 text-[11px] font-semibold focus:outline-none focus:border-indigo-500 transition-all ${
+                                theme === 'dark' ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                              }`}
+                            >
+                              <option value="">-- No Direct Line Bound --</option>
+                              {(numbers as any[]).map((num: any) => (
+                                <option key={num.id} value={num.phoneNumber}>{num.phoneNumber} ({num.name})</option>
+                              ))}
+                            </select>
                           </div>
                         </div>
 

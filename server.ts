@@ -630,16 +630,24 @@ async function startServer() {
     const clientApiKey = req.headers['x-gemini-api-key'] as string | undefined;
     const resolvedApiKey = clientApiKey || process.env.GEMINI_API_KEY;
 
+    console.log("[Gemini Service Orchestration] Received chat proxy request.");
+    console.log(`- Message Payload: "${message ? message.slice(0, 100) : ''}..."`);
+    console.log(`- History Entries: ${history ? history.length : 0}`);
+    console.log(`- System Instructions: "${systemInstruction ? systemInstruction.slice(0, 100) : ''}..."`);
+    console.log(`- Active Key Configuration: ${resolvedApiKey ? (resolvedApiKey.startsWith('AIzaSy') ? 'VALID_GOOGLE_KEY' : 'DUMMY_OR_CUSTOM_KEY') : 'MISSING'}`);
+
     try {
       if (!resolvedApiKey || resolvedApiKey === 'dummy-key') {
+        console.warn("[Gemini Fallback Agent] No active API key found or dummy configured. Deploying smart simulated response.");
         const fallbackResponse = getSimulatedAgentResponse(message, systemInstruction);
         return res.json({ text: fallbackResponse });
       }
 
+      console.log("[Gemini SDK Invoke] Calling generateContent utilizing gemini-3.8-flash model.");
       const ai = getAI(resolvedApiKey);
 
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           ...(history || []),
           { role: 'user', parts: [{ text: message }] }
@@ -649,9 +657,21 @@ async function startServer() {
           temperature: 0.7,
         }
       });
-      res.json({ text: response.text || "I'm sorry, I couldn't process that request right now." });
+      
+      if (!response || !response.text) {
+        throw new Error("Empty GenerateContentResponse received from the Gemini REST API.");
+      }
+
+      console.log("[Gemini Service Success] Token processing finished. Returning text.");
+      res.json({ text: response.text });
     } catch (error: any) {
-      console.error("Server /api/demo/chat error:", error);
+      console.error("[CRITICAL] Server /api/demo/chat API failure details:");
+      console.error("- Error Name:", error.name);
+      console.error("- Error Message:", error.message);
+      console.error("- Error Stack Trace:", error.stack);
+      console.error("- API Endpoint Triggered: /api/demo/chat");
+      
+      console.warn("[Gemini SDK Recovery] Redirecting flow to simulated response database...");
       const fallbackResponse = getSimulatedAgentResponse(message, systemInstruction);
       res.json({ text: fallbackResponse });
     }
@@ -760,7 +780,7 @@ async function startServer() {
   } else {
     const distPath = __dirname.endsWith("dist") ? __dirname : path.join(__dirname, "dist");
     app.use(express.static(distPath));
-    app.get("(.*)", (req, res) => {
+    app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

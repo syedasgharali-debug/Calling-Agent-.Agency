@@ -303,9 +303,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, plans, blogs, selectedB
                     </div>
                   )}
 
-                  <div className="w-10 h-10 rounded-full bg-slate-950 border border-white/10 flex items-center justify-center text-indigo-400 z-20 group-hover:scale-110 transition-transform duration-300 shadow-2xl">
-                    <Play className="w-4 h-4 fill-indigo-500/10 ml-0.5" />
-                  </div>
                   <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded border border-indigo-500/25 font-mono">
                     Research Paper
                   </div>

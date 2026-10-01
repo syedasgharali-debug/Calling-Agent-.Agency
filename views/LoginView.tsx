@@ -233,15 +233,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </svg>
               <span>Google SSO Link</span>
             </button>
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => handleGoogleLoginUnified(true)}
-                className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest font-mono cursor-pointer"
-              >
-                Popup issues? Access Direct Redirect Mode →
-              </button>
-            </div>
           </div>
         </form>
 
