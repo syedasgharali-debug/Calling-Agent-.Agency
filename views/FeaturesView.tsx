@@ -1,7 +1,7 @@
-
 import React from 'react';
 import Features from '../components/Features';
 import { View } from '../App';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 interface FeaturesViewProps {
   onNavigate: (view: View) => void;
@@ -9,49 +9,74 @@ interface FeaturesViewProps {
 
 const FeaturesView: React.FC<FeaturesViewProps> = ({ onNavigate }) => {
   return (
-    <div className="pt-24 min-h-screen bg-slate-950">
-      <div className="max-w-7xl mx-auto px-6 py-20">
-        <div className="mb-20">
-          <h1 className="text-5xl md:text-7xl font-black text-white mb-8 tracking-tighter">
-            Next-Gen <span className="text-indigo-500">Voice</span> Features
+    <div className="pt-32 min-h-screen bg-[#000000] relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60rem] h-[60rem] bg-indigo-500/[0.02] blur-[150px] rounded-full pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 py-20 space-y-24 relative z-10">
+        
+        {/* Header */}
+        <div className="space-y-6 max-w-3xl">
+          <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3.5 py-1">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest font-mono">Platform Capability</span>
+          </div>
+          <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter text-wrap-balance leading-none">
+            Next-Gen Voice Intelligence
           </h1>
-          <p className="text-xl text-slate-400 max-w-3xl leading-relaxed">
-            CallingAgent.agency is built from the ground up to handle the complexities of real-time human conversation. 
-            Explore the features that make our platform the choice for high-performance voice agents.
+          <p className="text-slate-400 text-sm md:text-base font-semibold leading-relaxed">
+            CallingAgent.agency is engineered from the ground up to orchestrate complex real-time conversations. Explore the sub-second pipeline features built for scale.
           </p>
         </div>
         
+        {/* Core Capabilities Component */}
         <Features />
 
-        <section className="mt-32">
-          <h2 className="text-4xl font-black text-white mb-12 tracking-tight">The CallingAgent AI Telephony Stack</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Dynamic Architectural Section */}
+        <section className="space-y-12">
+          <div className="space-y-2">
+            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] font-mono">Core Stack Blueprint</span>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter">The Telephony Engineering Layers</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { title: 'Autonomous Orchestrator', desc: 'The intellectual core of our real-time voice stack, routing multi-turn logic and managing persistent states instantly.' },
-              { title: 'CallingAgent Speech-to-Text', desc: 'Proprietary speech-to-text with sub-90ms latency, specifically optimized for public telephony and noisy environments.' },
-              { title: 'CallingAgent Voice Synthesis', desc: 'Ultra-fast, high-fidelity neural text-to-speech that speaks with natural breathing rhythms and emotional context.' },
-              { title: 'Domain-Fine-Tuned LLMs', desc: 'Fine-tuned, custom model architectures specializing in real-time dialog flow with zero verbal drift or latency.' }
+              { title: 'Autonomous Orchestration', desc: 'The state-driven brain routing complex multi-turn logic and capturing variables context-aware.' },
+              { title: 'Real-Time STT Processing', desc: 'Custom Speech-to-Text pipelines with sub-90ms processing speeds specifically optimized for noisy voice networks.' },
+              { title: 'Dynamic TTS Generation', desc: 'Ultra-fast neural text-to-speech engine carrying human-like breathing rhythms, pacing, and dynamic intonation.' },
+              { title: 'Specialized LLM Context', desc: 'Fine-tuned conversational logic graphs optimized strictly for telephone dialogue flows to eliminate drift.' }
             ].map((item, i) => (
-              <div key={i} className="p-10 bg-slate-900/50 border border-white/5 rounded-[3rem] hover:border-indigo-500/30 transition-all">
-                <h3 className="text-xl font-bold text-white mb-4">{item.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed font-medium">{item.desc}</p>
+              <div 
+                key={i} 
+                className="p-10 bg-slate-950/40 border border-white/5 rounded-[2.5rem] hover:border-indigo-500/15 transition-all duration-300 flex flex-col justify-between h-72"
+              >
+                <div className="text-[10px] font-mono font-black text-indigo-400 bg-indigo-500/5 border border-indigo-500/15 w-8 h-8 rounded-xl flex items-center justify-center">
+                  0{i + 1}
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white tracking-tight">{item.title}</h3>
+                  <p className="text-slate-450 text-slate-400 text-xs font-semibold leading-relaxed">{item.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <div className="mt-32 p-12 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] text-center shadow-2xl shadow-indigo-500/20">
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-8 tracking-tight">Ready to experience sub-second latency?</h2>
-          <div className="flex flex-wrap justify-center gap-6">
+        {/* CTA Bounded Box */}
+        <div className="p-12 md:p-16 bg-gradient-to-br from-indigo-500/10 via-slate-950 to-emerald-500/5 border border-white/5 rounded-[3rem] text-center space-y-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-white/5 pointer-events-none" />
+          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter max-w-2xl mx-auto">
+            Ready to experience sub-second latency?
+          </h2>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
             <button 
               onClick={() => onNavigate('login')}
-              className="px-10 py-5 bg-white text-slate-950 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all active:scale-95"
+              className="px-8 py-4 bg-white hover:bg-slate-200 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95"
             >
               Get Started Now
             </button>
             <button 
               onClick={() => onNavigate('docs')}
-              className="px-10 py-5 bg-indigo-900/30 text-white border border-white/10 rounded-2xl font-black text-lg hover:bg-indigo-900/50 transition-all active:scale-95"
+              className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-slate-350 hover:text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-white/5 transition-all active:scale-95"
             >
               Read Documentation
             </button>

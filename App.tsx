@@ -20,17 +20,8 @@ import { motion, AnimatePresence } from 'motion/react';
 export type View = 'home' | 'features' | 'pricing' | 'about' | 'docs' | 'login' | 'dashboard' | 'privacy' | 'terms' | 'careers' | 'blog';
 export type UserRole = 'customer' | 'admin' | null;
 
-export interface Plan {
-  name: string;
-  price: number;
-  yearlyPrice: number;
-  mins: number;
-  agents: number;
-  numbers: number;
-  features: string[];
-  color: string;
-  recommended?: boolean;
-}
+import { Plan } from './types';
+import { PLANS } from './services/pricingConfig';
 
 export interface Coupon {
   code: string;
@@ -89,49 +80,7 @@ const App: React.FC = () => {
     } catch (e) {}
   }, [theme]);
 
-  const [plans, setPlans] = useState<Plan[]>([
-    { 
-      name: 'Basic', 
-      price: 99, 
-      yearlyPrice: 950, 
-      mins: 500, 
-      agents: 2, 
-      numbers: 1,
-      features: ['500 Included Mins', '2 Active AI Agents', '1 Phone Number', 'Call Recording', 'Standard Support'],
-      color: 'from-blue-600 to-indigo-600',
-      recommended: true
-    },
-    { 
-      name: 'Pro', 
-      price: 249, 
-      yearlyPrice: 2390, 
-      mins: 2500, 
-      agents: 8, 
-      numbers: 3,
-      features: ['2,500 Included Mins', '8 Active AI Agents', '3 Phone Numbers', 'Advanced Analytics', 'Priority Support'],
-      color: 'from-cyan-500 to-blue-600'
-    },
-    { 
-      name: 'Business', 
-      price: 499, 
-      yearlyPrice: 4790, 
-      mins: 6000, 
-      agents: 20, 
-      numbers: 10,
-      features: ['6,000 Included Mins', '20 Active AI Agents', '10 Phone Numbers', 'API Access', 'Dedicated Account Manager'],
-      color: 'from-indigo-600 to-purple-600'
-    },
-    { 
-      name: 'Enterprise', 
-      price: 999, 
-      yearlyPrice: 9500, 
-      mins: 15000, 
-      agents: 50, 
-      numbers: 50,
-      features: ['15,000 Included Mins', '50 Active AI Agents', '50 Phone Numbers', 'Full API + White Label', '24/7 Dedicated SLA'],
-      color: 'from-purple-600 to-pink-600'
-    }
-  ]);
+  const [plans, setPlans] = useState<Plan[]>(PLANS);
 
   const [coupons, setCoupons] = useState<Coupon[]>([
     { code: 'WELCOME10', discount: 10, type: 'percentage', expiry: '2026-12-31' }

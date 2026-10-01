@@ -1,23 +1,15 @@
-
-// Fix: Import React to provide the React namespace for React.ReactNode used in the Feature interface
-import React from 'react';
-
-export interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-export interface Feature {
+export interface Plan {
   id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-}
-
-export interface PricingPlan {
   name: string;
-  price: string;
-  period: string;
+  price: number;
+  yearlyPrice: number;
+  mins: number;
+  agents: number;
+  numbers: number;
   features: string[];
+  color: string;
   recommended?: boolean;
+  hidden?: boolean; // Admin-only plan flag
+  trialDays?: number;
+  trialDescription?: string;
 }

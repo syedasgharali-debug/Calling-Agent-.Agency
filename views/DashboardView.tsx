@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { UserRole, Plan, Coupon, Blog } from '../App';
+import { UserRole, Coupon, Blog } from '../App';
+import { Plan } from '../types';
 import { PaymentGateways } from '../components/PaymentGateways';
+import { TRIAL_CONFIG } from '../services/pricingConfig';
 import { 
   Mic, 
   Users, 
@@ -9,6 +11,7 @@ import {
   CreditCard, 
   LogOut, 
   Plus, 
+  Zap, 
   Settings, 
   Key, 
   History, 
@@ -105,6 +108,10 @@ interface DashboardViewProps {
     notificationPhoneNumber?: string;
     notificationEmail?: string;
     lowCreditThreshold?: string;
+    trialStart?: string;
+    trialEnd?: string;
+    trialStatus?: 'active' | 'converted' | 'expired' | 'cancelled' | null;
+    trialPlan?: string;
   };
   isAdmin: boolean;
   isImpersonating: boolean;
@@ -1014,113 +1021,116 @@ If a client is highly demanding or looking for properties not publicly listed:
 
   // Real State
   const [agents, setAgents] = useState<Agent[]>(() => {
+    const defaultAgents = [
+      { id: 'agent_sarah_v2', name: 'Sarah (Real Estate)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 142, logic: 'Real Estate Orchestrator', prompt: 'Assists with real estate viewings, prices, and booking Saturday slot tours.', provider: 'CallingAgent' },
+      { id: 'agent_chloe_v2', name: 'Chloe (SaaS Billing)', voice: 'Kore', gender: 'Female', status: 'Active', calls: 89, logic: 'SaaS Billing & Support', prompt: 'Handles account queries, applies retention discounts, and updates payment methods.', provider: 'CallingAgent' },
+      { id: 'agent_david_v2', name: 'David (Medical)', voice: 'Puck', gender: 'Male', status: 'Active', calls: 64, logic: 'Medical Clinic', prompt: 'Schedules medical appointments, verifies insurance, and sends pre-visit instructions.', provider: 'CallingAgent' },
+      { id: 'agent_john_v2', name: 'John (Finance)', voice: 'Fenrir', gender: 'Male', status: 'Active', calls: 110, logic: 'Banking Dispute', prompt: 'Manages fraud disputes, locks cards, and issues virtual cards.', provider: 'CallingAgent' },
+      { id: 'agent_logistics_v2', name: 'Alex (Logistics)', voice: 'Zephyr', gender: 'Neutral', status: 'Active', calls: 0, logic: 'Logistics Tracker', prompt: 'Tracks shipment status, resolves delays, and manages international delivery updates.', provider: 'CallingAgent' },
+      { id: 'agent_ecommerce_v2', name: 'Maria (E-commerce)', voice: 'Aoede', gender: 'Female', status: 'Active', calls: 0, logic: 'Retail Ordering', prompt: 'Manages order status, processes returns, and handles inventory inquiries.', provider: 'CallingAgent' },
+      { id: 'agent_auto_v2', name: 'Marcus (Automotive)', voice: 'Puck', gender: 'Male', status: 'Active', calls: 0, logic: 'Auto Repair', prompt: 'Schedules maintenance appointments, provides repair estimates, and manages service logs.', provider: 'CallingAgent' },
+      { id: 'agent_legal_v2', name: 'Elena (Legal)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 0, logic: 'Legal Services', prompt: 'Handles initial legal intakes, schedules consultations, and collects basic case info.', provider: 'CallingAgent' },
+      { id: 'agent_education_v2', name: 'Sam (Education)', voice: 'Charon', gender: 'Neutral', status: 'Active', calls: 0, logic: 'Student Admissions', prompt: 'Assists with enrollment applications, answers course queries, and schedules tours.', provider: 'CallingAgent' },
+      { id: 'agent_hospitality_v2', name: 'Sophia (Hospitality)', voice: 'Kore', gender: 'Female', status: 'Active', calls: 0, logic: 'Travel Concierge', prompt: 'Manages hotel bookings, restaurant reservations, and travel itinerary changes.', provider: 'CallingAgent' },
+      { id: 'agent_construction_v2', name: 'Victor (Construction)', voice: 'Fenrir', gender: 'Male', status: 'Active', calls: 0, logic: 'Contracting Services', prompt: 'Captures project inquiries, schedules site visits, and provides preliminary quotes.', provider: 'CallingAgent' },
+      { id: 'agent_insurance_v2', name: 'Julia (Insurance)', voice: 'Aoede', gender: 'Female', status: 'Active', calls: 0, logic: 'Policy Support', prompt: 'Handles policy queries, provides insurance quotes, and assists with claim initiations.', provider: 'CallingAgent' },
+      { id: 'agent_marketing_v2', name: 'Ben (Marketing)', voice: 'Zephyr', gender: 'Male', status: 'Active', calls: 0, logic: 'Agency Outreach', prompt: 'Qualifies leads for marketing services, schedules strategy calls, and manages client meetings.', provider: 'CallingAgent' },
+      { id: 'agent_hr_v2', name: 'Linda (HR)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 0, logic: 'Recruitment', prompt: 'Screens candidate applications, schedules interviews, and manages applicant database.', provider: 'CallingAgent' },
+      { id: 'agent_energy_v2', name: 'Kevin (Energy)', voice: 'Puck', gender: 'Male', status: 'Active', calls: 0, logic: 'Utility Support', prompt: 'Assists with utility outages, billing questions, and usage plan upgrades.', provider: 'CallingAgent' },
+      { id: 'agent_retail_v2', name: 'Nina (Retail/F&B)', voice: 'Kore', gender: 'Female', status: 'Active', calls: 0, logic: 'Food Ordering', prompt: 'Handles food orders, manages allergy requests, and tracks delivery status.', provider: 'CallingAgent' },
+      { id: 'agent_telecom_v2', name: 'Oscar (Telecom)', voice: 'Zephyr', gender: 'Male', status: 'Active', calls: 0, logic: 'Tech Support', prompt: 'Troubleshoots network issues, manages service plan upgrades, and handles technical tickets.', provider: 'CallingAgent' },
+      { id: 'agent_media_v2', name: 'Zoe (Entertainment)', voice: 'Aoede', gender: 'Female', status: 'Active', calls: 0, logic: 'Media Subscription', prompt: 'Manages subscription billing, resolves access issues, and handles content inquiries.', provider: 'CallingAgent' },
+      { id: 'agent_nonprofit_v2', name: 'Paul (Non-Profit)', voice: 'Charon', gender: 'Male', status: 'Active', calls: 0, logic: 'Donation Management', prompt: 'Coordinates donation campaigns, manages volunteer registrations, and event inquiries.', provider: 'CallingAgent' },
+      { id: 'agent_manufacturing_v2', name: 'Rachel (Manufacturing)', voice: 'Emma', gender: 'Female', status: 'Active', calls: 0, logic: 'Supply Chain', prompt: 'Manages manufacturing orders, tracks inventory status, and assists with supply inquiries.', provider: 'CallingAgent' }
+    ] as Agent[];
+
+    let storedAgents: Agent[] = [];
     if (user && (user as any).agents && Array.isArray((user as any).agents) && (user as any).agents.length > 0) {
-      return (user as any).agents;
-    }
-    try {
-      const userKey = user && (user as any).uid ? `dashboard-agents-${(user as any).uid}` : 'dashboard-agents';
-      const saved = localStorage.getItem(userKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+      storedAgents = (user as any).agents;
+    } else {
+      try {
+        const userKey = user && (user as any).uid ? `dashboard-agents-v2-${(user as any).uid}` : 'dashboard-agents-v2';
+        const saved = localStorage.getItem(userKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            storedAgents = parsed;
+          }
         }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
     }
-    return [
-      {
-        id: 'agent_sarah',
-        name: 'Sarah (Real Estate)',
-        voice: 'Emma',
-        gender: 'Female',
-        pitch: 1.05,
-        speed: 0.95,
-        status: 'Active',
-        calls: 142,
-        logic: 'Real Estate Orchestrator',
-        prompt: 'Assists with real estate viewings, prices, and booking Saturday slot tours.',
-        provider: 'CallingAgent'
-      },
-      {
-        id: 'agent_chloe',
-        name: 'Chloe (SaaS Billing)',
-        voice: 'Kore',
-        gender: 'Female',
-        pitch: 1.0,
-        speed: 1.05,
-        status: 'Active',
-        calls: 89,
-        logic: 'SaaS Billing & Support',
-        prompt: 'Handles account queries, applies 50% retention discounts, and updates payment methods.',
-        provider: 'CallingAgent'
-      },
-      {
-        id: 'agent_david',
-        name: 'David (Medical Clinic)',
-        voice: 'Puck',
-        gender: 'Male',
-        pitch: 0.95,
-        speed: 1.0,
-        status: 'Active',
-        calls: 64,
-        logic: 'Clinic Booking & Triage',
-        prompt: 'Schedules medical appointments, verifies Blue Cross insurance, and sends pre-visit lists.',
-        provider: 'CallingAgent'
-      },
-      {
-        id: 'agent_john',
-        name: 'John (Capital dispute)',
-        voice: 'Fenrir',
-        gender: 'Male',
-        pitch: 0.9,
-        speed: 1.02,
-        status: 'Paused',
-        calls: 110,
-        logic: 'Fraud & Dispute Desk',
-        prompt: 'Locks compromised debit cards, initiates dispute tickets, and issues virtual cards.',
-        provider: 'CallingAgent'
-      },
-      { id: 'agent_a1', name: 'Agent 5', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 5', provider: 'CallingAgent' },
-      { id: 'agent_a2', name: 'Agent 6', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 6', provider: 'CallingAgent' },
-      { id: 'agent_a3', name: 'Agent 7', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 7', provider: 'CallingAgent' },
-      { id: 'agent_a4', name: 'Agent 8', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 8', provider: 'CallingAgent' },
-      { id: 'agent_a5', name: 'Agent 9', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 9', provider: 'CallingAgent' },
-      { id: 'agent_a6', name: 'Agent 10', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 10', provider: 'CallingAgent' },
-      { id: 'agent_a7', name: 'Agent 11', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 11', provider: 'CallingAgent' },
-      { id: 'agent_a8', name: 'Agent 12', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 12', provider: 'CallingAgent' },
-      { id: 'agent_a9', name: 'Agent 13', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 13', provider: 'CallingAgent' },
-      { id: 'agent_a10', name: 'Agent 14', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 14', provider: 'CallingAgent' },
-      { id: 'agent_a11', name: 'Agent 15', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 15', provider: 'CallingAgent' },
-      { id: 'agent_a12', name: 'Agent 16', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 16', provider: 'CallingAgent' },
-      { id: 'agent_a13', name: 'Agent 17', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 17', provider: 'CallingAgent' },
-      { id: 'agent_a14', name: 'Agent 18', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 18', provider: 'CallingAgent' },
-      { id: 'agent_a15', name: 'Agent 19', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 19', provider: 'CallingAgent' },
-      { id: 'agent_a16', name: 'Agent 20', voice: 'Zephyr', status: 'Active', calls: 0, logic: 'General', prompt: 'Prompt 20', provider: 'CallingAgent' }
-    ];
+
+    if (storedAgents.length > 0) {
+      // Merge existing with defaults, forcefully overwriting key configuration fields for matching IDs
+      const defaultAgentsMap = new Map(defaultAgents.map(a => [a.id, a]));
+      return storedAgents.map(sa => {
+        if (defaultAgentsMap.has(sa.id)) {
+          const defaults = defaultAgentsMap.get(sa.id)!;
+          return { 
+            ...sa, 
+            name: defaults.name, 
+            voice: defaults.voice, 
+            gender: defaults.gender,
+            logic: defaults.logic,
+            prompt: defaults.prompt
+          };
+        }
+        return sa;
+      });
+    }
+    
+    // For logged-in users, default to a pristine empty slate of agents so they can create their own!
+    if (user) {
+      return [];
+    }
+    
+    return defaultAgents;
   });
 
   const [agentLoads, setAgentLoads] = useState<Record<string, { activeCalls: number; maxCalls: number; cpuUsage: number }>>({});
 
-  // Keep agents in sync with user state
-  useEffect(() => {
-    if (isImpersonating) return;
-    if (user && (user as any).agents && Array.isArray((user as any).agents)) {
-      const serializedUserAgents = JSON.stringify((user as any).agents);
-      const serializedCurrentAgents = JSON.stringify(agents);
-      if (serializedUserAgents !== serializedCurrentAgents) {
-        setAgents((user as any).agents);
-      }
+  // Admin Test Call Modal
+  const [showAdminTestModal, setShowAdminTestModal] = useState(false);
+  const [adminTestNumber, setAdminTestNumber] = useState('');
+  const [adminTestAgent, setAdminTestAgent] = useState<any>(null);
+
+  const initiateAdminTestCall = async () => {
+    if (!adminTestAgent || !adminTestNumber) {
+      triggerToast("Please select an agent and enter a valid phone number.", "amber");
+      return;
     }
-  }, [user, isImpersonating]);
+    
+    // Call backend API (proxy route in server.ts)
+    // Twilio outbound credentials are pulled from process.env in server.ts
+    // or passed securely. The frontend doesn't need to know the credentials.
+    try {
+      const response = await fetch('/api/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: adminTestNumber,
+          agentId: adminTestAgent.id,
+          provider: 'Twilio'
+        })
+      });
+      
+      if (!response.ok) throw new Error("Failed to initiate test call");
+      
+      triggerToast("Test call initiated successfully!", "success");
+      setShowAdminTestModal(false);
+    } catch (e) {
+      triggerToast("Failed to initiate test call. Check backend configuration.", "error");
+    }
+  };
 
   // Persist agents to local storage and Firestore when they change
   useEffect(() => {
     if (isImpersonating) return;
-    const userKey = user && (user as any).uid ? `dashboard-agents-${(user as any).uid}` : 'dashboard-agents';
+    const userKey = user && (user as any).uid ? `dashboard-agents-v2-${(user as any).uid}` : 'dashboard-agents-v2';
     localStorage.setItem(userKey, JSON.stringify(agents));
-    localStorage.setItem('dashboard-agents', JSON.stringify(agents));
+    localStorage.setItem('dashboard-agents-v2', JSON.stringify(agents));
     
     // Update parent user state if they don't match
     if (user) {
@@ -1196,6 +1206,12 @@ If a client is highly demanding or looking for properties not publicly listed:
         return JSON.parse(saved);
       }
     } catch (e) {}
+
+    // For logged-in users, start with a pristine empty list of calls!
+    if (user) {
+      return [];
+    }
+
     return [
       {
         id: 'call_1',
@@ -1939,7 +1955,7 @@ If a client is highly demanding or looking for properties not publicly listed:
   };
 
   // Single-Lead Direct Test Call Simulator inside Live Campaigns tab
-  const handleStartCampaignTestCall = (leadName: string, leadPhone: string) => {
+  const handleStartCampaignTestCall = async (leadName: string, leadPhone: string) => {
     setTestLeadName(leadName);
     setTestLeadPhone(leadPhone);
     setIsTestCallModalOpen(true);
@@ -1948,35 +1964,36 @@ If a client is highly demanding or looking for properties not publicly listed:
     setTestCallInput('');
     setIsAgentTyping(false);
 
-    // After 2 seconds, connect and have the agent introduce itself
-    setTimeout(async () => {
+    try {
+      const response = await fetch('/api/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: leadPhone,
+          agentId: agents[0]?.id || '1',
+          provider: 'CallingAgent',
+          twilioSid: twilioSid,
+          twilioToken: twilioToken,
+          twilioNumber: twilioNumber
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initiate outbound call');
+      }
+
       setTestCallStatus('connected');
       setIsAgentTyping(true);
-
-      const activeAgent = agents[0] ? agents[0].name : "Sarah";
-      
-      const promptText = `You are simulated AI Voice Agent "${activeAgent}" on an outbound marketing campaign call.
-Customer/Lead Name: "${leadName}"
-Campaign Purpose: "${campaignPurpose}"
-Script Guidelines/Instructions: "${campaignGuidelines}"
-
-This is the very beginning of the phone call. Ringing has just finished and the lead answered "Hello?".
-Write a highly natural, friendly, and persuasive 1-2 sentence introduction greeting that identifies yourself, your company (CallingAgent.agency), the reason for the call based on the campaign purpose, and asks an engaging opening question.
-Return ONLY your greeting text as speech, without quotes or conversational labels.`;
-
-      try {
-        const response = await geminiService.getAgentResponse(
-          promptText,
-          [],
-          "You are a professional simulated outbound sales voice assistant. Be natural, polite, and brief."
-        );
-        setTestCallMessages([{ sender: 'agent', text: response || `Hi ${leadName}, this is ${activeAgent} here. I was reaching out regarding our exciting summer offerings about ${campaignPurpose}. How are you doing today?` }]);
-      } catch (err) {
-        setTestCallMessages([{ sender: 'agent', text: `Hi ${leadName}, this is ${activeAgent} here. I was reaching out regarding our exciting summer offerings. How are you doing today?` }]);
-      } finally {
-        setIsAgentTyping(false);
-      }
-    }, 2000);
+      setTestCallMessages([{ sender: 'agent', text: "Call connected. Initializing agent..." }]);
+    } catch (err: any) {
+      console.error("Test call initiation failed:", err);
+      setTestCallStatus('ended');
+      triggerToast(err.message || "Failed to initiate test call. Check your Twilio credentials.", "error");
+    } finally {
+      setIsAgentTyping(false);
+    }
   };
 
   const handleSendCampaignTestResponse = async () => {
@@ -2574,9 +2591,9 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
   const [emailLogs, setEmailLogs] = useState<string[]>([]);
   
   // Custom temporary Toast notifications
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'amber' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'amber' | 'info' | 'error' } | null>(null);
   
-  const triggerToast = (message: string, type: 'success' | 'amber' | 'info' = 'success') => {
+  const triggerToast = (message: string, type: 'success' | 'amber' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
@@ -3354,9 +3371,25 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
     if (!pendingPlan) return;
     
     try {
+      const now = new Date();
+      const trialDays = TRIAL_CONFIG.enabled ? TRIAL_CONFIG.days : 0;
+      const trialEndDate = new Date();
+      trialEndDate.setDate(now.getDate() + trialDays);
+
+      const trialStartStr = now.toISOString();
+      const trialEndStr = trialEndDate.toISOString();
+
+      const updatedUserFields = {
+        plan: pendingPlan.name,
+        trialPlan: pendingPlan.name,
+        trialStart: trialStartStr,
+        trialEnd: trialEndStr,
+        trialStatus: TRIAL_CONFIG.enabled ? 'active' as const : null
+      };
+
       // Direct integration/sandbox callback success
       setCurrentPlan(pendingPlan);
-      onUpdateUser({ plan: pendingPlan.name });
+      onUpdateUser(updatedUserFields);
       
       // Add transaction record to invoices log
       setInvoices(prev => [{
@@ -3367,7 +3400,7 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
         date: receipt?.date || new Date().toISOString().split('T')[0]
       }, ...prev]);
 
-      alert(`Successfully upgraded to ${pendingPlan.name} plan via ${method === 'stripe' ? 'Stripe Sandbox' : 'PayPal Sandbox'}!`);
+      alert(`Successfully upgraded to ${pendingPlan.name} plan via ${method === 'stripe' ? 'Stripe Sandbox' : 'PayPal Sandbox'}! Your ${TRIAL_CONFIG.days}-day free trial is now active.`);
       setShowPaymentSelectionModal(false);
       setPendingPlan(null);
     } catch (error) {
@@ -4614,6 +4647,48 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
               ) : (
                 // User Overview
                 <>
+                  {/* Free Trial Banner */}
+                  {user.trialStatus === 'active' && (
+                    <div className="p-8 bg-gradient-to-r from-indigo-500/10 via-slate-900/40 to-indigo-500/5 border border-indigo-500/20 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl">
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2 text-indigo-400">
+                          <Zap className="w-4 h-4 animate-pulse" />
+                          <span className="text-xs font-black uppercase tracking-widest font-mono">Free Trial — 7 Days</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white tracking-tight">
+                          Your 7-Day Free Trial for {user.plan} Plan
+                        </h3>
+                        <p className="text-slate-400 text-xs font-medium leading-relaxed">
+                          Started on <span className="text-white font-bold">{user.trialStart ? new Date(user.trialStart).toLocaleDateString() : 'N/A'}</span> · Expiring on <span className="text-white font-bold">{user.trialEnd ? new Date(user.trialEnd).toLocaleDateString() : 'N/A'}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-none">
+                          Upon trial expiration, your workspace will seamlessly transition into the standard monthly subscription cycle.
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 font-mono">Time Remaining</div>
+                        <div className="text-4xl font-black text-indigo-400 tracking-tight tabular-nums">
+                          {(() => {
+                            if (!user.trialEnd) return '0 days';
+                            const end = new Date(user.trialEnd).getTime();
+                            const now = new Date().getTime();
+                            const diff = end - now;
+                            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                            const remaining = Math.max(0, days);
+                            return `${remaining} ${remaining === 1 ? 'day' : 'days'}`;
+                          })()}
+                        </div>
+                        <button 
+                          onClick={() => setActiveTab('billing')}
+                          className="mt-2 text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest font-mono underline block cursor-pointer text-right"
+                        >
+                          Manage subscription →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Stats Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {stats.map((stat, i) => (
@@ -6114,6 +6189,22 @@ Provide ONLY the single crisp sentence. Do not include any quotes, markdown, or 
                           <span>Joined {formatDate(u.createdAt)}</span>
                           <span>{u.usage || 0} mins used</span>
                         </div>
+                        {u.trialStatus && (
+                          <div className="mt-2 text-[10px] font-black uppercase tracking-widest font-mono flex items-center space-x-2">
+                            <span className={`px-2 py-0.5 rounded ${
+                              u.trialStatus === 'active' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
+                              u.trialStatus === 'converted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                              'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}>
+                              Trial: {u.trialStatus} ({u.trialPlan || u.plan})
+                            </span>
+                            {u.trialStart && (
+                              <span className="text-slate-500">
+                                Start: {new Date(u.trialStart).toLocaleDateString()} · End: {new Date(u.trialEnd).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -13367,7 +13458,7 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide relative">
+               <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide relative">
                 {isCallActive && (
                   <div className={`absolute inset-0 z-50 backdrop-blur-[2px] flex flex-col items-center justify-end pb-20 pointer-events-none ${
                     theme === 'dark' ? 'bg-slate-900/40' : 'bg-slate-900/10'
@@ -13492,6 +13583,53 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                   </div>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Admin Test Call Modal */}
+      <AnimatePresence>
+        {showAdminTestModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" 
+              onClick={() => setShowAdminTestModal(false)}
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`relative w-full max-w-lg border rounded-[3rem] p-10 shadow-2xl ${
+                theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              }`}
+            >
+              <h3 className={`text-2xl font-black mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Admin Agent Test Call</h3>
+              <div className="space-y-4">
+                <select 
+                  className={`w-full p-3 rounded-xl border ${theme === 'dark' ? 'bg-slate-800 border-white/10' : 'bg-slate-50'}`}
+                  onChange={(e) => setAdminTestAgent(agents.find(a => a.id === e.target.value))}
+                >
+                  <option value="">Select Agent</option>
+                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <input 
+                  type="text" 
+                  placeholder="Enter Phone Number (e.g., +1...)" 
+                  value={adminTestNumber}
+                  onChange={(e) => setAdminTestNumber(e.target.value)}
+                  className={`w-full p-3 rounded-xl border ${theme === 'dark' ? 'bg-slate-800 border-white/10' : 'bg-slate-50'}`}
+                />
+                <button 
+                  onClick={initiateAdminTestCall}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black"
+                >
+                  Make Test Call
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -13991,8 +14129,10 @@ Return ONLY the fully updated script. Do not include any notes, intros, or markd
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
+                  const planName = formData.get('name') as string;
                   const newPlan: Plan = {
-                    name: formData.get('name') as string,
+                    id: editingPlan?.id || planName.toLowerCase().replace(/\s+/g, '-'),
+                    name: planName,
                     price: Number(formData.get('price')),
                     yearlyPrice: Number(formData.get('yearlyPrice')),
                     mins: Number(formData.get('mins')),

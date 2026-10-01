@@ -161,7 +161,7 @@ async function startServer() {
   } catch (e) {
     console.error("WebSocket server initialization failed, proceeding without it:", e);
   }
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -639,7 +639,7 @@ async function startServer() {
       const ai = getAI(resolvedApiKey);
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-1.5-flash',
         contents: [
           ...(history || []),
           { role: 'user', parts: [{ text: message }] }
@@ -713,10 +713,25 @@ async function startServer() {
         selectedVoice = 'Aoede';
       }
 
+      let personaInstruction = "You are an elite, highly realistic human voice actor. Read the text with an incredibly natural, friendly, warm, conversational cadence, realistic pauses, and human sentence rhythm.";
+      
+      if (selectedVoice === 'Aoede') {
+        personaInstruction = "You are Sarah, a highly professional, sophisticated, and polished corporate voice actor. Read the text with perfect conversational rhythm, realistic pauses, and a clear, elegant, high-end business delivery.";
+      } else if (selectedVoice === 'Fenrir') {
+        personaInstruction = "You are David, a warm, calm, deeply patient and reassuring medical assistant. Read the text slowly, with smooth transitions, gentle empathy, and highly realistic, patient conversational pacing.";
+      } else if (selectedVoice === 'Puck') {
+        personaInstruction = "You are Marco, an exceptionally friendly, welcoming, and conversational hospitality host. Read the text with warm enthusiasm, a clear inviting smile in your tone, and highly natural conversational pauses.";
+      } else if (selectedVoice === 'Kore') {
+        personaInstruction = "You are Kore, a clear, confident, and professional logistics coordinator. Read the text with high clarity, precise pronunciation, and direct conversational pacing.";
+      } else if (selectedVoice === 'Charon') {
+        personaInstruction = "You are John, a calm, controlled, serious, and highly trustworthy fraud investigator. Read the text slowly, with high authority, reassuring confidence, and a steady, secure pace.";
+      }
+
       const response = await ai.models.generateContent({
         model: "gemini-3.8-flash",
-        contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
+        contents: [{ parts: [{ text: text }] }],
         config: {
+          systemInstruction: personaInstruction,
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
@@ -743,9 +758,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, "dist")));
-    app.get("/*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
+    const distPath = __dirname.endsWith("dist") ? __dirname : path.join(__dirname, "dist");
+    app.use(express.static(distPath));
+    app.get("(.*)", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

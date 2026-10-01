@@ -1,7 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, Mic2, Building2, Stethoscope, Utensils, Truck, Headset, Mic, PhoneOff, AlertCircle, X, Send, CreditCard } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Play, Pause, Building2, Stethoscope, Utensils, Truck, Headset, Mic, PhoneOff, AlertCircle, Send, CreditCard } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
+
+interface VoiceConfig {
+  provider: 'Gemini' | 'ElevenLabs';
+  voiceId: string;
+  speakingStyle: string;
+  speed: number;
+  stability: number;
+  similarity: number;
+  accent: string;
+}
 
 interface Sample {
   id: string;
@@ -12,6 +21,7 @@ interface Sample {
   icon: any;
   voiceName: string;
   suggestions: string[];
+  voiceSettings: VoiceConfig;
 }
 
 const samples: Sample[] = [
@@ -19,90 +29,143 @@ const samples: Sample[] = [
     id: 'real-estate',
     industry: 'Real Estate',
     scenario: 'Booking a property viewing for a downtown loft.',
-    greeting: "Hello! This is Sarah from CallingAgent Loft Realty. I see you're interested in booking a viewing for our beautiful downtown loft. How can I assist you today?",
-    prompt: "You are Sarah, a high-end real estate agent for CallingAgent Loft Realty. A potential client is calling to book a viewing for a downtown loft listed at $1.2M. Be professional, sophisticated, and helpful. Ask for their preferred time and contact details. Greet the caller with: 'Hello! This is Sarah from CallingAgent Loft Realty. I see you're interested in our beautiful downtown loft. How can I assist you today?' Keep responses short and realistic.",
+    greeting: "Absolutely, I'd love to help you schedule a walkthrough. We actually have an open slot this Saturday at 2:00 PM for that gorgeous downtown loft. Would that time work well for your schedule?",
+    prompt: "You are Sarah, an elite property consultant for CallingAgent Loft Realty. A potential client is calling to book a viewing for a downtown loft listed at $1.2M. Be professional, sophisticated, and warm. Ask for their preferred viewing slot and contact details. Greet the caller naturally, prioritizing helpful scheduling.",
     icon: Building2,
     voiceName: 'Aoede',
     suggestions: [
       "Can I view it this Saturday?",
       "What is the listing price?",
       "How many bedrooms does it have?"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Aoede',
+      speakingStyle: 'Professional & Elegant',
+      speed: 0.95,
+      stability: 0.8,
+      similarity: 0.85,
+      accent: 'US Female Corporate'
+    }
   },
   {
     id: 'healthcare',
     industry: 'Healthcare',
     scenario: 'Scheduling a follow-up appointment with a specialist.',
-    greeting: "Welcome to CallingAgent Health. This is David speaking. I'm here to help you schedule your follow-up with Dr. Aris. Do you have your insurance information handy?",
-    prompt: "You are David, a medical coordinator at CallingAgent Health. You are helping a patient schedule a follow-up appointment with Dr. Aris, a cardiologist. Be empathetic, clear, and reassuring. Greet the caller with: 'Welcome to CallingAgent Health. This is David speaking. I'm here to help you schedule your follow-up with Dr. Aris. Do you have your insurance information handy?'",
+    greeting: "Hello, thank you for reaching out. Let me check Dr. Aris's calendar for your cardiology follow-up. I see a slot available next Tuesday morning. Do you have your insurance provider card handy?",
+    prompt: "You are David, a medical coordinator at CallingAgent Health. You are helping a patient schedule a follow-up appointment with Dr. Aris, a cardiologist. Be warm, calm, reassuring, and patient. Avoid making direct medical claims. Focus on scheduling and collecting insurance data.",
     icon: Stethoscope,
     voiceName: 'Fenrir',
     suggestions: [
       "Yes, I have my insurance ready",
       "Is Tuesday at 10:00 AM still open?",
       "Do you take self-pay patients?"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Fenrir',
+      speakingStyle: 'Reassuring & Empathetic',
+      speed: 0.9,
+      stability: 0.85,
+      similarity: 0.9,
+      accent: 'US Male Reassuring'
+    }
   },
   {
     id: 'hospitality',
     industry: 'Hospitality',
     scenario: 'Making a dinner reservation and checking allergy options.',
-    greeting: "Buonasera! CallingAgent Bistro, this is Marco. We'd love to host you this Saturday. How many guests will be joining us?",
-    prompt: "You are Marco, the head host at CallingAgent Bistro. A customer wants to make a dinner reservation for 4 people this Saturday. Be enthusiastic and welcoming. Greet with: 'Buonasera! CallingAgent Bistro, this is Marco. We'd love to host you this Saturday. How many guests will be joining us?' Mention our gluten-free menu when asked.",
+    greeting: "Buonasera! Welcome to CallingAgent Bistro. I'd be absolutely delighted to secure a table for you this weekend. How many guests will be joining us for dinner?",
+    prompt: "You are Marco, the head host at CallingAgent Bistro. A customer wants to make a dinner reservation for 4 people this Saturday. Be enthusiastic, welcoming, and highly conversational. Greet with Italian hospitality. Mention our custom gluten-free menu when asked.",
     icon: Utensils,
     voiceName: 'Puck',
     suggestions: [
       "Do you have gluten-free dishes?",
       "Can I book a table for 4 this Saturday?",
       "Where are you located?"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Puck',
+      speakingStyle: 'Welcoming & Friendly',
+      speed: 1.0,
+      stability: 0.75,
+      similarity: 0.8,
+      accent: 'European Male Warm'
+    }
   },
   {
     id: 'logistics',
     industry: 'Logistics',
     scenario: 'Automated status check for an international shipment.',
-    greeting: "Global Logistics tracking assistant. Please provide your tracking number or ask about your Singapore to New York shipment status.",
-    prompt: "You are the CallingAgent Global Logistics assistant. You help customers track international shipments. Be efficient, direct, and clear. Greet with: 'Global Logistics tracking assistant. Please provide your tracking number or ask about your Singapore to New York shipment status.' Provide status of SG-NY-39049 when queried.",
+    greeting: "Hello. Let me pull up that shipment record for you right now. I see your package from Singapore to New York is currently in transit and cleared customs smoothly. It's on track for delivery this Thursday.",
+    prompt: "You are the CallingAgent Global Logistics assistant. You help customers track international shipments. Be efficient, direct, confident, and highly clear. Greet naturally and assist with package query updates.",
     icon: Truck,
     voiceName: 'Kore',
     suggestions: [
       "Where is my package right now?",
       "Is there any customs delay?",
       "Awesome, prioritize my package"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Kore',
+      speakingStyle: 'Confident & Confirmed',
+      speed: 0.98,
+      stability: 0.82,
+      similarity: 0.88,
+      accent: 'US Female Clear'
+    }
   },
   {
     id: 'support',
     industry: 'Support',
     scenario: 'Resolving a billing inquiry for a SaaS subscription.',
-    greeting: "Hi, thank you for calling support. This is Chloe. I understand you have a question about your Pro plan billing. How can I help you today?",
-    prompt: "You are Chloe from CallingAgent SaaS Support. You are helping a customer with a billing inquiry regarding their 'Pro' plan subscription. Be patient, professional, and clear. Greet with: 'Hi, thank you for calling support. This is Chloe. I understand you have a question about your Pro plan billing. How can I help you today?' Offer a 50% discount instead of letting them cancel.",
+    greeting: "Hi there, thank you for calling support. I understand there was a discrepancy on your latest Pro subscription invoice. Let me take a look at your account statement and get this squared away for you.",
+    prompt: "You are Chloe from CallingAgent SaaS Support. You are helping a customer with a billing inquiry regarding their 'Pro' plan subscription. Be exceptionally patient, warm, and helpful. Offer a retention discount instead of direct cancellation if appropriate.",
     icon: Headset,
     voiceName: 'Aoede',
     suggestions: [
       "Why did you charge me $49?",
       "I want to cancel my Pro subscription",
       "Can you send me my invoice?"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Aoede',
+      speakingStyle: 'Helpful & Patient',
+      speed: 0.95,
+      stability: 0.8,
+      similarity: 0.85,
+      accent: 'US Female Friendly'
+    }
   },
   {
     id: 'finance',
     industry: 'Financial Services',
     scenario: 'Flagging fraudulent activity and disputes on a debit card.',
-    greeting: "Thank you for contacting CallingAgent Capital. This is John speaking. I see you flagged an unauthorized $45.00 charge on your account. Let's get this resolved for you right away.",
-    prompt: "You are John, a senior fraud investigator at CallingAgent Capital. A customer is calling to dispute an unrecognized $45.00 online transaction. Be calm, reassuring, highly secure, and professional. Greet with: 'Thank you for contacting CallingAgent Capital. This is John speaking. I see you flagged an unauthorized $45.00 charge on your account. Let's get this resolved for you right away.' Offer to lock the card and generate a new secure virtual card.",
+    greeting: "Hello, thank you for reaching out to security services. I've flagged that suspicious transaction of forty-five dollars on your debit card. Let's lock this down to secure your account and issue a replacement virtual card immediately.",
+    prompt: "You are John, a senior fraud investigator at CallingAgent Capital. A customer is calling to dispute an unrecognized charge. Be completely calm, serious, highly secure, reassuring, and professional. Greet and immediately coordinate card safety.",
     icon: CreditCard,
     voiceName: 'Charon',
     suggestions: [
       "Block that unauthorized charge",
       "Is my savings balance safe?",
       "Can I get a new virtual card?"
-    ]
+    ],
+    voiceSettings: {
+      provider: 'Gemini',
+      voiceId: 'Charon',
+      speakingStyle: 'Secure & Controlled',
+      speed: 0.93,
+      stability: 0.9,
+      similarity: 0.92,
+      accent: 'US Male Authoritative'
+    }
   }
 ];
 
 const VoiceSamples: React.FC = () => {
-  // Play state for static files (dynamic TTS greetings)
   const [playingSampleId, setPlayingSampleId] = useState<string | null>(null);
   const [isTTSLoading, setIsTTSLoading] = useState(false);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -113,28 +176,33 @@ const VoiceSamples: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState<{ role: 'user' | 'model'; text: string }[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isMicSupported, setIsMicSupported] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const historyRef = useRef<{ role: 'user' | 'model'; parts: { text: string }[] }[]>([]);
 
-  // Cleanup synthesis or audio on unmount
   useEffect(() => {
     return () => {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      cleanupAudio();
     };
   }, []);
 
-  // Web Speech Synthesis Fallback
+  const cleanupAudio = () => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+  };
+
+  // Browser synthesis fallback
   const speakWithBrowserFallback = (text: string, voiceName: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!('speechSynthesis' in window)) {
@@ -159,7 +227,7 @@ const VoiceSamples: React.FC = () => {
     });
   };
 
-  // Speaks using Gemini high-quality TTS or falls back to browser synthesis
+  // Speaks using high-fidelity prebuilt AI voice models
   const speakAgentResponse = async (text: string, voiceName: string) => {
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
@@ -182,34 +250,21 @@ const VoiceSamples: React.FC = () => {
         await speakWithBrowserFallback(text, voiceName);
       }
     } catch (e) {
-      console.warn("TTS fetch failed, falling back to Web Speech API", e);
+      console.warn("High-fidelity TTS generated error, falling back to Web Speech API", e);
       await speakWithBrowserFallback(text, voiceName);
     }
   };
 
-  // Toggle play greeting sample
   const togglePlayStatic = async (sample: Sample) => {
-    // If live call is active or connecting, close it first
     if (activeLiveId) {
       stopLiveTest();
     }
 
     if (playingSampleId === sample.id) {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      cleanupAudio();
       setPlayingSampleId(null);
     } else {
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-
+      cleanupAudio();
       setPlayingSampleId(sample.id);
       setIsTTSLoading(true);
 
@@ -224,7 +279,6 @@ const VoiceSamples: React.FC = () => {
     }
   };
 
-  // Stop current live conversation
   const stopLiveTest = () => {
     setActiveLiveId(null);
     setIsConnecting(false);
@@ -232,31 +286,17 @@ const VoiceSamples: React.FC = () => {
     setLiveTranscript([]);
     setMicError(null);
     historyRef.current = [];
-    
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
+    cleanupAudio();
   };
 
-  // Start Speech Recognition loop
+  // Start Speech Recognition loop with working BARGE-IN!
   const startSpeechRecognition = (sample: Sample) => {
     if (!activeLiveId) return;
     setMicError(null);
     
     const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionClass) {
-      setIsMicSupported(false);
-      setMicError("Speech synthesis is active, but microphone recognition is not supported in this browser. Please type or use quick chips below!");
-      console.warn("Speech recognition is not supported in this browser.");
+      setMicError("Microphone recognition is not supported in this browser. Please type or use quick chips below!");
       return;
     }
 
@@ -276,6 +316,15 @@ const VoiceSamples: React.FC = () => {
       setMicError(null);
     };
 
+    // BARGE-IN IMPLEMENTATION: Mute agent immediately when user starts speaking!
+    rec.onsoundstart = () => {
+      if (activeAudioRef.current) {
+        console.log("Barge-in / interruption triggered! Muting active agent voice output immediately.");
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+    };
+
     rec.onresult = async (e: any) => {
       const text = e.results[0][0].transcript;
       if (text && text.trim()) {
@@ -284,15 +333,12 @@ const VoiceSamples: React.FC = () => {
     };
 
     rec.onerror = (e: any) => {
-      console.warn("Speech recognition error:", e.error);
+      console.warn("Speech recognition notice:", e.error);
       setIsListening(false);
       if (e.error === 'not-allowed') {
-        setMicError("Microphone permission denied. Click the camera/mic camera icon in the address bar to allow browser access.");
+        setMicError("Microphone permission denied. Enable microphone access in your browser settings.");
       } else if (e.error === 'no-speech') {
-        // no-speech is common if user was silent. We can just guide them to click speak again.
-        setMicError("No speech detected. click 'TAP TO SPEAK' when you are ready to speak!");
-      } else {
-        setMicError(`Recognition stopped (${e.error}). Feel free to talk again.`);
+        setMicError("No speech detected. Feel free to speak or tap chips.");
       }
     };
 
@@ -305,11 +351,9 @@ const VoiceSamples: React.FC = () => {
       rec.start();
     } catch (e) {
       console.error("Failed to start SpeechRecognition:", e);
-      setMicError("Failed to initiate microphone control. Please refresh or use manual chips.");
     }
   };
 
-  // Process user message (vocal or typed)
   const handleUserTurn = async (userText: string, sample: Sample) => {
     if (recognitionRef.current) {
       try {
@@ -318,28 +362,22 @@ const VoiceSamples: React.FC = () => {
     }
 
     setIsListening(false);
-
-    // Add user message to transcript and history
     setLiveTranscript(prev => [...prev, { role: 'user', text: userText }]);
     const currentHistory = [...historyRef.current];
     currentHistory.push({ role: 'user', parts: [{ text: userText }] });
     historyRef.current = currentHistory;
 
-    setIsConnecting(true); // show thinking indicator
+    setIsConnecting(true);
 
     try {
-      // Get response from server-side agent
       const agentReply = await geminiService.getAgentResponse(userText, currentHistory, sample.prompt);
       
-      // Update transcript
       setLiveTranscript(prev => [...prev, { role: 'model', text: agentReply }]);
       historyRef.current.push({ role: 'model', parts: [{ text: agentReply }] });
 
-      // Speak response
       setIsConnecting(false);
       await speakAgentResponse(agentReply, sample.voiceName);
 
-      // Loop back to speech recognition if conversation is still active
       if (activeLiveId === sample.id) {
         startSpeechRecognition(sample);
       }
@@ -349,7 +387,6 @@ const VoiceSamples: React.FC = () => {
     }
   };
 
-  // Start live conversational test
   const startLiveTest = async (sample: Sample) => {
     if (playingSampleId) {
       setPlayingSampleId(null);
@@ -360,14 +397,12 @@ const VoiceSamples: React.FC = () => {
     setIsConnecting(true);
 
     try {
-      // Speak the initial greeting
       setLiveTranscript([{ role: 'model', text: sample.greeting }]);
       historyRef.current = [{ role: 'model', parts: [{ text: sample.greeting }] }];
       
       setIsConnecting(false);
       await speakAgentResponse(sample.greeting, sample.voiceName);
 
-      // Trigger automatic voice pickup if supported
       startSpeechRecognition(sample);
     } catch (err) {
       console.error("Failed to start live call:", err);
@@ -376,14 +411,15 @@ const VoiceSamples: React.FC = () => {
   };
 
   return (
-    <section id="samples" className="py-16 px-6 bg-slate-900/40 border-y border-white/5 relative">
+    <section id="samples" className="py-16 px-6 bg-slate-950 border-y border-white/5 relative">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
-            A <span className="text-indigo-500">Smarter</span> Way to Automate Calls
+          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest font-mono">Conversational Realism</span>
+          <h2 className="text-3xl md:text-5xl font-black text-white mt-3 mb-4 tracking-tighter">
+            A Smarter Way to Automate Calls
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-lg lowercase tracking-tight">
-            Listen to pre-recorded samples or <span className="text-emerald-400 font-bold uppercase tracking-widest px-2 opacity-80">talk live</span> to our agents right now.
+          <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base font-semibold leading-relaxed">
+            Listen to pre-recorded conversational patterns or tap <span className="text-emerald-400 uppercase tracking-widest px-1 font-bold">Talk Live</span> to experience lag-free human-like dialogue right now.
           </p>
         </div>
 
@@ -396,80 +432,78 @@ const VoiceSamples: React.FC = () => {
             return (
               <div 
                 key={sample.id}
-                className={`group relative p-8 rounded-3xl border transition-all duration-500 flex flex-col justify-between overflow-hidden ${
+                className={`group relative p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col justify-between overflow-hidden ${
                   isLive 
-                    ? 'bg-emerald-950/20 border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.08)]'
-                    : 'bg-slate-900/60 border-white/5 hover:border-white/10 hover:bg-slate-900/80 shadow-2xl'
+                    ? 'bg-emerald-950/10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.06)]'
+                    : 'bg-slate-950/40 border-white/5 hover:border-indigo-500/10 hover:bg-slate-950/60 shadow-2xl'
                 }`}
               >
                 {isLive && (
-                  <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500 animate-pulse"></div>
+                  <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500 animate-pulse" />
                 )}
 
                 <div>
-                  {/* Top Bar inside Card */}
                   <div className="flex items-start justify-between mb-6">
-                    <div className={`p-4 rounded-2xl transition-all duration-300 ${
-                      isLive ? 'bg-emerald-500 text-white' : 
-                      'bg-slate-800 text-slate-400 group-hover:text-white group-hover:bg-slate-700'
+                    <div className={`p-3.5 rounded-2xl transition-all duration-300 ${
+                      isLive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                      'bg-slate-900 text-slate-400 group-hover:text-white border border-transparent group-hover:border-white/5'
                     }`}>
-                      <Icon size={28} />
+                      <Icon size={24} />
                     </div>
 
                     <div className="flex space-x-3">
                       <button
                         type="button"
                         onClick={() => togglePlayStatic(sample)}
-                        disabled={isLive}
-                        className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 border ${
+                        disabled={isLive || isTTSLoading}
+                        className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border cursor-pointer ${
                           isSamplePlaying 
-                            ? 'bg-rose-500 border-rose-500 text-white shadow-xl scale-105' 
+                            ? 'bg-rose-600 border-rose-600 text-white' 
                             : isLive 
-                              ? 'bg-slate-800/40 border-transparent text-slate-600 cursor-not-allowed'
-                              : 'bg-white border-white text-slate-950 hover:scale-110 shadow-xl'
+                              ? 'bg-slate-900 border-transparent text-slate-700 cursor-not-allowed'
+                              : 'bg-white border-white text-slate-950 hover:scale-105'
                         }`}
                         title={isSamplePlaying ? "Pause Sample" : "Play Greeting Sample"}
                       >
                         {isSamplePlaying ? (
-                          <Pause size={18} fill="currentColor" />
+                          <Pause size={16} fill="currentColor" />
                         ) : (
-                          <Play size={18} fill="currentColor" className="ml-0.5" />
+                          <Play size={16} fill="currentColor" className="ml-0.5" />
                         )}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => isLive ? stopLiveTest() : startLiveTest(sample)}
-                        className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 border ${
+                        className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border cursor-pointer ${
                           isLive 
-                            ? 'bg-emerald-500 border-emerald-500 text-white animate-pulse shadow-xl shadow-emerald-500/30' 
-                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:scale-110'
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xl shadow-emerald-500/10' 
+                            : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400 hover:bg-emerald-500 hover:text-white hover:scale-105'
                         }`}
                         title={isLive ? "End Conversation" : "Talk Live"}
                       >
-                        {isLive ? <PhoneOff size={18} /> : <Mic size={18} />}
+                        {isLive ? <PhoneOff size={16} /> : <Mic size={16} />}
                       </button>
                     </div>
                   </div>
 
-                  {/* Info / Conversation Panel */}
                   <div className="relative">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className={`text-2xl font-black tracking-tight ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className={`text-xl font-bold tracking-tight ${isLive ? 'text-emerald-400' : 'text-white'}`}>
                         {sample.industry}
                       </h3>
-                      <span className="text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                        {sample.voiceName} Voice
+                      <span className="text-[9px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/15">
+                        {sample.voiceSettings.accent}
                       </span>
                     </div>
 
                     {isLive ? (
                       <div className="space-y-4">
-                        <div className="bg-slate-950/80 border border-white/5 rounded-2xl p-4 h-[12rem] overflow-y-auto custom-scrollbar flex flex-col justify-end">
+                        <div className="bg-slate-950/80 border border-white/5 rounded-2xl p-4 h-[12rem] overflow-y-auto flex flex-col justify-end">
                           <div className="space-y-3">
                             {liveTranscript.slice(-3).map((msg, i) => (
-                              <div key={i} className={`text-sm ${msg.role === 'model' ? 'text-white' : 'text-emerald-400'} font-medium animate-fade-in`}>
-                                <span className="text-[10px] uppercase font-black mr-2 opacity-60">
+                              <div key={i} className={`text-xs ${msg.role === 'model' ? 'text-white' : 'text-emerald-400'} font-semibold`}>
+                                <span className="text-[9px] uppercase font-black mr-2 opacity-50">
                                   {msg.role === 'model' ? 'Agent' : 'You'}
                                 </span>
                                 {msg.text}
@@ -477,25 +511,24 @@ const VoiceSamples: React.FC = () => {
                             ))}
                             
                             {isConnecting && (
-                              <div className="flex items-center space-x-2 py-1">
-                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></div>
-                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                              <div className="flex items-center space-x-1.5 py-1">
+                                <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce" />
+                                <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.15s]" />
+                                <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.3s]" />
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Interactive Suggestion Chips */}
                         <div className="space-y-1.5">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Quick Response Chips (Iframe Friendly)</p>
+                          <p className="text-[9px] uppercase font-black tracking-wider text-slate-500 font-mono">Quick Response Chips</p>
                           <div className="flex flex-wrap gap-1.5">
                             {sample.suggestions.map((option, sIdx) => (
                               <button
                                 key={sIdx}
                                 type="button"
                                 onClick={() => handleUserTurn(option, sample)}
-                                className="text-[11px] font-bold px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-350 hover:text-white rounded-lg border border-white/5 transition-all text-left"
+                                className="text-[10px] font-bold px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg border border-white/5 transition-all text-left cursor-pointer"
                               >
                                 {option}
                               </button>
@@ -503,7 +536,6 @@ const VoiceSamples: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Manual Keyboard Response Entry */}
                         <form 
                           onSubmit={(e) => {
                             e.preventDefault();
@@ -518,30 +550,29 @@ const VoiceSamples: React.FC = () => {
                             type="text"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            placeholder="Type response to voice agent..."
-                            className="bg-transparent text-xs text-white placeholder-slate-600 focus:outline-none px-2 py-1 w-full"
+                            placeholder="Type to voice agent..."
+                            className="bg-transparent text-[11px] text-white placeholder-slate-650 placeholder-slate-500 focus:outline-none px-2 py-1 w-full"
                           />
                           <button
                             type="submit"
-                            className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                            className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors cursor-pointer"
                           >
-                            <Send size={12} />
+                            <Send size={10} />
                           </button>
                         </form>
 
                         {micError && (
-                          <div className="bg-amber-950/20 text-amber-300 text-[11px] p-2.5 rounded-xl border border-amber-500/20 flex gap-2 items-start leading-snug">
+                          <div className="bg-amber-950/20 text-amber-300 text-[10px] p-2.5 rounded-xl border border-amber-500/20 flex gap-2 items-start leading-snug">
                             <AlertCircle size={14} className="shrink-0 mt-0.5" />
                             <span>{micError}</span>
                           </div>
                         )}
 
-                        {/* Visualizer Status */}
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                           <div className="flex items-center gap-2">
                             <span className="relative flex h-2 w-2">
-                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isListening ? 'bg-emerald-400' : 'bg-indigo-400'}`}></span>
-                              <span className={`relative inline-flex rounded-full h-2 w-2 ${isListening ? 'bg-emerald-500' : 'bg-indigo-500'}`}></span>
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isListening ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
+                              <span className={`relative inline-flex rounded-full h-2 w-2 ${isListening ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
                             </span>
                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                               {isListening ? 'Listening...' : 'Muted'}
@@ -555,7 +586,7 @@ const VoiceSamples: React.FC = () => {
                                   key={i} 
                                   className="w-0.5 bg-emerald-400 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]"
                                   style={{ height: `${val * 3}px` }}
-                                ></div>
+                                />
                               ))}
                             </div>
                           ) : (
@@ -563,7 +594,7 @@ const VoiceSamples: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => startSpeechRecognition(sample)}
-                                className="text-[10px] font-extrabold text-white bg-emerald-550 bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 rounded-lg shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                className="text-[10px] font-black text-white bg-emerald-600 hover:bg-emerald-550 px-2.5 py-1 rounded-lg active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                               >
                                 <Mic size={10} />
                                 <span>TAP TO SPEAK</span>
@@ -573,7 +604,7 @@ const VoiceSamples: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-slate-400 text-sm leading-relaxed mb-6 font-medium mt-2">
+                      <p className="text-slate-400 text-xs md:text-sm leading-relaxed mb-6 font-semibold mt-2">
                         {sample.scenario}
                       </p>
                     )}
@@ -581,35 +612,14 @@ const VoiceSamples: React.FC = () => {
                 </div>
 
                 {!isLive && (
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-slate-500 text-xs">
-                    <span>Vibe: {sample.id === 'healthcare' || sample.id === 'support' ? 'Warm' : 'Professional'}</span>
-                    <span>Latency: sub-150ms</span>
+                  <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between text-slate-500 text-[10px] font-mono uppercase tracking-wider gap-2">
+                    <span>Vibe: {sample.voiceSettings.speakingStyle}</span>
+                    <span>Speed: {sample.voiceSettings.speed}x</span>
                   </div>
                 )}
               </div>
             );
           })}
-        </div>
-        
-        <div className="mt-20 bg-gradient-to-br from-indigo-500/10 via-slate-900/80 to-emerald-500/10 rounded-[3rem] p-10 border border-white/5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-white/5 pointer-events-none"></div>
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="max-w-2xl">
-              <h4 className="text-2xl md:text-3xl font-black text-white mb-3 tracking-tight flex items-center">
-                <AlertCircle className="mr-3 text-indigo-500 animate-pulse" size={24} />
-                Try Our Latency-Free Pipeline
-              </h4>
-              <p className="text-slate-300 font-medium text-base md:text-lg leading-snug">
-                Click the <span className="text-emerald-450 font-black text-emerald-400">MIC icon</span> on any card to talk directly with that industry agent. No login required for preview. Experience sub-300ms response times that feel truly human.
-              </p>
-            </div>
-            <button 
-              type="button"
-              className="px-10 py-5 bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-600 transition-all transform hover:-translate-y-1 active:scale-95 shadow-2xl shadow-indigo-600/20 cursor-pointer shrink-0"
-            >
-              Get Enterprise Access
-            </button>
-          </div>
         </div>
       </div>
     </section>

@@ -383,25 +383,8 @@ export const getCallLogs = async (userId: string, isAdmin: boolean) => {
     }) as any[];
 
     if (logs.length === 0) {
-      // Seed some mock logs in database so it starts off looking stunning
-      const seeded: any[] = [];
-      for (const seed of SEED_CALLS) {
-        const customId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const logDocRef = doc(db, 'calls', customId);
-        const docData = {
-          ...seed,
-          userId,
-          timestamp: serverTimestamp()
-        };
-        await setDoc(logDocRef, docData);
-        seeded.push({
-          id: customId,
-          ...seed,
-          userId,
-          timestamp: seed.timestamp
-        });
-      }
-      logs = seeded;
+      // Return a clean empty state for new users
+      return [];
     }
 
     return logs.sort((a, b) => {

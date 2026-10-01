@@ -13,11 +13,18 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-16 mb-24">
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center space-x-3 mb-8 group cursor-pointer" onClick={() => onNavigate('home')}>
-              <div className="relative w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/30 group-hover:scale-110 transition-all duration-500 overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)]"></div>
-                <svg className="w-7 h-7 text-white relative z-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 4H9L11 9L8.5 10.5C9.57096 12.6715 11.3285 14.429 13.5 15.5L15 13L20 15V19C20 20.1046 19.1046 21 18 21C8.61116 21 1 13.3888 1 4C1 2.89543 1.89543 2 3 2H5" fill="currentColor"/>
-                  <path d="M17 2L18 5L21 6L18 7L17 10L16 7L13 6L16 5L17 2Z" fill="white" className="animate-pulse" />
+              <div className="relative w-12 h-12 bg-slate-950 border border-white/10 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.15)] group-hover:border-indigo-500/30 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all duration-500 overflow-hidden shrink-0">
+                {/* Soft inner radial gradient glow */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-purple-500/5" />
+                <svg className="w-6 h-6 text-indigo-400 relative z-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Telephony Ring Paths */}
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 4" className="opacity-30" />
+                  <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="16 4" className="opacity-80" />
+                  
+                  {/* Voice Waves */}
+                  <path d="M9 10V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M12 7V17" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M15 10V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </div>
               <div className="flex flex-col -space-y-1">
