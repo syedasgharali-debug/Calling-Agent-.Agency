@@ -1,7 +1,11 @@
 import React from 'react';
 import { Shield, Sparkles, Zap, Smartphone, Key, LineChart } from 'lucide-react';
 
-const Features: React.FC = () => {
+interface FeaturesProps {
+  theme?: 'dark' | 'light';
+}
+
+const Features: React.FC<FeaturesProps> = ({ theme = 'dark' }) => {
   const features = [
     {
       title: "Vocal Provisioner",
@@ -36,7 +40,7 @@ const Features: React.FC = () => {
   ];
 
   return (
-    <section id="features" className="py-24 px-6 bg-[#000000] relative overflow-hidden">
+    <section id="features" className={`py-24 px-6 relative overflow-hidden transition-colors duration-500 ${theme === 'dark' ? 'bg-[#000000]' : 'bg-[#ffffff]'}`}>
       {/* Background glow lines in the style of dark.magicproject.ai */}
       <div className="absolute top-[10%] left-[-10%] w-[35rem] h-[35rem] bg-indigo-500/[0.02] rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[10%] right-[-10%] w-[35rem] h-[35rem] bg-violet-500/[0.02] rounded-full blur-[100px] pointer-events-none" />
@@ -47,10 +51,10 @@ const Features: React.FC = () => {
           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.25em] font-mono">
             Platform Capabilities
           </span>
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter text-wrap-balance leading-[1.1]">
+          <h2 className={`text-4xl md:text-6xl font-black tracking-tighter text-wrap-balance leading-[1.1] ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             Architected for Sub-Second Conversational Scale
           </h2>
-          <p className="text-slate-400 text-sm md:text-base font-semibold leading-relaxed">
+          <p className={`text-sm md:text-base font-semibold leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
             Don't settle for high-latency wrappers. Use our integrated carrier stack designed specifically to run voice agents with lightning-fast speeds.
           </p>
         </div>
@@ -62,22 +66,22 @@ const Features: React.FC = () => {
             return (
               <div 
                 key={idx} 
-                className="group p-10 rounded-[2.5rem] border border-white/5 bg-slate-950/40 hover:bg-slate-900/10 hover:border-indigo-500/15 transition-all duration-300 flex flex-col justify-between h-80 relative"
+                className={`group p-10 rounded-[2.5rem] border transition-all duration-300 flex flex-col justify-between h-80 relative ${theme === 'dark' ? 'border-white/5 bg-slate-950/40 hover:bg-slate-900/10 hover:border-indigo-500/15' : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-500/15 shadow-sm'}`}
               >
                 {/* Thin overlay top lighting glow */}
                 <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 <div>
-                  <div className="w-12 h-12 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-center mb-8 text-slate-450 group-hover:text-indigo-400 transition-colors">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-8 text-slate-450 group-hover:text-indigo-400 transition-colors border ${theme === 'dark' ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-250'}`}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-white tracking-tight mb-3">{feature.title}</h3>
-                  <p className="text-slate-450 text-slate-400 text-sm leading-relaxed font-medium">
+                  <h3 className={`text-xl font-bold tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{feature.title}</h3>
+                  <p className={`text-sm leading-relaxed font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
                     {feature.description}
                   </p>
                 </div>
                 
-                <div className="text-[10px] font-mono font-black text-slate-500 tracking-wider pt-4 border-t border-white/[0.03] uppercase">
+                <div className={`text-[10px] font-mono font-black tracking-wider pt-4 uppercase border-t ${theme === 'dark' ? 'border-white/[0.03] text-slate-500' : 'border-slate-100 text-slate-400'}`}>
                   Capability 0{idx + 1}
                 </div>
               </div>

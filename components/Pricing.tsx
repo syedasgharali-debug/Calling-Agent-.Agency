@@ -6,9 +6,10 @@ import { Check, Info, Settings, Shield, Sliders, Zap, Sparkles, Star, Award, Shi
 interface PricingProps {
   onNavigate: (view: View) => void;
   plans: Plan[];
+  theme?: 'dark' | 'light';
 }
 
-const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
+const Pricing: React.FC<PricingProps> = ({ onNavigate, plans, theme = 'dark' }) => {
   const [isYearly, setIsYearly] = useState(false);
   
   // Custom Enterprise Plan Builder State
@@ -126,21 +127,27 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
             CALIBRATED SCALE ECONOMICS
           </span>
         </div>
-        <h3 className="text-3xl md:text-5xl font-black text-white tracking-tighter">
+        <h3 className={`text-3xl md:text-5xl font-black tracking-tighter transition-colors duration-500 ${
+          theme === 'dark' ? 'text-white' : 'text-slate-900'
+        }`}>
           Calibrate Your Scaling Velocity
         </h3>
-        <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-semibold leading-relaxed">
+        <p className={`text-sm md:text-base max-w-2xl mx-auto font-semibold leading-relaxed transition-colors duration-500 ${
+          theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+        }`}>
           Unlock maximum operational efficiency. Choose a pre-configured tier or craft your own custom high-volume trunking package below.
         </p>
 
         {/* Dynamic Billing Toggle Card */}
-        <div className="inline-flex items-center p-1.5 bg-slate-900/60 border border-white/5 rounded-2xl backdrop-blur-xl shadow-2xl mt-4">
+        <div className={`inline-flex items-center p-1.5 rounded-2xl backdrop-blur-xl shadow-2xl mt-4 transition-all duration-500 ${
+          theme === 'dark' ? 'bg-slate-900/60 border-white/5' : 'bg-slate-100 border-slate-200'
+        }`}>
           <button
             onClick={() => setIsYearly(false)}
             className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
               !isYearly 
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
-                : 'text-slate-400 hover:text-white'
+                : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             Monthly
@@ -150,7 +157,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
             className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-1.5 ${
               isYearly 
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
-                : 'text-slate-400 hover:text-white'
+                : theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <span>Annually</span>
@@ -181,8 +188,12 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
               key={idx} 
               className={`group relative rounded-[2.5rem] border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between ${
                 plan.recommended 
-                  ? 'border-indigo-500/80 bg-slate-950/90 shadow-[0_30px_100px_rgba(99,102,241,0.18)] scale-[1.03] md:-translate-y-2 hover:scale-[1.06] hover:border-indigo-400 hover:shadow-[0_45px_120px_rgba(99,102,241,0.28)]' 
-                  : 'border-white/[0.08] bg-white/[0.02] backdrop-blur-xl hover:bg-white/[0.04] hover:border-white/20 hover:scale-[1.04] hover:shadow-[0_30px_80px_rgba(0,0,0,0.6)]'
+                  ? theme === 'dark'
+                    ? 'border-indigo-500/80 bg-slate-950/90 shadow-[0_30px_100px_rgba(99,102,241,0.18)] scale-[1.03] md:-translate-y-2 hover:scale-[1.06] hover:border-indigo-400 hover:shadow-[0_45px_120px_rgba(99,102,241,0.28)]' 
+                    : 'border-indigo-600/80 bg-white shadow-[0_30px_100px_rgba(99,102,241,0.12)] scale-[1.03] md:-translate-y-2 hover:scale-[1.06] hover:border-indigo-500 hover:shadow-[0_45px_120px_rgba(99,102,241,0.2)]'
+                  : theme === 'dark'
+                    ? 'border-white/[0.08] bg-white/[0.02] backdrop-blur-xl hover:bg-white/[0.04] hover:border-white/20 hover:scale-[1.04] hover:shadow-[0_30px_80px_rgba(0,0,0,0.6)]'
+                    : 'border-slate-200 bg-white/85 backdrop-blur-xl hover:bg-white hover:border-indigo-500/20 hover:scale-[1.04] hover:shadow-[0_30px_80px_rgba(0,0,0,0.1)]'
               }`}
             >
               {/* Premium Glow Overlay */}
@@ -196,21 +207,25 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
               <div className="p-10 space-y-8 relative z-10">
                 {/* Upper Metadata Ribbon */}
                 <div className="flex justify-between items-center">
-                  <span className={`text-[9px] font-black uppercase tracking-widest font-mono px-3 py-1 rounded-full bg-white/5 border border-white/5 ${details.focusColor}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest font-mono px-3 py-1 rounded-full border ${
+                    theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200/80'
+                  } ${details.focusColor}`}>
                     {details.badge}
                   </span>
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 ${details.focusColor}`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-250'
+                  } ${details.focusColor}`}>
                     <IconComponent className="w-4 h-4 shrink-0" />
                   </div>
                 </div>
 
                 {/* Plan Naming & Dynamics Pricing */}
                 <div className="space-y-4">
-                  <h4 className="text-2xl font-black text-white tracking-tight">{plan.name}</h4>
-                  <p className="text-xs text-slate-400 font-bold leading-relaxed">{details.tagline}</p>
+                  <h4 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{plan.name}</h4>
+                  <p className={`text-xs font-bold leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{details.tagline}</p>
                   
-                  <div className="flex items-baseline pt-4 border-t border-white/[0.04]">
-                    <span className="text-5xl font-black text-white tracking-tighter">
+                  <div className={`flex items-baseline pt-4 border-t ${theme === 'dark' ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                    <span className={`text-5xl font-black tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                       ${displayPrice}
                     </span>
                     <span className="text-slate-500 font-black ml-2 text-xs uppercase tracking-widest">/ month</span>
@@ -229,13 +244,13 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
                 </div>
 
                 {/* High-Converting Feature Blueprint */}
-                <div className="space-y-5 border-t border-dashed border-white/10 pt-6">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">
+                <div className={`space-y-5 border-t border-dashed pt-6 ${theme === 'dark' ? 'border-white/10' : 'border-slate-200'}`}>
+                  <div className={`text-[9px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                     Bundled Feature Architecture:
                   </div>
                   <ul className="space-y-3.5">
                     {plan.features.map((feat, i) => (
-                      <li key={i} className="flex items-start text-xs font-semibold text-slate-300">
+                      <li key={i} className={`flex items-start text-xs font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-750'}`}>
                         <Check className="w-4 h-4 text-emerald-400 mr-3 shrink-0 mt-0.5" />
                         <span className="leading-snug">{feat}</span>
                       </li>
@@ -245,13 +260,15 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
 
                 {/* Secure Trial Callout Module */}
                 {plan.trialDays && (
-                  <div className="bg-indigo-500/[0.04] border border-indigo-500/10 rounded-2xl p-4 flex items-start space-x-3.5">
+                  <div className={`border rounded-2xl p-4 flex items-start space-x-3.5 ${
+                    theme === 'dark' ? 'bg-indigo-500/[0.04] border-indigo-500/10' : 'bg-indigo-50/50 border-indigo-100'
+                  }`}>
                     <Shield className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5 animate-pulse" />
                     <div className="space-y-0.5">
                       <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest font-mono leading-none">
                         {plan.trialDescription} Enabled
                       </div>
-                      <p className="text-[9px] text-slate-400 font-bold leading-normal">
+                      <p className={`text-[9px] font-bold leading-normal ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
                         Test out our live voice relays completely free of cost for 7 days.
                       </p>
                     </div>
@@ -266,7 +283,9 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
                   className={`w-full py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-[0.98] ${
                     plan.recommended
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:-translate-y-0.5'
-                      : 'bg-white hover:bg-slate-200 text-slate-950 shadow-white/5 hover:-translate-y-0.5'
+                      : theme === 'dark'
+                        ? 'bg-white hover:bg-slate-200 text-slate-950 shadow-white/5 hover:-translate-y-0.5'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white hover:-translate-y-0.5'
                   }`}
                 >
                   Configure & Checkout {plan.name}
@@ -281,24 +300,28 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
       </div>
 
       {/* Dynamic Enterprise Configurator */}
-      <div className="bg-slate-900/15 border border-white/5 rounded-[3rem] p-10 md:p-14 space-y-12 relative overflow-hidden backdrop-blur-xl">
+      <div className={`rounded-[3rem] p-10 md:p-14 space-y-12 relative overflow-hidden backdrop-blur-xl border transition-colors duration-500 ${
+        theme === 'dark' ? 'bg-slate-900/15 border-white/5' : 'bg-slate-100 border-slate-200'
+      }`}>
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 border-b border-white/[0.04] pb-8">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-8 border-b pb-8 ${theme === 'dark' ? 'border-white/[0.04]' : 'border-slate-200'}`}>
           <div className="space-y-2.5">
             <div className="flex items-center space-x-2 text-indigo-400">
               <Sliders className="w-4 h-4 text-indigo-400 shrink-0" />
               <span className="text-[10px] font-black uppercase tracking-widest font-mono">ELASTIC BUNDLE BUILDER</span>
             </div>
-            <h3 className="text-3xl font-black text-white tracking-tight">Custom Plan Customizer</h3>
-            <p className="text-slate-400 text-xs md:text-sm font-semibold max-w-xl leading-relaxed">
+            <h3 className={`text-3xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Custom Plan Customizer</h3>
+            <p className={`text-xs md:text-sm font-semibold max-w-xl leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
               Calculate your wholesale operational costs instantly. Adjust minutes, concurrently active AI agent bots, and phone numbers in real-time.
             </p>
           </div>
           
-          <div className="bg-slate-950/80 border border-white/5 p-6 rounded-3xl text-right shrink-0 shadow-2xl relative min-w-[240px]">
+          <div className={`p-6 rounded-3xl text-right shrink-0 shadow-2xl relative min-w-[240px] border ${
+            theme === 'dark' ? 'bg-slate-950/80 border-white/5' : 'bg-white border-slate-200'
+          }`}>
             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-mono">Estimated Investment</div>
-            <div className="text-4xl md:text-5xl font-black text-white tracking-tight tabular-nums">
+            <div className={`text-4xl md:text-5xl font-black tracking-tight tabular-nums ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
               ${calculateEnterpriseMonthly()}
             </div>
             <div className="text-[9px] text-emerald-400 font-black uppercase tracking-widest font-mono mt-1">
@@ -311,7 +334,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
           {/* Sliders Area */}
           <div className="space-y-8">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-slate-300">
+              <div className={`flex justify-between items-center text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                 <span>Monthly Dialogue Minutes</span>
                 <span className="font-mono text-indigo-400 font-black">{entMinutes.toLocaleString()}</span>
               </div>
@@ -322,7 +345,9 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
                 step="5000"
                 value={entMinutes}
                 onChange={(e) => setEntMinutes(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none ${
+                  theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'
+                }`}
               />
               <div className="flex justify-between text-[8px] text-slate-500 font-black uppercase tracking-widest font-mono">
                 <span>5k Mins</span>
@@ -331,7 +356,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-slate-300">
+              <div className={`flex justify-between items-center text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                 <span>Concurrent Active Agent Slots</span>
                 <span className="font-mono text-indigo-400 font-black">{entAgents}</span>
               </div>
@@ -342,7 +367,9 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
                 step="1"
                 value={entAgents}
                 onChange={(e) => setEntAgents(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none ${
+                  theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'
+                }`}
               />
               <div className="flex justify-between text-[8px] text-slate-500 font-black uppercase tracking-widest font-mono">
                 <span>2 Agents</span>
@@ -354,7 +381,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
           {/* Toggle and SLA Area */}
           <div className="space-y-6">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-slate-300">
+              <div className={`flex justify-between items-center text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                 <span>Real Carrier Phone Lines</span>
                 <span className="font-mono text-indigo-400 font-black">{entNumbers} Lines</span>
               </div>
@@ -365,7 +392,9 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
                 step="1"
                 value={entNumbers}
                 onChange={(e) => setEntNumbers(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none ${
+                  theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'
+                }`}
               />
               <div className="flex justify-between text-[8px] text-slate-500 font-black uppercase tracking-widest font-mono">
                 <span>1 Line</span>
@@ -374,14 +403,18 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
             </div>
 
             {/* SLA Priority Switcher */}
-            <div className="flex items-center justify-between border border-white/5 p-4.5 rounded-2xl bg-slate-950/30">
+            <div className={`flex items-center justify-between border p-4.5 rounded-2xl ${
+              theme === 'dark' ? 'border-white/5 bg-slate-950/30' : 'border-slate-200 bg-white shadow-sm'
+            }`}>
               <div className="space-y-1 pr-4">
-                <div className="text-xs font-black text-white uppercase tracking-wider">24/7 Dedicated SLA Support</div>
-                <p className="text-[10px] text-slate-500 leading-snug font-semibold">Priority developer channels & custom deployment engineers</p>
+                <div className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>24/7 Dedicated SLA Support</div>
+                <p className={`text-[10px] leading-snug font-semibold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-650'}`}>Priority developer channels & custom deployment engineers</p>
               </div>
               <button 
                 onClick={() => setHasDedicatedSLA(!hasDedicatedSLA)}
-                className={`w-10 h-6 shrink-0 rounded-full p-1 transition-all ${hasDedicatedSLA ? 'bg-indigo-600' : 'bg-slate-800'}`}
+                className={`w-10 h-6 shrink-0 rounded-full p-1 transition-all ${
+                  hasDedicatedSLA ? 'bg-indigo-600' : theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'
+                }`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${hasDedicatedSLA ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
@@ -390,14 +423,18 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
 
           {/* Checkout & BYOK Module */}
           <div className="flex flex-col justify-between space-y-6">
-            <div className="flex items-center justify-between border border-white/5 p-4.5 rounded-2xl bg-slate-950/30">
+            <div className={`flex items-center justify-between border p-4.5 rounded-2xl ${
+              theme === 'dark' ? 'border-white/5 bg-slate-950/30' : 'border-slate-200 bg-white shadow-sm'
+            }`}>
               <div className="space-y-1 pr-4">
-                <div className="text-xs font-black text-white uppercase tracking-wider">Bring Your Own Keys (BYOK)</div>
-                <p className="text-[10px] text-slate-500 leading-snug font-semibold">Use custom Twilio/Vapi wholesale rates with $0 template markups</p>
+                <div className={`text-xs font-black uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Bring Your Own Keys (BYOK)</div>
+                <p className={`text-[10px] leading-snug font-semibold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-650'}`}>Use custom Twilio/Vapi wholesale rates with $0 template markups</p>
               </div>
               <button 
                 onClick={() => setUseOwnApiKeys(!useOwnApiKeys)}
-                className={`w-10 h-6 shrink-0 rounded-full p-1 transition-all ${useOwnApiKeys ? 'bg-indigo-600' : 'bg-slate-800'}`}
+                className={`w-10 h-6 shrink-0 rounded-full p-1 transition-all ${
+                  useOwnApiKeys ? 'bg-indigo-600' : theme === 'dark' ? 'bg-slate-800' : 'bg-slate-200'
+                }`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${useOwnApiKeys ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
@@ -416,28 +453,34 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans }) => {
       {/* Comprehensive Capabilities Table */}
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <h4 className="text-xl font-black text-white tracking-tight">Full Capabilities Matrix</h4>
+          <h4 className={`text-xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Full Capabilities Matrix</h4>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-widest font-mono">Architectural Telephony Stack Comparison</p>
         </div>
         
-        <div className="border border-white/5 rounded-3xl overflow-hidden bg-slate-900/10 backdrop-blur-md">
+        <div className={`border rounded-3xl overflow-hidden backdrop-blur-md ${
+          theme === 'dark' ? 'border-white/5 bg-slate-900/10' : 'border-slate-200 bg-white/50 shadow-sm'
+        }`}>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-white/5 text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono bg-slate-950/40">
+                <tr className={`border-b text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono ${
+                  theme === 'dark' ? 'border-white/5 bg-slate-950/40' : 'border-slate-200 bg-slate-100/60'
+                }`}>
                   <th className="p-6">Feature Layer</th>
                   <th className="p-6">Standard Voice Wrappers</th>
                   <th className="p-6 text-indigo-400">CallingAgent Bundle</th>
                   <th className="p-6">BYOK Enterprise</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.02] text-xs font-semibold text-slate-350">
+              <tbody className={`divide-y text-xs font-semibold ${
+                theme === 'dark' ? 'divide-white/[0.02] text-slate-350' : 'divide-slate-200 text-slate-700'
+              }`}>
                 {comparisonRows.map((row, i) => (
-                  <tr key={i} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="p-6 font-bold text-white whitespace-nowrap">{row.layer}</td>
-                    <td className="p-6 text-slate-400">{row.standardApi}</td>
-                    <td className="p-6 text-indigo-300 font-bold">{row.callingAgent}</td>
-                    <td className="p-6 text-slate-300">{row.byokSupport}</td>
+                  <tr key={i} className={`transition-colors ${theme === 'dark' ? 'hover:bg-white/[0.01]' : 'hover:bg-slate-50/50'}`}>
+                    <td className={`p-6 font-bold whitespace-nowrap ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{row.layer}</td>
+                    <td className={`p-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{row.standardApi}</td>
+                    <td className="p-6 text-indigo-500 font-bold">{row.callingAgent}</td>
+                    <td className={`p-6 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{row.byokSupport}</td>
                   </tr>
                 ))}
               </tbody>

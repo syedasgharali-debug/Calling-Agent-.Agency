@@ -524,9 +524,9 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
 
     switch (currentView) {
       case 'about':
-        return <AboutView />;
+        return <AboutView theme={theme} />;
       case 'docs':
-        return <DocsView />;
+        return <DocsView theme={theme} />;
       case 'login':
         return <LoginView onLogin={handleLogin} />;
       case 'dashboard':
@@ -551,13 +551,13 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
         ) : <LoginView onLogin={handleLogin} />;
       case 'privacy':
       case 'terms':
-        return <LegalView type={currentView} />;
+        return <LegalView type={currentView} theme={theme} />;
       case 'careers':
-        return <CareerView />;
+        return <CareerView theme={theme} />;
       case 'features':
-        return <FeaturesView onNavigate={navigate} />;
+        return <FeaturesView onNavigate={navigate} theme={theme} />;
       case 'pricing':
-        return <PricingView onNavigate={navigate} plans={plans} />;
+        return <PricingView onNavigate={navigate} plans={plans} theme={theme} />;
       case 'home':
       default:
         return (
@@ -567,6 +567,7 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
             blogs={blogs} 
             selectedBlog={selectedBlog} 
             setSelectedBlog={setSelectedBlog} 
+            theme={theme}
           />
         );
     }

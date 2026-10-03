@@ -24,6 +24,10 @@ interface Sample {
   voiceSettings: VoiceConfig;
 }
 
+interface VoiceSamplesProps {
+  theme?: 'dark' | 'light';
+}
+
 const samples: Sample[] = [
   {
     id: 'real-estate',
@@ -165,7 +169,7 @@ const samples: Sample[] = [
   }
 ];
 
-const VoiceSamples: React.FC = () => {
+const VoiceSamples: React.FC<VoiceSamplesProps> = ({ theme = 'dark' }) => {
   const [playingSampleId, setPlayingSampleId] = useState<string | null>(null);
   const [isTTSLoading, setIsTTSLoading] = useState(false);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -202,7 +206,7 @@ const VoiceSamples: React.FC = () => {
     }
   };
 
-  // Browser synthesis fallback
+  // Browser synthesis fallback with exceptionally premium voice selection (Google Natural / Local HQ)
   const speakWithBrowserFallback = (text: string, voiceName: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!('speechSynthesis' in window)) {
@@ -211,16 +215,63 @@ const VoiceSamples: React.FC = () => {
       }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        const nameLower = voiceName.toLowerCase();
-        const matched = voices.find(v => 
-          v.name.toLowerCase().includes(nameLower) ||
-          (nameLower === 'aoede' && v.name.toLowerCase().includes('female')) ||
-          (nameLower === 'fenrir' && v.name.toLowerCase().includes('male'))
-        );
-        if (matched) utterance.voice = matched;
+      
+      const selectBestVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          const nameLower = voiceName.toLowerCase();
+          
+          // 1. Try to find custom "natural" or "google" versions of the specific model voice
+          let matched = voices.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes(nameLower));
+          if (!matched) {
+            matched = voices.find(v => v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes(nameLower));
+          }
+          if (!matched) {
+            matched = voices.find(v => v.name.toLowerCase().includes(nameLower));
+          }
+          
+          // 2. Gender and accent fallback matching for premium, lifelike voices
+          if (!matched) {
+            const isFemale = ['aoede', 'kore', 'chloe', 'sarah', 'claudia'].includes(nameLower);
+            const genderKeywords = isFemale 
+              ? ['natural', 'google', 'female', 'samantha', 'sira', 'zira', 'karen', 'tessa', 'veena'] 
+              : ['natural', 'google', 'male', 'david', 'guy', 'george', 'sean', 'ravi'];
+            
+            for (const keyword of genderKeywords) {
+              matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes(keyword));
+              if (matched) break;
+            }
+            if (!matched) {
+              for (const keyword of genderKeywords) {
+                matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes(keyword));
+                if (matched) break;
+              }
+            }
+            if (!matched) {
+              for (const keyword of genderKeywords) {
+                matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes(keyword));
+                if (matched) break;
+              }
+            }
+          }
+          
+          if (matched) {
+            utterance.voice = matched;
+          }
+        }
+      };
+
+      selectBestVoice();
+      
+      // Handle asynchronous loading of voices in browsers like Chrome
+      if ('onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = selectBestVoice;
       }
+
+      utterance.rate = 0.94; // Reassuring, clear, slightly slower natural human pace
+      utterance.pitch = 1.02; // Friendly, clear pitch adjustment
+      utterance.volume = 1.0;
+
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       window.speechSynthesis.speak(utterance);
@@ -411,15 +462,15 @@ const VoiceSamples: React.FC = () => {
   };
 
   return (
-    <section id="samples" className="py-16 px-6 bg-slate-950 border-y border-white/5 relative">
+    <section id="samples" className={`py-16 px-6 border-y relative transition-colors duration-500 ${theme === 'dark' ? 'bg-slate-950 border-white/5' : 'bg-slate-100/50 border-slate-200'}`}>
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest font-mono">Conversational Realism</span>
-          <h2 className="text-3xl md:text-5xl font-black text-white mt-3 mb-4 tracking-tighter">
+          <h2 className={`text-3xl md:text-5xl font-black mt-3 mb-4 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             A Smarter Way to Automate Calls
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base font-semibold leading-relaxed">
-            Listen to pre-recorded conversational patterns or tap <span className="text-emerald-400 uppercase tracking-widest px-1 font-bold">Talk Live</span> to experience lag-free human-like dialogue right now.
+          <p className={`max-w-2xl mx-auto text-sm md:text-base font-semibold leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+            Listen to pre-recorded conversational patterns or tap <span className="text-emerald-500 uppercase tracking-widest px-1 font-bold">Talk Live</span> to experience lag-free human-like dialogue right now.
           </p>
         </div>
 
@@ -435,7 +486,9 @@ const VoiceSamples: React.FC = () => {
                 className={`group relative p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col justify-between overflow-hidden ${
                   isLive 
                     ? 'bg-emerald-950/10 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.06)]'
-                    : 'bg-slate-950/40 border-white/5 hover:border-indigo-500/10 hover:bg-slate-950/60 shadow-2xl'
+                    : theme === 'dark'
+                      ? 'bg-slate-950/40 border-white/5 hover:border-indigo-500/10 hover:bg-slate-950/60 shadow-2xl'
+                      : 'bg-white border-slate-200 hover:border-indigo-500/10 hover:bg-slate-50 shadow-md'
                 }`}
               >
                 {isLive && (
@@ -446,7 +499,9 @@ const VoiceSamples: React.FC = () => {
                   <div className="flex items-start justify-between mb-6">
                     <div className={`p-3.5 rounded-2xl transition-all duration-300 ${
                       isLive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                      'bg-slate-900 text-slate-400 group-hover:text-white border border-transparent group-hover:border-white/5'
+                      theme === 'dark'
+                        ? 'bg-slate-900 text-slate-400 group-hover:text-white border border-transparent group-hover:border-white/5'
+                        : 'bg-slate-100 text-slate-600 group-hover:text-slate-900 border border-transparent group-hover:border-slate-200'
                     }`}>
                       <Icon size={24} />
                     </div>
@@ -460,8 +515,8 @@ const VoiceSamples: React.FC = () => {
                           isSamplePlaying 
                             ? 'bg-rose-600 border-rose-600 text-white' 
                             : isLive 
-                              ? 'bg-slate-900 border-transparent text-slate-700 cursor-not-allowed'
-                              : 'bg-white border-white text-slate-950 hover:scale-105'
+                              ? theme === 'dark' ? 'bg-slate-900 border-transparent text-slate-700 cursor-not-allowed' : 'bg-slate-100 border-transparent text-slate-400 cursor-not-allowed'
+                              : theme === 'dark' ? 'bg-white border-white text-slate-950 hover:scale-105' : 'bg-slate-900 border-slate-900 text-white hover:scale-105 hover:bg-slate-800'
                         }`}
                         title={isSamplePlaying ? "Pause Sample" : "Play Greeting Sample"}
                       >
@@ -489,7 +544,7 @@ const VoiceSamples: React.FC = () => {
 
                   <div className="relative">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h3 className={`text-xl font-bold tracking-tight ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                      <h3 className={`text-xl font-bold tracking-tight ${isLive ? 'text-emerald-400' : theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                         {sample.industry}
                       </h3>
                       <span className="text-[9px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/15">
@@ -499,7 +554,7 @@ const VoiceSamples: React.FC = () => {
 
                     {isLive ? (
                       <div className="space-y-4">
-                        <div className="bg-slate-950/80 border border-white/5 rounded-2xl p-4 h-[12rem] overflow-y-auto flex flex-col justify-end">
+                        <div className={`rounded-2xl p-4 h-[12rem] overflow-y-auto flex flex-col justify-end border ${theme === 'dark' ? 'bg-slate-950/80 border-white/5' : 'bg-white border-slate-200'}`}>
                           <div className="space-y-3">
                             {liveTranscript.slice(-3).map((msg, i) => (
                               <div key={i} className={`text-xs ${msg.role === 'model' ? 'text-white' : 'text-emerald-400'} font-semibold`}>
@@ -528,7 +583,11 @@ const VoiceSamples: React.FC = () => {
                                 key={sIdx}
                                 type="button"
                                 onClick={() => handleUserTurn(option, sample)}
-                                className="text-[10px] font-bold px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg border border-white/5 transition-all text-left cursor-pointer"
+                                className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                                  theme === 'dark' 
+                                    ? 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border-white/5' 
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                                }`}
                               >
                                 {option}
                               </button>
@@ -544,14 +603,18 @@ const VoiceSamples: React.FC = () => {
                               setInputText('');
                             }
                           }}
-                          className="flex items-center gap-1.5 bg-slate-900 border border-white/5 rounded-xl p-1"
+                          className={`flex items-center gap-1.5 rounded-xl p-1 border ${
+                            theme === 'dark' ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200'
+                          }`}
                         >
                           <input
                             type="text"
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            placeholder="Type to voice agent..."
-                            className="bg-transparent text-[11px] text-white placeholder-slate-650 placeholder-slate-500 focus:outline-none px-2 py-1 w-full"
+                             value={inputText}
+                             onChange={(e) => setInputText(e.target.value)}
+                             placeholder="Type to voice agent..."
+                             className={`bg-transparent text-[11px] focus:outline-none px-2 py-1 w-full ${
+                               theme === 'dark' ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'
+                             }`}
                           />
                           <button
                             type="submit"
@@ -568,7 +631,9 @@ const VoiceSamples: React.FC = () => {
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                        <div className={`flex items-center justify-between mt-2 pt-2 border-t ${
+                          theme === 'dark' ? 'border-white/5' : 'border-slate-200'
+                        }`}>
                           <div className="flex items-center gap-2">
                             <span className="relative flex h-2 w-2">
                               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isListening ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
@@ -604,7 +669,9 @@ const VoiceSamples: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-slate-400 text-xs md:text-sm leading-relaxed mb-6 font-semibold mt-2">
+                      <p className={`text-xs md:text-sm leading-relaxed mb-6 font-semibold mt-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+                      }`}>
                         {sample.scenario}
                       </p>
                     )}
@@ -612,7 +679,9 @@ const VoiceSamples: React.FC = () => {
                 </div>
 
                 {!isLive && (
-                  <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between text-slate-500 text-[10px] font-mono uppercase tracking-wider gap-2">
+                  <div className={`mt-4 pt-4 border-t flex flex-wrap items-center justify-between text-[10px] font-mono uppercase tracking-wider gap-2 ${
+                    theme === 'dark' ? 'border-white/5 text-slate-500' : 'border-slate-200 text-slate-500'
+                  }`}>
                     <span>Vibe: {sample.voiceSettings.speakingStyle}</span>
                     <span>Speed: {sample.voiceSettings.speed}x</span>
                   </div>

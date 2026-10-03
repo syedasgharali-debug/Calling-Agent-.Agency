@@ -748,7 +748,7 @@ async function startServer() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-3.8-flash-tts",
         contents: [{ parts: [{ text: text }] }],
         config: {
           systemInstruction: personaInstruction,

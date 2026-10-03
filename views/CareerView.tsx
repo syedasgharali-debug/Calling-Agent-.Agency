@@ -1,7 +1,10 @@
-
 import React from 'react';
 
-const CareerView: React.FC = () => {
+interface CareerViewProps {
+  theme?: 'dark' | 'light';
+}
+
+const CareerView: React.FC<CareerViewProps> = ({ theme = 'dark' }) => {
   const jobs = [
     { 
       title: 'Senior Audio Engineer', 
@@ -34,35 +37,39 @@ const CareerView: React.FC = () => {
   ];
 
   return (
-    <div className="pt-40 pb-32 px-6 max-w-6xl mx-auto font-sans animate-fade-in">
+    <div className={`pt-40 pb-32 px-6 max-w-6xl mx-auto font-sans transition-colors duration-500`}>
       <div className="text-center mb-32">
-        <h1 className="text-6xl md:text-8xl font-black text-white mb-10 tracking-tighter">Join the <span className="text-indigo-500">Mission</span></h1>
-        <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+        <h1 className={`text-6xl md:text-8xl font-black mb-10 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+          Join the <span className="text-indigo-500">Mission</span>
+        </h1>
+        <p className={`text-xl max-w-3xl mx-auto leading-relaxed font-light ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
           We are a team of researchers, engineers, and designers building the foundational infrastructure for the AI-first voice economy. We move fast, take big swings, and value technical excellence above all else.
         </p>
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-16 mb-32">
         <div className="space-y-10">
-          <h2 className="text-4xl font-black text-white tracking-tight">Our Values</h2>
+          <h2 className={`text-4xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Our Values</h2>
           <div className="space-y-8">
             <div>
               <h4 className="text-indigo-500 font-black uppercase tracking-widest text-xs mb-3">01. Velocity</h4>
-              <p className="text-slate-400 font-medium leading-relaxed">We ship every single day. We prefer speed of execution over perfect consensus. We learn by building.</p>
+              <p className={`font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>We ship every single day. We prefer speed of execution over perfect consensus. We learn by building.</p>
             </div>
             <div>
               <h4 className="text-indigo-500 font-black uppercase tracking-widest text-xs mb-3">02. Deep Craft</h4>
-              <p className="text-slate-400 font-medium leading-relaxed">Whether it is a line of Rust or a customer support email, we care about the details. Excellence is our only baseline.</p>
+              <p className={`font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Whether it is a line of Rust or a customer support email, we care about the details. Excellence is our only baseline.</p>
             </div>
             <div>
               <h4 className="text-indigo-500 font-black uppercase tracking-widest text-xs mb-3">03. High Trust</h4>
-              <p className="text-slate-400 font-medium leading-relaxed">We hire adults and treat them as such. We are a remote-first company that values outcome over activity.</p>
+              <p className={`font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>We hire adults and treat them as such. We are a remote-first company that values outcome over activity.</p>
             </div>
           </div>
         </div>
-        <div className="bg-slate-900 border border-white/5 rounded-[3rem] p-12 shadow-2xl">
-          <h3 className="text-2xl font-bold text-white mb-6">Life at CallingAgent.agency</h3>
-          <ul className="space-y-6 text-slate-400 font-medium">
+        <div className={`border rounded-[3rem] p-12 shadow-2xl transition-colors ${
+          theme === 'dark' ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200'
+        }`}>
+          <h3 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Life at CallingAgent.agency</h3>
+          <ul className={`space-y-6 font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>
             <li className="flex items-start space-x-4">
               <span className="text-indigo-500">•</span>
               <span>Fully remote culture with yearly company-wide retreats in places like Bali, Iceland, and Chamonix.</span>
@@ -84,7 +91,7 @@ const CareerView: React.FC = () => {
       </section>
 
       <section className="mb-32">
-        <h2 className="text-4xl font-black text-white mb-12 tracking-tight">The Hiring Process</h2>
+        <h2 className={`text-4xl font-black mb-12 tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>The Hiring Process</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {[
             { step: '01', title: 'Application', desc: 'Submit your resume and a short note about why you want to build the future of voice.' },
@@ -92,38 +99,44 @@ const CareerView: React.FC = () => {
             { step: '03', title: 'Technical Deep Dive', desc: 'A hands-on session where we build something together or solve a complex architectural problem.' },
             { step: '04', title: 'Founders Call', desc: 'A final conversation with our founders to ensure alignment on vision and culture.' }
           ].map((item, i) => (
-            <div key={i} className="p-8 bg-slate-900/50 border border-white/5 rounded-3xl">
+            <div key={i} className={`p-8 border rounded-3xl transition-colors ${
+              theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
               <span className="text-indigo-500 font-black text-xs mb-4 block tracking-widest">{item.step}</span>
-              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-              <p className="text-slate-500 text-xs leading-relaxed font-medium">{item.desc}</p>
+              <h3 className={`text-lg font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{item.title}</h3>
+              <p className={`text-xs leading-relaxed font-medium ${theme === 'dark' ? 'text-slate-500' : 'text-slate-600'}`}>{item.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       <div className="space-y-10">
-        <h2 className="text-4xl font-black text-white tracking-tight mb-16">Open Positions</h2>
+        <h2 className={`text-4xl font-black tracking-tight mb-16 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Open Positions</h2>
         <div className="grid grid-cols-1 gap-8">
           {jobs.map((job, i) => (
-            <div key={i} className="group bg-slate-900 border border-white/5 p-12 rounded-[2.5rem] flex flex-col lg:flex-row lg:items-center justify-between hover:border-indigo-500/30 transition-all cursor-pointer shadow-xl">
+            <div key={i} className={`group border p-12 rounded-[2.5rem] flex flex-col lg:flex-row lg:items-center justify-between transition-all cursor-pointer shadow-xl ${
+              theme === 'dark' ? 'bg-slate-900 border-white/5 hover:border-indigo-500/30' : 'bg-white border-slate-200 hover:border-indigo-500/30 shadow-sm'
+            }`}>
               <div className="max-w-2xl">
                 <div className="flex items-center space-x-4 mb-3">
-                  <h4 className="text-2xl font-bold text-white group-hover:text-indigo-400 transition-colors">{job.title}</h4>
+                  <h4 className={`text-2xl font-bold group-hover:text-indigo-400 transition-colors ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{job.title}</h4>
                   <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[10px] font-black uppercase tracking-widest">{job.type}</span>
                 </div>
-                <div className="flex items-center space-x-6 text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-6">
+                <div className="flex items-center space-x-6 text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-6 font-mono">
                   <span>{job.department}</span>
                   <span>{job.location}</span>
                 </div>
-                <p className="text-slate-400 font-medium leading-relaxed">{job.desc}</p>
+                <p className={`font-medium leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>{job.desc}</p>
               </div>
-              <button className="mt-8 lg:mt-0 px-12 py-5 bg-white text-slate-950 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-2xl">Apply Now</button>
+              <button className={`mt-8 lg:mt-0 px-12 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-2xl ${
+                theme === 'dark' ? 'bg-white hover:bg-slate-200 text-slate-950' : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}>Apply Now</button>
             </div>
           ))}
         </div>
       </div>
       
-      <div className="mt-32 p-16 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] text-center text-white">
+      <div className="mt-32 p-16 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] text-center text-white shadow-2xl">
         <h2 className="text-4xl font-black mb-6 tracking-tighter">Don't see a fit?</h2>
         <p className="text-xl opacity-90 mb-10 max-w-2xl mx-auto">We are always looking for exceptional talent. If you think you can help us build the future, reach out directly to <b>founders@callingagent.agency</b></p>
         <button className="px-10 py-4 bg-white text-indigo-700 rounded-xl font-black text-lg hover:scale-105 transition-transform">General Application</button>

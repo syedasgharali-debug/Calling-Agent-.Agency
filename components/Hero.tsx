@@ -5,9 +5,10 @@ import { motion } from 'motion/react';
 
 interface HeroProps {
   onNavigate: (view: View) => void;
+  theme?: 'dark' | 'light';
 }
 
-const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
+const Hero: React.FC<HeroProps> = ({ onNavigate, theme = 'dark' }) => {
   const [activeCallIdx, setActiveCallIdx] = useState(0);
   const [latencyTicks, setLatencyTicks] = useState<number[]>([]);
   const [activeLinesCount, setActiveLinesCount] = useState(148);
@@ -55,9 +56,9 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   };
 
   return (
-    <section className="relative pt-44 pb-32 px-6 overflow-hidden bg-[#000000]">
+    <section className={`relative pt-44 pb-32 px-6 overflow-hidden transition-colors duration-500 ${theme === 'dark' ? 'bg-[#000000]' : 'bg-[#ffffff]'}`}>
       {/* Immersive background Grid lines & Ambient Glow */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:5rem_5rem] opacity-25 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_20%,#000_70%,transparent_100%)]" />
+      <div className={`absolute inset-0 bg-size-[5rem_5rem] opacity-25 pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_20%,#000_70%,transparent_100%)] ${theme === 'dark' ? 'bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:5rem_5rem]' : 'bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:5rem_5rem]'}`} />
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/[0.04] blur-[150px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/[0.03] blur-[120px] pointer-events-none" />
 
@@ -81,7 +82,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           </motion.div>
           
           <motion.h1 
-            className="text-5xl sm:text-7xl lg:text-8xl font-black text-white leading-[1.05] tracking-tight text-wrap-balance"
+            className={`text-5xl sm:text-7xl lg:text-8xl font-black leading-[1.05] tracking-tight text-wrap-balance ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}
             variants={itemVariants}
           >
             Smarter AI Telephony <br />
@@ -89,7 +90,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           </motion.h1>
           
           <motion.p 
-            className="text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed font-semibold"
+            className={`text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-semibold ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}
             variants={itemVariants}
           >
             CallingAgent.agency is an ultra-low latency voice orchestration engine that connects autonomous AI agents directly to secure carrier SIP trunks. Run natural inbound phone lines, schedule live bookings, and resolve database actions in sub-150ms.
@@ -108,7 +109,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             </button>
             <button 
               onClick={() => onNavigate('docs')}
-              className="w-full sm:w-auto px-8 py-4 bg-slate-950 text-slate-350 rounded-2xl font-black text-xs uppercase tracking-widest border border-white/5 hover:bg-slate-900 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${theme === 'dark' ? 'bg-slate-950 text-slate-350 border-white/5 hover:bg-slate-900 hover:text-white' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200 hover:text-slate-900'}`}
             >
               <span>Explore API Docs</span>
             </button>
@@ -117,7 +118,9 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
         {/* LOWER PANEL: Immersive AI Telephony Console Interface Showcase */}
         <motion.div 
-          className="bg-slate-950/40 border border-white/5 rounded-[3rem] p-8 md:p-10 shadow-2xl relative grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden backdrop-blur-md"
+          className={`rounded-[3rem] p-8 md:p-10 shadow-2xl relative grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden backdrop-blur-md border ${
+            theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-slate-50 border-slate-200'
+          }`}
           variants={itemVariants}
         >
           {/* Subtle top edge glow beam */}
@@ -130,13 +133,17 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 <div className="w-3 h-3 rounded-full bg-indigo-500 animate-ping" />
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-mono">TELECOM STATUS // STREAMING</span>
               </div>
-              <span className="text-[10px] font-mono font-black text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-1 rounded">
+              <span className={`text-[10px] font-mono font-black px-2.5 py-1 rounded border ${
+                theme === 'dark' ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' : 'text-emerald-700 bg-emerald-100 border-emerald-200'
+              }`}>
                 Active lines: {activeLinesCount}
               </span>
             </div>
 
             {/* Glowing Orbit Telephony Pulse Visual */}
-            <div className="relative h-64 bg-slate-900/10 border border-white/5 rounded-[2rem] flex items-center justify-center overflow-hidden">
+            <div className={`relative h-64 rounded-[2rem] flex items-center justify-center overflow-hidden border ${
+              theme === 'dark' ? 'bg-slate-900/10 border-white/5' : 'bg-slate-100 border-slate-200'
+            }`}>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.02)_0%,transparent_75%)]" />
               
               {/* Spinning geometric carrier dashed circle */}
@@ -144,11 +151,13 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               <div className="absolute w-36 h-36 rounded-full border border-purple-500/20" />
 
               <div className="z-10 text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-slate-950 border border-white/10 flex items-center justify-center mx-auto shadow-2xl relative group">
-                  <Activity className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-2xl relative group border ${
+                  theme === 'dark' ? 'bg-slate-950 border-white/10 text-indigo-400' : 'bg-white border-slate-250 text-indigo-600'
+                }`}>
+                  <Activity className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 </div>
                 <div className="text-xs font-mono uppercase tracking-widest text-slate-500">Routing Direct SIP</div>
-                <div className="text-3xl font-black text-white tabular-nums tracking-tighter">
+                <div className={`text-3xl font-black tabular-nums tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                   {simulatedCalls[activeCallIdx].duration}
                 </div>
               </div>
@@ -167,26 +176,26 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
 
             {/* Live SIP Route Diagnostic logs */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-900/20 border border-white/5 rounded-2xl">
+              <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/20 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
                 <div className="text-[9px] font-black uppercase text-slate-500 tracking-wider mb-1 flex items-center gap-1.5 font-mono">
                   <HardDrive size={10} className="text-indigo-400" />
                   VOICE ENCODER
                 </div>
-                <div className="text-xs font-black text-white">OPUS Wideband</div>
+                <div className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>OPUS Wideband</div>
               </div>
-              <div className="p-4 bg-slate-900/20 border border-white/5 rounded-2xl">
+              <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/20 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
                 <div className="text-[9px] font-black uppercase text-slate-500 tracking-wider mb-1 flex items-center gap-1.5 font-mono">
                   <Cpu size={10} className="text-indigo-400" />
                   REASONING CORE
                 </div>
-                <div className="text-xs font-black text-white">Gemini Pro Inbound</div>
+                <div className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Gemini Pro Inbound</div>
               </div>
-              <div className="p-4 bg-slate-900/20 border border-white/5 rounded-2xl">
+              <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/20 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
                 <div className="text-[9px] font-black uppercase text-slate-500 tracking-wider mb-1 flex items-center gap-1.5 font-mono">
                   <Terminal size={10} className="text-indigo-400" />
                   AVG LATENCY
                 </div>
-                <div className="text-xs font-black text-white">142ms</div>
+                <div className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>142ms</div>
               </div>
             </div>
           </div>
@@ -195,7 +204,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div className="space-y-2">
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 font-mono">Simulated Carrier Routes</div>
-              <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+              <p className={`text-xs leading-relaxed font-semibold ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
                 Monitor live audio packages transit. Click any carrier line below to inspect active routing parameters.
               </p>
             </div>
@@ -209,11 +218,13 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                   className={`w-full p-5 rounded-2xl border text-left transition-all cursor-pointer flex justify-between items-center ${
                     activeCallIdx === i 
                       ? 'bg-indigo-500/10 border-indigo-500/25 shadow-lg shadow-indigo-600/5' 
-                      : 'bg-white/[0.01] border-white/5 hover:bg-slate-900/20'
+                      : theme === 'dark'
+                        ? 'bg-white/[0.01] border-white/5 hover:bg-slate-900/20'
+                        : 'bg-white border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   <div className="space-y-1">
-                    <div className="text-xs font-black text-white flex items-center gap-2">
+                    <div className={`text-xs font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
                       <div className={`w-1.5 h-1.5 rounded-full ${activeCallIdx === i ? 'bg-indigo-400 animate-pulse' : 'bg-slate-600'}`} />
                       {call.client}
                     </div>
@@ -230,7 +241,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             </div>
 
             {/* Live Signal latency stream chart */}
-            <div className="p-5 bg-slate-900/10 border border-white/5 rounded-2xl space-y-2">
+            <div className={`p-5 rounded-2xl space-y-2 border ${theme === 'dark' ? 'bg-slate-900/10 border-white/5' : 'bg-slate-100 border-slate-200'}`}>
               <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-500 font-mono">
                 <span>Jitter Chart (ms)</span>
                 <span className="text-indigo-400 font-black">Stable Route</span>

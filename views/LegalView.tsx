@@ -1,11 +1,11 @@
-
 import React from 'react';
 
 interface LegalViewProps {
   type: 'privacy' | 'terms';
+  theme?: 'dark' | 'light';
 }
 
-const LegalView: React.FC<LegalViewProps> = ({ type }) => {
+const LegalView: React.FC<LegalViewProps> = ({ type, theme = 'dark' }) => {
   const content = type === 'privacy' ? {
     title: 'Privacy Policy',
     lastUpdated: 'May 24, 2024',
@@ -61,24 +61,22 @@ const LegalView: React.FC<LegalViewProps> = ({ type }) => {
   };
 
   return (
-    <div className="pt-40 pb-32 px-6 max-w-4xl mx-auto font-sans animate-fade-in">
-      <h1 className="text-6xl font-black text-white mb-4 tracking-tighter">{content.title}</h1>
+    <div className="pt-40 pb-32 px-6 max-w-4xl mx-auto font-sans animate-fade-in transition-colors duration-500">
+      <h1 className={`text-6xl font-black mb-4 tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{content.title}</h1>
       <p className="text-indigo-500 font-bold text-xs uppercase tracking-widest mb-8">Last Updated: {content.lastUpdated}</p>
       
-      <p className="text-xl text-slate-400 mb-16 leading-relaxed font-light border-l-4 border-indigo-500 pl-8">
+      <p className={`text-xl mb-16 leading-relaxed font-light border-l-4 border-indigo-500 pl-8 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
         {content.intro}
       </p>
 
       <div className="space-y-16">
         {content.sections.map((section, i) => (
           <section key={i} className="space-y-6">
-            <h2 className="text-3xl font-black text-white tracking-tight">{section.title}</h2>
-            <p className="text-slate-400 text-lg leading-relaxed font-medium">{section.text}</p>
+            <h2 className={`text-3xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{section.title}</h2>
+            <p className={`text-lg leading-relaxed font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-650'}`}>{section.text}</p>
           </section>
         ))}
       </div>
-      
-      {/* Removing legal team contact section per user request */}
     </div>
   );
 };
