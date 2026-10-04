@@ -191,9 +191,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-indigo-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm tracking-tight transition-all active:scale-95 shadow-xl shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Authorizing Session...' : (isRegistering ? 'Initialize Workspace' : 'Authorize Credentials')}
+              {loading ? (isRegistering ? 'Signing Up...' : 'Signing In...') : (isRegistering ? 'Sign Up' : 'Sign In')}
             </button>
           </div>
 
@@ -202,7 +202,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="w-full border-t border-white/5"></div>
             </div>
             <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
-              <span className="bg-[#0b1229] px-3 text-slate-500 font-mono">Or connect via</span>
+              <span className="bg-[#020617] px-3 text-slate-500 font-mono">Or connect via</span>
             </div>
           </div>
 
@@ -211,7 +211,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               type="button"
               onClick={() => handleGoogleLoginUnified(false)}
               disabled={loading}
-              className="w-full py-3.5 bg-white hover:bg-slate-200 text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50"
+              className="w-full py-3 bg-white hover:bg-slate-200 text-slate-950 rounded-xl font-bold text-sm tracking-tight transition-all active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-50"
             >
               <svg viewBox="0 0 24 24" className="w-4 h-4">
                 <path
@@ -231,7 +231,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   fill="#EA4335"
                 />
               </svg>
-              <span>Google SSO Link</span>
+              <span>{isRegistering ? 'Sign up with Google' : 'Sign in with Google'}</span>
             </button>
           </div>
         </form>

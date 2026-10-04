@@ -280,7 +280,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans, theme = 'dark' }) 
               <div className="p-10 pt-0 relative z-10">
                 <button 
                   onClick={() => onNavigate('login')}
-                  className={`w-full py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-[0.98] ${
+                  className={`w-full py-3 rounded-xl font-bold text-sm tracking-tight transition-all shadow-xl active:scale-[0.98] ${
                     plan.recommended
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:-translate-y-0.5'
                       : theme === 'dark'
@@ -442,7 +442,7 @@ const Pricing: React.FC<PricingProps> = ({ onNavigate, plans, theme = 'dark' }) 
             
             <button 
               onClick={() => onNavigate('login')}
-              className="w-full py-4.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/10 active:scale-[0.98]"
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm tracking-tight transition-all shadow-xl shadow-indigo-600/10 active:scale-[0.98]"
             >
               Provision Custom Workspace
             </button>
