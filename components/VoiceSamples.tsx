@@ -186,6 +186,16 @@ const VoiceSamples: React.FC<VoiceSamplesProps> = ({ theme = 'dark' }) => {
   const historyRef = useRef<{ role: 'user' | 'model'; parts: { text: string }[] }[]>([]);
 
   useEffect(() => {
+    // Pre-warm Web Speech Synthesis voices so they load instantly on component mount
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      if ('onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    }
+
     return () => {
       cleanupAudio();
     };
@@ -221,42 +231,43 @@ const VoiceSamples: React.FC<VoiceSamplesProps> = ({ theme = 'dark' }) => {
         if (voices.length > 0) {
           const nameLower = voiceName.toLowerCase();
           
-          // 1. Try to find custom "natural" or "google" versions of the specific model voice
-          let matched = voices.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes(nameLower));
-          if (!matched) {
-            matched = voices.find(v => v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes(nameLower));
+          // Tailored keywords for each specific agent to find the absolute most realistic natural voice
+          let voiceKeywords: string[] = [];
+          if (nameLower === 'aoede' || nameLower === 'sarah') {
+            // Sarah (Real Estate) & Chloe (Support): Crisp, elegant, professional US female
+            voiceKeywords = ['natural', 'google us english', 'aria', 'jenny', 'samantha', 'female'];
+          } else if (nameLower === 'fenrir' || nameLower === 'david') {
+            // David (Healthcare): Warm, empathetic, calm US male
+            voiceKeywords = ['natural', 'google uk english male', 'guy', 'david', 'daniel', 'male'];
+          } else if (nameLower === 'puck' || nameLower === 'marco') {
+            // Marco (Hospitality): Enthusiastic, welcoming European/UK/US male
+            voiceKeywords = ['natural', 'ryan', 'google uk english male', 'guy', 'daniel', 'male'];
+          } else if (nameLower === 'kore') {
+            // Kore (Logistics): Clear, direct, confident US female
+            voiceKeywords = ['natural', 'google us english', 'aria', 'samantha', 'female'];
+          } else if (nameLower === 'charon' || nameLower === 'john') {
+            // John (Finance): Authoritative, mature, secure US male
+            voiceKeywords = ['natural', 'guy', 'david', 'daniel', 'male'];
+          } else {
+            // Default fallbacks
+            voiceKeywords = ['natural', 'google', 'samantha', 'david', 'female', 'male'];
           }
-          if (!matched) {
-            matched = voices.find(v => v.name.toLowerCase().includes(nameLower));
-          }
+
+          let matched: SpeechSynthesisVoice | undefined;
           
-          // 2. Gender and accent fallback matching for premium, lifelike voices
+          // Match by looking for our prioritized keywords in order
+          for (const keyword of voiceKeywords) {
+            matched = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes(keyword));
+            if (matched) break;
+          }
+
           if (!matched) {
-            const isFemale = ['aoede', 'kore', 'chloe', 'sarah', 'claudia'].includes(nameLower);
-            const genderKeywords = isFemale 
-              ? ['natural', 'google', 'female', 'samantha', 'sira', 'zira', 'karen', 'tessa', 'veena'] 
-              : ['natural', 'google', 'male', 'david', 'guy', 'george', 'sean', 'ravi'];
-            
-            for (const keyword of genderKeywords) {
-              matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes(keyword));
-              if (matched) break;
-            }
-            if (!matched) {
-              for (const keyword of genderKeywords) {
-                matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes(keyword));
-                if (matched) break;
-              }
-            }
-            if (!matched) {
-              for (const keyword of genderKeywords) {
-                matched = voices.find(v => v.name.toLowerCase().includes('en-') && v.name.toLowerCase().includes(keyword));
-                if (matched) break;
-              }
-            }
+            matched = voices.find(v => v.lang.startsWith('en'));
           }
           
           if (matched) {
             utterance.voice = matched;
+            console.log(`[Premium TTS Fallback] Matched voice "${matched.name}" for Agent "${voiceName}"`);
           }
         }
       };
@@ -268,8 +279,30 @@ const VoiceSamples: React.FC<VoiceSamplesProps> = ({ theme = 'dark' }) => {
         window.speechSynthesis.onvoiceschanged = selectBestVoice;
       }
 
-      utterance.rate = 0.94; // Reassuring, clear, slightly slower natural human pace
-      utterance.pitch = 1.02; // Friendly, clear pitch adjustment
+      // Configure distinct, natural pacing and friendly pitch variables tailored for each agent persona
+      const nameLower = voiceName.toLowerCase();
+      if (nameLower === 'fenrir' || nameLower === 'david') {
+        // David (Healthcare): Calm, slow, empathetic, comforting
+        utterance.rate = 0.85;
+        utterance.pitch = 0.95;
+      } else if (nameLower === 'charon' || nameLower === 'john') {
+        // John (Finance): Authoritative, mature, stable, serious
+        utterance.rate = 0.88;
+        utterance.pitch = 0.92;
+      } else if (nameLower === 'puck' || nameLower === 'marco') {
+        // Marco (Hospitality): Welcoming, energetic, cheerful, faster
+        utterance.rate = 0.98;
+        utterance.pitch = 1.05;
+      } else if (nameLower === 'kore') {
+        // Kore (Logistics): Extremely clear, direct, professional
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+      } else {
+        // Sarah (Real Estate) & Chloe (Support): Polished, articulate, helpful
+        utterance.rate = 0.92;
+        utterance.pitch = 1.02;
+      }
+
       utterance.volume = 1.0;
 
       utterance.onend = () => resolve();

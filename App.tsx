@@ -613,7 +613,7 @@ Our voice stack models the speaker's emotional state by analyzing voice acoustic
             </motion.div>
           </AnimatePresence>
         </main>
-        {currentView !== 'dashboard' && <Footer onNavigate={navigate} />}
+        {currentView !== 'dashboard' && <Footer onNavigate={navigate} theme={theme} />}
         <ChatWidget />
       </div>
 

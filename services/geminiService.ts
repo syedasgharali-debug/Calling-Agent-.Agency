@@ -1,5 +1,3 @@
-
-
 export interface LiveCallbacks {
   onopen: () => void;
   onmessage: (message: any) => void;
@@ -38,74 +36,7 @@ export class GeminiService {
     };
   }
 
-  async callGeminiDirectly(
-    message: string, 
-    history: { role: 'user' | 'model', parts: { text: string }[] }[] = [], 
-    systemInstruction?: string,
-    apiKey?: string
-  ): Promise<string> {
-    if (!apiKey) {
-      throw new Error("No Gemini API key available for client-side generation.");
-    }
-
-    const contents = [...history];
-    contents.push({
-      role: 'user',
-      parts: [{ text: message }]
-    });
-
-    const formattedContents = contents.map(item => ({
-      role: item.role === 'model' ? 'model' : 'user',
-      parts: item.parts.map(p => ({ text: p.text }))
-    }));
-
-    const body: any = {
-      contents: formattedContents
-    };
-
-    if (systemInstruction) {
-      body.systemInstruction = {
-        parts: [{ text: systemInstruction }]
-      };
-    }
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData?.error?.message || `Gemini REST API failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (candidateText) {
-      return candidateText;
-    }
-
-    throw new Error("Empty response from Gemini REST API.");
-  }
-
   async getAgentResponse(message: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = [], systemInstruction?: string) {
-    let localKey = '';
-    try {
-      localKey = localStorage.getItem('gemini_api_key') || '';
-    } catch (e) {}
-
-    if (localKey) {
-      try {
-        console.log("Using custom Gemini API key for direct client-side generation...");
-        return await this.callGeminiDirectly(message, history, systemInstruction, localKey);
-      } catch (err: any) {
-        console.warn("Direct client-side Gemini API call failed, falling back to server proxy...", err);
-      }
-    }
-
     try {
       const response = await fetch('/api/demo/chat', {
         method: 'POST',
@@ -119,6 +50,11 @@ export class GeminiService {
       return data.text || "I'm sorry, I couldn't process that request right now.";
     } catch (error) {
       console.error("Gemini Proxy API Error:", error);
+      let localKey = '';
+      try {
+        localKey = localStorage.getItem('gemini_api_key') || '';
+      } catch (e) {}
+      
       if (!localKey) {
         return "I'm having trouble connecting to my central brain. If you are on a custom domain, please go to the Integrations tab and save your own Gemini API Key to enable instant client-side AI processing!";
       }
@@ -261,4 +197,3 @@ export class GeminiService {
 }
 
 export const geminiService = new GeminiService();
-

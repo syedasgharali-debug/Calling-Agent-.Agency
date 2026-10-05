@@ -152,14 +152,20 @@ export const PaymentGateways: React.FC<PaymentGatewaysProps> = ({
           })
         });
         const data = await res.json();
-        if (data.id) {
-          // Real PayPal order created
-          setStatusText(`Order created: ${data.id}. Opening official billing drawer...`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          // Since browser may block popup in sandboxed iframe, we activate interactive simulation callback
-          setLoadingState('idle');
+        if (data.error) throw new Error(data.error);
+
+        if (data.url) {
+          setStatusText('Redirecting to PayPal secure portal...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          window.location.href = data.url;
+          return;
+        } else if (data.id) {
+          setStatusText('Redirecting to PayPal secure portal...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          window.location.href = `https://www.paypal.com/checkoutnow?token=${data.id}`;
+          return;
         } else {
-          throw new Error(data.error || 'Failed to initialize official order.');
+          throw new Error('Failed to retrieve PayPal redirect link.');
         }
       } catch (err: any) {
         console.warn('Real PayPal order failed, falling back to sandbox simulator.', err);
